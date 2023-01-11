@@ -1,0 +1,234 @@
+---
+title: "Adjusting for variables in OLS regression (lecture material)"
+author: "(c) Jussi Palomäki, 2020-2023"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 2
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(include = TRUE, echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Load libraries
+
+```{r}
+library(tidyverse)
+library(MASS)
+library(plotly)
+```
+
+## Plotting model residuals
+
+We'll first simulate positively correlated x and z variables:
+
+
+```{r}
+set.seed(1) # so we can replicate our results
+data = mvrnorm(n=100, mu=c(0,0), Sigma =  matrix(c(1, 0.8, 0.8, 1), nrow=2), empirical=TRUE) # 100 obs, mean = 0, correlation = 0.8 
+x = data[, 1]
+z = data[, 2]
+correlation <- cor(x, z)
+```
+
+
+Next, let's make it so that the dependent variable (y) is positively associated with x, and negatively with z:
+
+
+```{r}
+p1 <- 2 # positive effect of x
+p2 <- -2 # negative effect of z
+y <- p1*x + p2*z + rnorm(100, sd=1) # independent effects of x and z, plus noise
+```
+
+
+Then, calculate linear model residuals "y given z" and "x given z", that is, "what is left of y when we distill away the effect of z or x":
+
+
+```{r}
+mod1 <- lm(y ~ z)
+resid.1 <- resid(mod1)
+
+mod2 <- lm(x ~ z)
+resid.2 <- resid(mod2)
+```
+
+
+Put everything in a dataframe, and fit a simple OLS regression model with both x and z as predictors:
+
+
+```{r}
+data <- data.frame(y=y, x=x, z=z, resid.1 = resid.1, resid.2 = resid.2)
+head(data)
+
+model <- lm(y~x+z, data=data)
+summary(model)
+```
+
+
+Obtain the slope (coefficient) of x and the model intercept (where the slope intersects the y-axis), and visualize both variables:
+
+
+```{r}
+x_coef <- model$coefficients[2] # coefficient of x
+intercept <- model$coefficients[1] # intercept
+
+# Visualize both variables
+data %>% 
+  gather(IV, value, x, z) %>%
+  ggplot(aes(x=value, y=y)) + 
+  geom_point() + 
+  geom_smooth(method="lm") + 
+  facet_wrap("IV") + 
+  theme_bw()
+```
+
+
+Now, focus on the x variable:
+
+
+```{r}
+ggplot(data, aes(x=x, y=y)) + 
+  geom_smooth(method="lm", fullrange=TRUE) + 
+  geom_point() +
+  theme_bw()
+```
+
+
+Plot the model prediction abline for x, which is the model prediction controlling for z (from the linear model y ~ x + z):
+
+
+```{r}
+ggplot(data, aes(x=x, y=y)) + 
+  geom_smooth(method="lm", fullrange=TRUE) + 
+  geom_point() +
+  theme_bw() + 
+  geom_abline(intercept = intercept, slope = x_coef, colour="red", size=1)
+```
+
+
+Plot data points for resid(lm(y ~ z)) and resid(lm(x ~ z)), that is, the values of y and x when z has been "distilled" away from both:
+
+
+```{r}
+ggplot(data, aes(x=x, y=y)) + 
+  geom_smooth(method="lm", fullrange=TRUE) + 
+  geom_point(alpha=.05) +
+  geom_abline(intercept = intercept, slope = x_coef, colour="red", size=1) +
+  geom_abline(intercept = intercept, slope = x_coef) +
+  geom_point(aes(x=resid.2, y=resid.1), color="salmon") +
+  theme_bw()
+```
+
+
+Finally, fit OLS regression on the residuals (notice it's identical to the regression slope for x controlling for z):
+
+
+```{r}
+ggplot(data, aes(x=x, y=y)) + 
+  geom_smooth(method="lm", fullrange=TRUE) + 
+  geom_point(alpha=.05) +
+  geom_abline(intercept = intercept, slope = x_coef, colour="red", size=1) +
+  geom_point(aes(x=resid.2, y=resid.1), color="salmon") +
+  geom_smooth(aes(x=resid.2, y=resid.1), method="lm") +
+  theme_bw()
+```
+
+
+## Wrapping everything in a function
+
+Below I've written a simple function that does all of the above. The point is to help visualize how altering 1) the correlation between x and z, and 2) the slopes of x and z on y affects the model predictions. Feel free to play around with it, but if you break it, you get to keep both parts.
+
+
+```{r}
+OLS_visualizer <- function(slope_x, slope_z, correlation, output="2d") {
+  
+  set.seed(1)
+  data = mvrnorm(n=100, mu=c(0,0), Sigma =  matrix(c(1, correlation, correlation, 1), nrow=2), empirical=TRUE)
+  x = data[, 1]
+  z = data[, 2]
+  correlation <- cor(x, z)
+
+  p1 <- slope_x
+  p2 <- slope_z
+  y <- p1*x + p2*z + rnorm(100, sd=1)
+  
+  # y, given z
+  mod1 <- lm(y ~ z)
+  resid.1 <- resid(mod1)
+  
+  # x1, given x
+  mod2 <- lm(x ~ z)
+  resid.2 <- resid(mod2)
+  
+  dataframe <- data.frame(y=y, x=x, z=z, resid.1 = resid.1, resid.2 = resid.2)
+
+  ggobject <- ggplot(dataframe, aes(x=x, y=y)) + 
+    geom_smooth(method="lm", fullrange=TRUE, aes(color="Not controlling for z"), fill="blue", alpha=.15) + 
+    theme_bw(base_size=13) +
+    geom_point(alpha=.05, aes(color="Not controlling for z")) +
+    geom_point(aes(x=resid.2, y=resid.1, color="Controlling for z"), alpha=.5) +
+    geom_smooth(aes(x=resid.2, y=resid.1, color="Controlling for z"), fill="red", alpha=.15, method="lm") + 
+    labs(title=paste(" Correlation between x and z =", round(correlation,2), "\n", "Regression: y =", slope_x, "*x", "+", slope_z, "*z"),
+         color=NULL) + theme(legend.position="bottom") + 
+    scale_color_manual(values=c("salmon", "blue")) +
+    guides(color=guide_legend(override.aes=list(fill=NA)))
+  
+  plotly_object <- plot_ly(x=x, y=y, z=z, type="scatter3d", mode="markers")
+
+  if (output == "2d") {
+    return(ggobject)
+  } else {
+    return(plotly_object)
+  }
+  
+}
+```
+
+
+If x and z have shared variance and opposing associations with y, controlling for z strengthens the link between x and y:
+
+
+```{r, echo = TRUE}
+OLS_visualizer(2,-2,0.8) #correlation between x and z = 0.8
+```
+
+
+If x and z have shared variance and similar association with y, controlling for z weakens the link between x and y:
+
+
+```{r, echo = TRUE}
+OLS_visualizer(2,2,0.8)
+```
+
+
+If x and z have no shared variance, controlling for z has no effect on the effect of x on y: 
+
+
+```{r, echo = TRUE}
+OLS_visualizer(2,2,0) #correlation between x and z = 0
+OLS_visualizer(2,-2,0)
+OLS_visualizer(0,0,0)
+```
+
+
+If x and z have shared variance but no association with y, controlling for z merely reduces the variability in x:
+
+
+```{r, echo = TRUE}
+OLS_visualizer(0,0,0.8)
+```
+
+
+3d scatterplot:
+
+
+```{r, echo = TRUE}
+OLS_visualizer(2,-2,0.8, "3d")
+
+```

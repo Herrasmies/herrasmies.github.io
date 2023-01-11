@@ -1,0 +1,35 @@
+---
+---
+
+<link rel="stylesheet" href="styles.css" type="text/css">
+
+
+### Editorial- and peer review activity
+
+Currently I'm an editorial board member for <a href="https://www.nature.com/srep/" target="_blank">Scientific Reports</a href> (Psychology). My previous editorial responsibilities include
+
+1) Research topic editor for <a href="https://www.frontiersin.org/research-topics/9288/high-performance-cognition-information-processing-in-complex-skills-expert-performance-and-flow" target="_blank">Frontiers in Psychology</a href>
+2) Associate editor for <a href="https://jeps.efpsa.org/" target="_blank">Journal of European Psychology Students</a href>
+3) Ad hoc academic editor for <a href="https://journals.sagepub.com/home/sgo" target="_blank">Sage OPEN</a href>
+
+
+I've written about 50 peer reviews, excluding reviews of revised manuscripts, for
+
+1) Journal of Gambling Studies
+2) Frontiers in Psychology
+3) International Gambling Studies
+4) Legal and Criminological Psychology
+5) Cognitive Science
+6) International Journal of Human-Computer Studies
+7) Neuropsychiatric Disease and Treatment
+8) Gerontology
+9) IEEE Access
+10) Learning and Individual Differences
+11) Basic and Applied Social Psychology
+12) Nordic Conference on Human-Computer Interaction
+13) Workshop on Socio-Technical Aspects in Security and Trust
+14) Routledge Books (Applied Psychology)
+15) IGI Global
+16) Annual Meeting of the Cognitive Science Society
+17) SAGE Open
+18) Journal of Behavioral Addictions.

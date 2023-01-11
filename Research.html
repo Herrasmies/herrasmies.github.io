@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Research.knit</title>
+
+<script src="site_libs/header-attrs-2.18/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-5.1.0/css/v4-shims.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+<link rel="stylesheet" href="styles.css" type="text/css" />
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Jussi Palomäki</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Research
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="Research.html">Published scientific papers</a>
+    </li>
+    <li>
+      <a href="academic_activity.html">Editorial work and peer review</a>
+    </li>
+    <li class="dropdown-header">TBA</li>
+  </ul>
+</li>
+<li>
+  <a href="Teaching.html">Teaching</a>
+</li>
+<li>
+  <a href="communication.html">Science communication</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Other
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li class="dropdown-header">Teaching materials</li>
+    <li>
+      <a href="adjusting_variables.html">Adjusting for variables in OLS regression</a>
+    </li>
+    <li class="dropdown-header">TBA</li>
+    <li class="divider"></li>
+    <li class="dropdown-header">Content to be added</li>
+    <li class="dropdown-header">TBA</li>
+    <li class="dropdown-header">TBA</li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="contact.html">
+    <span class="fa fa-envelope fa-lg"></span>
+     
+  </a>
+</li>
+<li>
+  <a href="TODO">
+    <span class="fa fa-linkedin fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+
+</div>
+
+
+<p><link rel="stylesheet" href="styles.css" type="text/css"></p>
+<div id="selected-publications" class="section level3">
+<h3>Selected publications</h3>
+<p>To date (11.1.2023), I’ve (co)authored 55 scientific papers, 46 of
+which have been peer-reviewed (18 as first author, 8 as second author,
+and 9 as last author). My work is multidisciplinary, and I have
+published papers focusing, in order of personal importance, on 1)
+gambling, games, and behavioral addictions, 2) decision-making, and
+psychophysiology of emotions and memory, 3) social psychology and ethics
+of artificial intelligence, and 4) psychology of deception.</p>
+<p>Below is a snapshot of my research (OA = open access). For a more
+comprehensive list, see
+<a href="https://scholar.google.com/citations?user=oKOImCYAAAAJ&hl=fi&oi=ao">here</a href>.
+If you want a paper you can’t access, I’ll be happy to email you a
+copy.</p>
+<p><br></p>
+<div id="gambling-games-and-behavioral-addictions"
+class="section level4">
+<h4>Gambling, games, and behavioral addictions</h4>
+<p>OA:
+<a href="https://akjournals.com/view/journals/2006/11/1/article-p75.xml"><b>Palomäki,
+J.</b>, Heiskanen, M., &amp; Castrén, S. (2022). Online 8-week cognitive
+therapy for problem gamblers: The moderating effects of depression
+symptoms and perceived financial control. <i>Journal of Behavioral
+Addictions, 11</i>(1), 75-87.</a href></p>
+<p>OA:
+<a href="https://www.journalofexpertise.org/articles/volume3_issue2/JoE_3_2_Palomaki_etal_earlyview.html"><b>Palomäki,
+J.</b>, Laakasuo, M., Cowley, B. U., &amp; Lappi, O. (2020). Poker as a
+Domain of Expertise. <i>Journal of Expertise, 3</i>(2).</a href></p>
+<p>OA:
+<a href="https://www.sciencedirect.com/science/article/pii/S0747563221002144"><b>Palomäki,
+J.</b>, Tammi, T., Lehtonen, N., Seittenranta, N., Laakasuo, M.,
+Abuhamdeh, S., Lappi, O., &amp; Cowley, B. U. (2021). The link between
+flow and performance is moderated by task experience. <i>Computers in
+Human Behavior</i>, 124, 106891.</a href></p>
+<p>OA:
+<a href="https://onlinelibrary.wiley.com/doi/full/10.1111/jopy.12637"><b>Palomäki,
+J.</b>, Laakasuo, M., Castrén, S., Saastamoinen, J., Kainulainen, T.,
+&amp; Suhonen, N. (2021). Online betting intensity is linked with
+Extraversion and Conscientiousness. <i>Journal of Personality,
+89</i>(5), 1081-1094.</a href></p>
+<p><a href="https://www.tandfonline.com/doi/abs/10.1080/14459795.2013.780631?casa_token=Gn3ZKVCWHqcAAAAA:82NEK2SXJcm-nTXfpemxIUPyrmnQxHNGt6dKYfCMlV6VBjFteBkp_vn0CUnVdiu6lBsZAgMMF6rv"><b>Palomäki,
+J.</b>, Laakasuo, M., &amp; Salmela, M. (2013). ‘This is just so
+unfair!’: A qualitative analysis of loss-induced emotions and tilting in
+on-line poker. <i>International Gambling Studies, 13</i>(2),
+255-270.</a href></p>
+<p><br></p>
+</div>
+<div id="social-psychology-and-moral-psychology-of-robotics"
+class="section level4">
+<h4>Social psychology and moral psychology of robotics</h4>
+<p>OA: <a href="https://www.nature.com/articles/s41467-021-27668-9">Van
+Bavel, J.J., Cichocka, A.,,, + 260 authors, including <b>Palomäki,
+J.</b> (2022). National identity predicts public health support during a
+global pandemic. <i>Nature Communications, 13</i>(1), 1-14.</a href></p>
+<p><a href="https://www.sciencedirect.com/science/article/pii/S0022103122000701">Koverola,
+M., Kunnari, A., Drosinou, M., <b>Palomäki, J.</b>, Hannikainen, I. R.,
+Košová, M. J., … &amp; Laakasuo, M. (2022). Treatments approved, boosts
+eschewed: Moral limits of neurotechnological enhancement. <i>Journal of
+Experimental Social Psychology</i>, 102, 104351.</a href></p>
+<p>OA:
+<a href="https://onlinelibrary.wiley.com/doi/full/10.1002/ejsp.2890">Laakasuo,
+M., <b>Palomäki, J.</b>, Kunnari, A., Rauhala, S., Drosinou, M.,
+Halonen, J., … &amp; Francis, K. B. (2022). Moral psychology of nursing
+robots: Exploring the role of robots in dilemmas of patient autonomy.
+<i>European Journal of Social Psychology</i>. Advance online
+publication.</a href></p>
+<p>OA:
+<a href="https://www.nature.com/articles/s41599-018-0124-6">Laakasuo,
+M., Drosinou, M., Koverola, M., Kunnari, A., Halonen, J., Lehtonen, N.,
+&amp; <b>Palomäki, J.</b> (2018). What makes people approve or condemn
+mind upload technology? Untangling the effects of sexual disgust, purity
+and science fiction familiarity. <i>Palgrave Communications, 4</i>(1),
+1-14.</a href></p>
+<p><br></p>
+</div>
+<div id="decision-making-psychophysiology-of-emotions-and-memory"
+class="section level4">
+<h4>Decision-making, psychophysiology of emotions and memory</h4>
+<p>OA:
+<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8741145/">Cowley,
+B. U., Juurmaa, K., &amp; <b>Palomäki, J.</b> (2022). Reduced power in
+fronto-parietal theta EEG linked to impaired attention-sampling in adult
+ADHD. <i>Eneuro, 9</i>(1).</a href></p>
+<p>OA:
+<a href="https://www.sciencedirect.com/science/article/pii/S2405844021003480">Määttänen,
+I., Henttonen, P., Väliaho, J., <b>Palomäki, J.</b>, Thibault, M.,
+Kallio, J., … &amp; Jokela, M. (2021). Positive affect state is a good
+predictor of movement and stress: combining data from ESM/EMA, mobile
+HRV measurements and trait questionnaires. <i>Heliyon, 7</i>(2),
+e06243.</a href></p>
+<p><a href="https://www.sciencedirect.com/science/article/pii/S1071581918303665?casa_token=IbW1KRZM18IAAAAA:KxZocMXN4FMt55zkADZszxDe7gk3CFmQuX5zjzLGa60eWiGC--XK5HRAu2ufkS_w9b6swaGZug">Kosunen,
+I., <b>Palomäki, J.</b>, Laakasuo, M., Kuikkaniemi, K., Ravaja, N.,
+&amp; Jacucci, G. (2018). Heart-rate sonification biofeedback for poker.
+<i>International Journal of Human-Computer Studies</i>, 120,
+14-21.</a href></p>
+<p>OA:
+<a href="https://onlinelibrary.wiley.com/doi/full/10.1002/ejsp.2890"><b>Palomäki,
+J.</b>, Kivikangas, M., Alafuzoff, A., Hakala, T., &amp; Krause, C. M.
+(2012). Brain oscillatory 4–35 Hz EEG responses during an n-back task
+with complex visual stimuli. <i>Neuroscience Letters, 516</i>(1),
+141-145.</a href></p>
+<p><br></p>
+</div>
+<div id="psychology-of-deception" class="section level4">
+<h4>Psychology of deception</h4>
+<p>OA:
+<a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0157838"><b>Palomäki,
+J.</b>, Yan, J., Modic, D., &amp; Laakasuo, M. (2016). “To Bluff like a
+Man or Fold like a Girl?” –Gender Biased Deceptive Behavior in Online
+Poker. <i>PloS ONE, 11</i>(7): e0157838.</a href></p>
+<p><a href="https://www.sciencedirect.com/science/article/pii/S0191886916302434"><b>Palomäki,
+J.</b>, J., Yan, J., &amp; Laakasuo, M. (2016). Machiavelli as a poker
+mate—A naturalistic behavioural study on strategic deception.
+<i>Personality and Individual Differences</i>, 98, 266-271.</a href></p>
+<p>OA:
+<a href="https://www.tandfonline.com/doi/full/10.1080/23311908.2018.1469579">Modic,
+D., <b>Palomäki, J.</b>, Drosinou, M., &amp; Laakasuo, M. (2018). The
+dark triad and willingness to commit insurance fraud. <i>Cogent
+Psychology, 5</i>(1), 1469579.</a href></p>
+<p>OA:
+<a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0194119">Modic,
+D., Anderson, R., &amp; <b>Palomäki, J.</b> (2018). We will make you
+like our research: The development of a susceptibility-to-persuasion
+scale. <i>PloS ONE, 13</i>(3), e0194119.</a href></p>
+</div>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
