@@ -1,0 +1,9 @@
+"0","ggplot(data, aes(x=x, y=y)) + "
+"0","  geom_smooth(method=""lm"", fullrange=TRUE) + "
+"0","  geom_point(alpha=.05) +"
+"0","  geom_abline(intercept = intercept, slope = x_coef, colour=""red"", size=1) +"
+"0","  geom_point(aes(x=resid.2, y=resid.1), color=""salmon"") +"
+"0","  theme_bw()"
+"2","Error in ggplot(data, aes(x = x, y = y)) : 
+  could not find function ""ggplot""
+"
