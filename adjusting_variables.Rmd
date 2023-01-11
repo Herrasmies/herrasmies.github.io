@@ -71,7 +71,7 @@ summary(model)
 ```
 
 
-Obtain the slope (coefficient) of x and the model intercept (where the slope intersects the y-axis), and visualize both variables:
+Obtain the slope (coefficient) of x and the model intercept (value of y when both x and z = 0), and visualize both variables:
 
 
 ```{r}

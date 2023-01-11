@@ -3,7 +3,7 @@
     "path": "C:/Users/jpgk/Desktop/Henk.koht.nettisivu/herrasmies.github.io/adjusting_variables.Rmd",
     "project_path": "adjusting_variables.Rmd",
     "type": "r_markdown",
-    "hash": "0",
+    "hash": "3587777409",
     "contents": "",
     "dirty": false,
     "created": 1673463101393.0,
@@ -11,14 +11,16 @@
     "relative_order": 7,
     "properties": {
         "source_window_id": "",
-        "Source": "Source"
+        "Source": "Source",
+        "cursorPosition": "73,93",
+        "scrollLine": "63"
     },
     "folds": "",
-    "lastKnownWriteTime": 1673433483,
+    "lastKnownWriteTime": 1673469259,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1673433483,
+    "last_content_update": 1673469259774,
     "read_only": false,
     "read_only_alternatives": []
 }
