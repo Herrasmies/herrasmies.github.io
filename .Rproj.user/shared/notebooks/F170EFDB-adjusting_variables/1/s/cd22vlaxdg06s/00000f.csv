@@ -1,0 +1,11 @@
+"0","ggplot(data, aes(x=x, y=y)) + "
+"0","  geom_smooth(method=""lm"", fullrange=TRUE) + "
+"0","  geom_point() +"
+"0","  theme_bw()"
+"1","[1m[33mError[39m in `ggplot()`:[22m
+[33m![39m   You're passing a function as global data.
+  Have you misspelled the `data` argument in `ggplot()`
+Backtrace:
+[90m 1. [39mggplot2::ggplot(data, aes(x = x, y = y))
+[90m 2. [39m[1m[94mggplot2:::ggplot.function([39m[22mdata, aes(x = x, y = y)[1m[94m)[39m[22m
+"

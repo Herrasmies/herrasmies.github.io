@@ -46,7 +46,7 @@ y <- p1*x + p2*z + rnorm(100, sd=1) # independent effects of x and z, plus noise
 ```
 
 
-Then, calculate linear model residuals "y given z" and "x given z", that is, "what is left of y when we distill away the effect of z or x":
+Then, calculate linear model residuals "y given z" and "x given z". Intuitively these residuals can be seen as the variability of y and x when z has been "distilled away" from them.
 
 
 ```{r}
@@ -70,7 +70,7 @@ summary(model)
 ```
 
 
-Obtain the slope (coefficient) of x and the model intercept (value of y when both x and z = 0), and visualize both variables:
+Obtain the slope of x and the model intercept (value of y when both x and z = 0), and visualize both variables:
 
 
 ```{r}
@@ -93,7 +93,7 @@ Now, focus on the x variable:
 
 ```{r}
 ggplot(data, aes(x=x, y=y)) + 
-  geom_smooth(method="lm", fullrange=TRUE) + 
+  geom_smooth(method="lm") + 
   geom_point() +
   theme_bw()
 ```
@@ -104,7 +104,7 @@ Plot the model prediction abline for x, which is the model prediction controllin
 
 ```{r}
 ggplot(data, aes(x=x, y=y)) + 
-  geom_smooth(method="lm", fullrange=TRUE) + 
+  geom_smooth(method="lm") + 
   geom_point() +
   theme_bw() + 
   geom_abline(intercept = intercept, slope = x_coef, colour="red", size=1)
@@ -116,7 +116,7 @@ Plot data points for resid(lm(y ~ z)) and resid(lm(x ~ z)), that is, the values 
 
 ```{r}
 ggplot(data, aes(x=x, y=y)) + 
-  geom_smooth(method="lm", fullrange=TRUE) + 
+  geom_smooth(method="lm") + 
   geom_point(alpha=.05) +
   geom_abline(intercept = intercept, slope = x_coef, colour="red", size=1) +
   geom_point(aes(x=resid.2, y=resid.1), color="salmon") +
@@ -129,7 +129,7 @@ Finally, fit OLS regression on the residuals (notice it's identical to the regre
 
 ```{r}
 ggplot(data, aes(x=x, y=y)) + 
-  geom_smooth(method="lm", fullrange=TRUE) + 
+  geom_smooth(method="lm") + 
   geom_point(alpha=.05) +
   geom_abline(intercept = intercept, slope = x_coef, colour="red", size=1) +
   geom_point(aes(x=resid.2, y=resid.1), color="salmon") +
@@ -140,7 +140,7 @@ ggplot(data, aes(x=x, y=y)) +
 
 ## Wrapping everything in a function
 
-Below I've written a simple function that does all of the above. The point is to help visualize how altering 1) the correlation between x and z, and 2) the slopes of x and z on y affects the model predictions. Feel free to play around with it, but if you break it, you get to keep both parts.
+Below I've written a simple function that does all of the above. The point is to help visualize how altering 1) the correlation between x and z, and 2) the slopes of x and z on y affects the model predictions. Feel free to play around with it.
 
 
 ```{r}
@@ -166,7 +166,7 @@ OLS_visualizer <- function(slope_x, slope_z, correlation, output="2d") {
   dataframe <- data.frame(y=y, x=x, z=z, resid.1 = resid.1, resid.2 = resid.2)
 
   ggobject <- ggplot(dataframe, aes(x=x, y=y)) + 
-    geom_smooth(method="lm", fullrange=TRUE, aes(color="Not controlling for z"), fill="blue", alpha=.15) + 
+    geom_smooth(method="lm", aes(color="Not controlling for z"), fill="blue", alpha=.15) + 
     theme_bw(base_size=13) +
     geom_point(alpha=.05, aes(color="Not controlling for z")) +
     geom_point(aes(x=resid.2, y=resid.1, color="Controlling for z"), alpha=.5) +
