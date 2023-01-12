@@ -5,7 +5,7 @@ navbar:
   left:
     - text: "Research"
       menu:
-        - text: "Published scientific papers"
+        - text: "Peer-reviewed publications"
           href: Research.html
         - text: "Editorial work and peer review"
           href: academic_activity.html
