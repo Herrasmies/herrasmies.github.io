@@ -3,7 +3,7 @@
     "path": "C:/Users/jpgk/Desktop/Henk.koht.nettisivu/herrasmies.github.io/index.Rmd",
     "project_path": "index.Rmd",
     "type": "r_markdown",
-    "hash": "0",
+    "hash": "2524956018",
     "contents": "",
     "dirty": false,
     "created": 1673463037691.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "11,491",
+        "cursorPosition": "3,43",
         "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1673561494,
+    "lastKnownWriteTime": 1674398537,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1673561494959,
+    "last_content_update": 1674398537078,
     "read_only": false,
     "read_only_alternatives": []
 }
