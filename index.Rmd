@@ -1,7 +1,7 @@
 ---
 ---
 
-<title>Dr. Jussi Palomäki's webpage</title>
+<title>Jussi Palomäki (cognitive scientist and gambling researcher)</title>
 
 <link rel="stylesheet" href="styles.css" type="text/css">
 
