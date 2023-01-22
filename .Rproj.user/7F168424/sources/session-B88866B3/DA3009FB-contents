@@ -37,8 +37,3 @@ output:
   html_document:
     theme: flatly
     css: 'styles.css'
-    
-    
-  # right:
-  #   - icon: fa-question fa-lg
-  #     href: https://example.com
