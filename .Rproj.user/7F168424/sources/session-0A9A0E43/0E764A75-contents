@@ -1,0 +1,126 @@
+---
+title: "Poker variance simulator"
+output: html_document
+date: "2023-02-13"
+runtime: shiny
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+This simulator illustrates the interplay of skill and chance in poker. In the simulator, players’ levels of skill are defined as their win rate, which is the average amount of profit over 100 poker hands played. The standard deviation of a player’s win rate (a measure of outcome variability) can be easily 20 times higher than the win rate itself. The default settings will compare 20 equally skilled hypothetical players playing 200,000 hands each. By assuming both players have somewhat low win rates (on the statistical edge of making longterm profit: 1.5 big blinds per 100 hands with a SD of 75), we observe the situation below (default setting). Outcome variability is clearly a highly significant factor masking a player's "true" skill as defined by the expected long-run winnings (dashed line). This means that while poker differs from games of pure chance (e.g. roulette) or games of skill and chance where long-term profit is unattainable (e.g. blackjack), outcome variability still makes it challenging to empirically estimate the actually skill level of individual players.
+
+To get a more accurate picture of players' actual level of skill, the number of hands played needs to be much higher (try playing around with it), and having a higher win rate doesn't hurt either :).
+
+
+```{r, message=FALSE}
+library(tidyverse)
+```
+
+```{r variance_test, echo=FALSE}
+
+inputPanel(
+  sliderInput("hands", label = "Number of hands x 100:",
+              min = 1, max = 1000, value = 200, step = 1),
+  
+  sliderInput("winrate", label = "Winrate (bb / 100):",
+              min = 0, max = 20, value = 1.5, step = 1),
+  
+  sliderInput("SD", label = "Standard deviation of winrate:",
+              min = 1, max = 150, value = 75, step = 1),
+  
+  sliderInput("players", label = "Number of players",
+              min = 1, max = 1000, value = 20, step = 1)
+)
+
+variance_simulator <- function(hands, winrate, SD, players) {
+  
+  simulations = data.frame(nrow = 0)
+  cumEV = cumsum(rep(winrate, hands))
+  cumSD = sqrt(cumsum(rep(SD^2, hands))) #first convert to variance, then convert the sum back to SD
+  lower <- qnorm(0.025, cumEV, cumSD)
+  upper <- qnorm(0.975, cumEV, cumSD)
+  confidence <- data.frame(cbind(lower, upper))
+  confidence$ID <- seq.int(nrow(confidence))
+  
+  for (i in 1:players) {
+    test <- rnorm(hands, mean=winrate, sd=SD)
+    test <- data.frame(run = test)
+    names(test)[1] <- paste("run",i,sep="")
+    simulations <- cbind(cumsum(test), simulations)
+    simulations$nrow <- NULL
+    
+  }
+  
+  simulations$ID <- seq.int(nrow(simulations))
+  simulations.long <- simulations %>% gather(key, value, -ID)
+  
+  
+  return(ggplot() + 
+           geom_line(data = simulations.long, aes(x = ID, y = value, colour = key)) + 
+           geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.8) + 
+           geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.8) + 
+           geom_abline(intercept = 0, slope = winrate, linetype="dashed", size=1) +
+           xlab("Hands played") + ylab("Big blinds won") +
+           scale_x_continuous(labels=function(x)x*100) +
+           theme_bw(base_size=14) +
+           guides(color="none"))
+           
+}
+
+renderPlot({
+  variance_simulator(input$hands, input$winrate, input$SD, input$players)
+  
+})
+
+
+#EXAMPLES FOR LEARNING PURPOSES:
+
+# renderPlot({
+#   hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
+#        xlab = "Duration (minutes)", main = "Geyser eruption duration")
+#   
+#   dens <- density(faithful$eruptions, adjust = input$bw_adjust)
+#   lines(dens, col = "blue")
+# })
+
+
+# inputPanel(
+#   selectInput("n_breaks", label = "Number of bins:",
+#               choices = c(10, 20, 35, 50), selected = 20),
+#   
+#   sliderInput("bw_adjust", label = "Bandwidth adjustment:",
+#               min = 0.2, max = 2, value = 1, step = 0.2)
+# )
+# 
+# renderPlot({
+#   hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
+#        xlab = "Duration (minutes)", main = "Geyser eruption duration")
+#   
+#   dens <- density(faithful$eruptions, adjust = input$bw_adjust)
+#   lines(dens, col = "blue")
+# })
+
+```
+
+
+## Embedded Application
+
+It's also possible to embed an entire Shiny application within an R Markdown document using the `shinyAppDir` function. This example embeds a Shiny application located in another directory:
+
+```{r tabsets, echo=FALSE}
+shinyAppDir(
+  system.file("examples/06_tabsets", package = "shiny"),
+  options = list(
+    width = "100%", height = 550
+  )
+)
+```
+
+Note the use of the `height` parameter to determine how much vertical space the embedded application should occupy.
+
+You can also use the `shinyApp` function to define an application inline rather then in an external directory.
+
+In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components.
+
+
+

@@ -1,0 +1,27 @@
+"0","library(tidyverse)
+library(foreign)
+library(car)
+"
+"2","Loading required package: carData
+"
+"2","
+Attaching package: ‘car’
+
+"
+"2","The following object is masked from ‘package:dplyr’:
+
+    recode
+
+"
+"2","The following object is masked from ‘package:purrr’:
+
+    some
+
+"
+"0","library(ggplot2)"
+"0","library(dplyr)"
+"0","library(tidyr)"
+"0","library(tibble)"
+"0","library(stargazer)"
+"2","Error in library(stargazer) : there is no package called ‘stargazer’
+"

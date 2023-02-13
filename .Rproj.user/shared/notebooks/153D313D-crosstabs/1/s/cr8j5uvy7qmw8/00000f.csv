@@ -1,0 +1,8 @@
+"0","crosstabs %>% 
+  group_by(sukupuoli, ko_alco) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  dplyr::mutate(freq = count / sum(count))
+"
+"2","Error in ungroup(.) : could not find function ""ungroup""
+"
