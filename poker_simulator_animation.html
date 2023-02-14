@@ -325,15 +325,20 @@ $(document).ready(function () {
 
 <pre class="r"><code>library(tidyverse)
 library(gganimate)
-library(transformr)</code></pre>
+library(transformr)
+library(plotly)</code></pre>
 <p>This simulator illustrates the interplay of skill and chance in
-poker. In the simulator, players’ levels of skill are defined as their
-win rate, which is the average amount of profit (or loss) over 100 poker
-hands played. The standard deviation (SD) of a player’s win rate can be
-more than 20 times higher than the win rate itself. By assuming the
-players have somewhat low win rates (e.g., 1.5 big blinds per 100 hands
-with a SD of 75), we observe the situation below over the course of
-30,000 hands. Outcome variability is clearly a highly significant factor
+poker. In the simulator, individual players are represented by the
+colored lines. The players’ levels of skill are defined as their win
+rate, which is the average amount of profit (or loss) over 100 poker
+hands played and represented by the dashed straight line. The standard
+deviation (SD) of a player’s win rate can be more than 20 times higher
+than the win rate itself. The dashed curved lines represent the 2.5% and
+97.5% percentiles (the 95% confidence interval) of the cumulative
+expected winnings at any given point in time. By assuming the players
+have somewhat low win rates (e.g., 1.5 big blinds per 100 hands with a
+SD of 75), we observe the situation below over the course of 50,000
+hands. Outcome variability is clearly a highly significant factor
 masking a player’s “true” skill as defined by the expected long-run
 winnings (dashed line). This means that while poker differs from games
 of pure chance (e.g. roulette) or games of skill and chance where
@@ -374,10 +379,12 @@ level of individual players.</p>
     theme_bw(base_size=14) +
     guides(color=&quot;none&quot;)
   
+
   return(plot)
+  
 }
 
-variance_simulator(300, 1.5, 75, 30)</code></pre>
+variance_simulator(500, 1.5, 75, 30)</code></pre>
 <p><img src="poker_simulator_animation_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
 <p>In the animation below, we’re simulating 50,000 poker hands for three
 equally skilled players who are all expected to win 1.5 big blinds per
@@ -385,9 +392,6 @@ equally skilled players who are all expected to win 1.5 big blinds per
 profit (or loss) over the course of 50,000 hands are typically very
 different for these three players, despite them being mathematically
 equally skilled.</p>
-<p>The dashed curved lines represent the 2.5% and 97.5% percentiles (the
-95% confidence interval) of the distribution of individual players’ win
-rate at any given point in time.</p>
 <pre class="r"><code>animation &lt;- variance_simulator(500, 1.5, 75, 3) + 
   geom_segment(aes(xend = 530, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
