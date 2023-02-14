@@ -10,9 +10,8 @@
 
 
 
-<meta name="date" content="2023-02-13" />
 
-<title>Poker variance simulator</title>
+<title>Poker variance simulator (c) Jussi Palomäki, 2017-2023</title>
 
 <script src="site_libs/header-attrs-2.18/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -317,8 +316,8 @@ $(document).ready(function () {
 
 
 
-<h1 class="title toc-ignore">Poker variance simulator</h1>
-<h4 class="date">2023-02-13</h4>
+<h1 class="title toc-ignore">Poker variance simulator (c) Jussi
+Palomäki, 2017-2023</h1>
 
 </div>
 
@@ -326,26 +325,9 @@ $(document).ready(function () {
 <pre class="r"><code>library(tidyverse)
 library(gganimate)
 library(transformr)
-library(plotly)</code></pre>
-<p>This simulator illustrates the interplay of skill and chance in
-poker. In the simulator, individual players are represented by the
-colored lines. The players’ levels of skill are defined as their win
-rate, which is the average amount of profit (or loss) over 100 poker
-hands played and represented by the dashed straight line. The standard
-deviation (SD) of a player’s win rate can be more than 20 times higher
-than the win rate itself. The dashed curved lines represent the 2.5% and
-97.5% percentiles (the 95% confidence interval) of the cumulative
-expected winnings at any given point in time. By assuming the players
-have somewhat low win rates (e.g., 1.5 big blinds per 100 hands with a
-SD of 75), we observe the situation below over the course of 50,000
-hands. Outcome variability is clearly a highly significant factor
-masking a player’s “true” skill as defined by the expected long-run
-winnings (dashed line). This means that while poker differs from games
-of pure chance (e.g. roulette) or games of skill and chance where
-long-term profit is unattainable (e.g. blackjack), outcome variability
-still makes it challenging to empirically estimate the actually skill
-level of individual players.</p>
-<pre class="r"><code>variance_simulator &lt;- function(hands, winrate, SD, players) {
+library(plotly)
+
+variance_simulator &lt;- function(hands, winrate, SD, players, topbottom=F) {
   
   simulations = data.frame(nrow = 0)
   cumEV = cumsum(rep(winrate, hands))
@@ -358,18 +340,23 @@ level of individual players.</p>
   for (i in 1:players) {
     test &lt;- rnorm(hands, mean=winrate, sd=SD)
     test &lt;- data.frame(run = test)
-    names(test)[1] &lt;- paste(&quot;Player &quot;,i,sep=&quot;&quot;)
-    simulations &lt;- cbind(cumsum(test), simulations)
+    #names(test)[1] &lt;- paste(&quot;Player &quot;,i,sep=&quot;&quot;)
+    names(test)[1] &lt;- i
+    simulations &lt;- cbind(simulations, cumsum(test))
     simulations$nrow &lt;- NULL
-    
   }
   
   simulations$ID &lt;- seq.int(nrow(simulations))
+
+  max_value &lt;- which(tail(simulations, 1) == max(tail(simulations, 1))) #Among the last row, which column has the highest value
+  min_value &lt;- which(tail(simulations, 1) == min(tail(simulations, 1))) #Among the last row, which column has the lowest value
   simulations.long &lt;- simulations %&gt;% 
     gather(key, value, -ID) %&gt;%
     dplyr::mutate(profit = factor(ifelse(value &gt; cumEV, 1, 0)))
   
-  plot &lt;- ggplot(data=simulations.long, aes(ID, value, group=key)) + #group here required for complex animation
+  #Plot all &quot;players&quot;
+  plot &lt;- simulations.long %&gt;%
+    ggplot(aes(ID, value, group=key)) + #group here required for complex animation
     geom_line(aes(colour = key)) +
     geom_line(data = confidence, aes(x = ID, y = lower), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
     geom_line(data = confidence, aes(x = ID, y = upper), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
@@ -378,32 +365,72 @@ level of individual players.</p>
     scale_x_continuous(labels=function(x)x*100) +
     theme_bw(base_size=14) +
     guides(color=&quot;none&quot;)
-  
 
-  return(plot)
   
+  #Plot only the top and bottom &quot;players&quot;
+  plot2 &lt;- simulations.long %&gt;%
+    dplyr::filter(key == max_value | key == min_value) %&gt;%
+    dplyr::mutate(key = factor(key, labels = c(&quot;Best\nluck&quot;, &quot;Worst\nluck&quot;))) %&gt;%
+    ggplot(aes(ID, value, group=key)) +
+    geom_line(aes(colour = key)) +
+    geom_line(data = confidence, aes(x = ID, y = lower), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
+    geom_line(data = confidence, aes(x = ID, y = upper), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
+    geom_abline(intercept = 0, slope = winrate, linetype=&quot;dashed&quot;, size=1) +
+    xlab(&quot;Hands played&quot;) + ylab(&quot;Big blinds won&quot;) +
+    scale_x_continuous(labels=function(x)x*100) +
+    theme_bw(base_size=14) +
+    guides(color=&quot;none&quot;)
+    
+  
+  if (topbottom == F) {
+    return(plot) 
+    } 
+  else {
+    return(plot2)
+    }
 }
 
-variance_simulator(500, 1.5, 75, 30)</code></pre>
-<p><img src="poker_simulator_animation_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
-<p>In the animation below, we’re simulating 50,000 poker hands for three
-equally skilled players who are all expected to win 1.5 big blinds per
-100 hands (with an SD of 75). As can be seen, the individual paths to
-profit (or loss) over the course of 50,000 hands are typically very
-different for these three players, despite them being mathematically
-equally skilled.</p>
-<pre class="r"><code>animation &lt;- variance_simulator(500, 1.5, 75, 3) + 
-  geom_segment(aes(xend = 530, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
+#variance_simulator(500, 1.5, 75, 30)</code></pre>
+<p>This simulator illustrates the interplay of skill and chance in
+poker. The hypothetical players’ levels of skill are defined as their
+winrate, which is the average amount of profit (or loss) over 100 poker
+hands played and represented by the dashed straight line. The standard
+deviation (SD) of every player’s winrate is set as 75, which is normal
+in No Limit Hold’em poker (but is higher in other formats like Pot Limit
+Omaha). The dashed curved lines represent the 2.5% and 97.5% percentiles
+(the 95% confidence interval) of the cumulative expected winnings at any
+given point in time. The players have positive but low winrates (1.5 big
+blinds per 100 hands), and the simulations runs through 50,000 hands
+(i.e. 50,000 rounds of play in poker). For clarity, only the top and
+bottom earning players are visualized. Since both players have
+<b>identical skill</b>, their difference in big blinds won must be
+attributed to variance alone, or, in layman’s terms, <b>luck</b>. Thus,
+the difference between the two curves is a direct illustration of the
+role of luck in the game, given a relatively low sample of 50,000 hands,
+and the relatively low winrate of 1.5 big blinds per 100 hands of
+play.</p>
+<p><b>TL;DR:</b> 30 poker players with the same amount of skill play
+poker for 50,000 hands. The winnings/losings for the one with the
+<b>best luck</b> and the one with the <b>worst luck</b> are
+visualized.</p>
+<pre class="r"><code>animation &lt;- variance_simulator(500, 1.5, 75, 30, topbottom=T) + 
+  geom_segment(aes(xend = 520, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
   geom_text(aes(x = 500, label = key, color=profit), hjust = 0) +
   #geom_text(aes(x = 500, label = round(value, -2), color=profit), vjust = -0.30, hjust = 0) +
-  scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;, &quot;purple&quot;)) +
+  scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
   transition_reveal(ID) +
   coord_cartesian(clip = &#39;off&#39;)
 
 animate(animation, duration = 25, fps = 10)</code></pre>
 <p><img
-src="poker_simulator_animation_files/figure-html/unnamed-chunk-3-1.gif" /><!-- --></p>
+src="poker_simulator_animation_files/figure-html/unnamed-chunk-2-1.gif" /><!-- --></p>
+<p>Below, I’ve rerun the simulation (hands = 50k, winrate = 1.5, SD of
+winrate = 75, players = 30) without animation, and visualized the entire
+spread of the observations.</p>
+<pre class="r"><code>variance_simulator(500, 1.5, 75, 30)</code></pre>
+<p><img src="poker_simulator_animation_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<pre class="r"><code>#Credit: https://github.com/thomasp85/gganimate/wiki/Temperature-time-series</code></pre>
 
 
 
