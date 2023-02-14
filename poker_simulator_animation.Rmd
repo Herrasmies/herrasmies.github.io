@@ -1,5 +1,6 @@
 ---
-title: "Poker variance simulator (c) Jussi Palomäki, 2017-2023"
+title: "Poker variance simulator"
+author: "(c) Jussi Palomäki, 2017-2023"
 output:
   html_document:
     code_folding: hide
@@ -101,6 +102,6 @@ Below, I've rerun the simulation (hands = 50k, winrate = 1.5, SD of winrate = 75
 
 ```{r}
 variance_simulator(500, 1.5, 75, 30)
-
-#Credit: https://github.com/thomasp85/gganimate/wiki/Temperature-time-series
 ```
+
+Credit: https://github.com/thomasp85/gganimate/wiki/Temperature-time-series
