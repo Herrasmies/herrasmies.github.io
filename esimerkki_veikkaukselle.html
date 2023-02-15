@@ -12,7 +12,7 @@
 <meta name="author" content="(c) Jussi Palomäki, 2023" />
 
 
-<title>Visualization of volatility and expected value</title>
+<title>Rahapelien odotusarvon ja volatiliteetin visualisointi</title>
 
 <script src="site_libs/header-attrs-2.18/header-attrs.js"></script>
 <script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
@@ -393,8 +393,8 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Visualization of volatility and expected
-value</h1>
+<h1 class="title toc-ignore">Rahapelien odotusarvon ja volatiliteetin
+visualisointi</h1>
 <h4 class="author">(c) Jussi Palomäki, 2023</h4>
 
 </div>
@@ -490,8 +490,9 @@ volatility_simulator &lt;- function(hours, ev, SD, players, topbottom=F, volatil
 }</code></pre>
 <div id="matala-volatiliteetti" class="section level2">
 <h2>Matala volatiliteetti</h2>
-<p>Pelatessasi 100 tuntia matalan volatiliteetin pelejä, rahoillesi käy
-hyvällä (“Onnekkain”) ja huonolla (“Epäonnekkain”) tuurilla näin:</p>
+<p>Jos sinä ja 99 kaveriasi pelaatte kaikki 100 tuntia matalan
+volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy
+näin:</p>
 <pre class="r"><code>animation &lt;- volatility_simulator(100, -1, 5, 100, T) + 
   geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
@@ -507,8 +508,8 @@ src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-2-1.gif" /><!-- -->
 </div>
 <div id="keskitason-volatiliteetti" class="section level2">
 <h2>Keskitason volatiliteetti</h2>
-<p>Pelatessasi 100 tuntia keskitason volatiliteetin pelejä, rahoillesi
-käy hyvällä (“Onnekkain”) ja huonolla (“Epäonnekkain”) tuurilla
+<p>Jos sinä ja 99 kaveriasi pelaatte kaikki 100 tuntia keskitason
+volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy
 näin:</p>
 <pre class="r"><code>animation &lt;- volatility_simulator(100, -1, 5, 100, T, &quot;med&quot;) + 
   geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
@@ -525,8 +526,9 @@ src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-3-1.gif" /><!-- -->
 </div>
 <div id="korkea-volatiliteetti" class="section level2">
 <h2>Korkea volatiliteetti</h2>
-<p>Pelatessasi 100 tuntia korkean volatiliteetin pelejä, rahoillesi käy
-hyvällä (“Onnekkain”) ja huonolla (“Epäonnekkain”) tuurilla näin:</p>
+<p>Jos sinä ja 99 kaveriasi pelaatte kaikki 100 tuntia korkean
+volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy
+näin:</p>
 <pre class="r"><code>animation &lt;- volatility_simulator(100, -1, 5, 100, T, &quot;high&quot;) + 
   geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +

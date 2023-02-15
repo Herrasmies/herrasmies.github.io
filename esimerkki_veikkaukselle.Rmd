@@ -1,5 +1,5 @@
 ---
-title: "Visualization of volatility and expected value"
+title: "Rahapelien odotusarvon ja volatiliteetin visualisointi"
 author: "(c) Jussi Palomäki, 2023"
 output:
   html_document:
@@ -105,7 +105,7 @@ volatility_simulator <- function(hours, ev, SD, players, topbottom=F, volatility
 
 ## Matala volatiliteetti
 
-Pelatessasi 100 tuntia matalan volatiliteetin pelejä, rahoillesi käy hyvällä ("Onnekkain") ja huonolla ("Epäonnekkain") tuurilla näin:
+Jos sinä ja 99 kaveriasi pelaatte kaikki 100 tuntia matalan volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
 animation <- volatility_simulator(100, -1, 5, 100, T) + 
   geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = 'grey') + 
@@ -121,7 +121,7 @@ animate(animation, duration = 15, fps = 10)
 
 ## Keskitason volatiliteetti
 
-Pelatessasi 100 tuntia keskitason volatiliteetin pelejä, rahoillesi käy hyvällä ("Onnekkain") ja huonolla ("Epäonnekkain") tuurilla näin:
+Jos sinä ja 99 kaveriasi pelaatte kaikki 100 tuntia keskitason volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
 animation <- volatility_simulator(100, -1, 5, 100, T, "med") + 
   geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = 'grey') + 
@@ -137,7 +137,7 @@ animate(animation, duration = 15, fps = 10)
 
 ## Korkea volatiliteetti
 
-Pelatessasi 100 tuntia korkean volatiliteetin pelejä, rahoillesi käy hyvällä ("Onnekkain") ja huonolla ("Epäonnekkain") tuurilla näin:
+Jos sinä ja 99 kaveriasi pelaatte kaikki 100 tuntia korkean volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
 animation <- volatility_simulator(100, -1, 5, 100, T, "high") + 
   geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = 'grey') + 
