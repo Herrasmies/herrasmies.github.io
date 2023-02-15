@@ -34,10 +34,12 @@ variance_simulator <- function(hands, winrate, SD, players, topbottom=F) {
     simulations$nrow <- NULL
   }
   
-  simulations$ID <- seq.int(nrow(simulations))
 
   max_value <- which(tail(simulations, 1) == max(tail(simulations, 1))) #Among the last row, which column has the highest value
   min_value <- which(tail(simulations, 1) == min(tail(simulations, 1))) #Among the last row, which column has the lowest value
+  
+  simulations$ID <- seq.int(nrow(simulations))
+  
   simulations.long <- simulations %>% 
     gather(key, value, -ID) %>%
     dplyr::mutate(profit = factor(ifelse(value > cumEV, 1, 0)))
@@ -58,7 +60,8 @@ variance_simulator <- function(hands, winrate, SD, players, topbottom=F) {
   #Plot only the top and bottom "players"
   plot2 <- simulations.long %>%
     dplyr::filter(key == max_value | key == min_value) %>%
-    dplyr::mutate(key = factor(key, labels = c("Best\nluck", "Worst\nluck"))) %>%
+    dplyr::mutate(key = factor(key, levels = c(max_value, min_value),
+                               labels = c("Best\nluck", "Worst\nluck"))) %>%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = key)) +
     geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
@@ -91,7 +94,7 @@ animation <- variance_simulator(500, 1.5, 75, 30, topbottom=T) +
   geom_point(size=2) +
   geom_text(aes(x = 500, label = key, color=profit), hjust = 0) +
   #geom_text(aes(x = 500, label = round(value, -2), color=profit), vjust = -0.30, hjust = 0) +
-  scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
+  scale_color_manual(values=c("red", "darkgreen", "lightblue", "salmon")) +
   transition_reveal(ID) +
   coord_cartesian(clip = 'off')
 

@@ -347,10 +347,12 @@ variance_simulator &lt;- function(hands, winrate, SD, players, topbottom=F) {
     simulations$nrow &lt;- NULL
   }
   
-  simulations$ID &lt;- seq.int(nrow(simulations))
 
   max_value &lt;- which(tail(simulations, 1) == max(tail(simulations, 1))) #Among the last row, which column has the highest value
   min_value &lt;- which(tail(simulations, 1) == min(tail(simulations, 1))) #Among the last row, which column has the lowest value
+  
+  simulations$ID &lt;- seq.int(nrow(simulations))
+  
   simulations.long &lt;- simulations %&gt;% 
     gather(key, value, -ID) %&gt;%
     dplyr::mutate(profit = factor(ifelse(value &gt; cumEV, 1, 0)))
@@ -371,7 +373,8 @@ variance_simulator &lt;- function(hands, winrate, SD, players, topbottom=F) {
   #Plot only the top and bottom &quot;players&quot;
   plot2 &lt;- simulations.long %&gt;%
     dplyr::filter(key == max_value | key == min_value) %&gt;%
-    dplyr::mutate(key = factor(key, labels = c(&quot;Best\nluck&quot;, &quot;Worst\nluck&quot;))) %&gt;%
+    dplyr::mutate(key = factor(key, levels = c(max_value, min_value),
+                               labels = c(&quot;Best\nluck&quot;, &quot;Worst\nluck&quot;))) %&gt;%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = key)) +
     geom_line(data = confidence, aes(x = ID, y = lower), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
@@ -419,7 +422,7 @@ visualized.</p>
   geom_point(size=2) +
   geom_text(aes(x = 500, label = key, color=profit), hjust = 0) +
   #geom_text(aes(x = 500, label = round(value, -2), color=profit), vjust = -0.30, hjust = 0) +
-  scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
+  scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;lightblue&quot;, &quot;salmon&quot;)) +
   transition_reveal(ID) +
   coord_cartesian(clip = &#39;off&#39;)
 

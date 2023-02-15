@@ -1,0 +1,104 @@
+---
+title: "Visualization of volatility and expected value"
+author: "(c) Jussi Palomäki, 2023"
+output:
+  html_document:
+    code_folding: hide
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(include = TRUE, echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r, message=FALSE}
+library(tidyverse)
+library(gganimate)
+library(transformr)
+library(plotly)
+
+volatility_simulator <- function(hours, ev, SD, players, topbottom=F) {
+  
+  simulations = data.frame(nrow = 0)
+  cumEV = cumsum(rep(ev, hours))
+  cumSD = sqrt(cumsum(rep(SD^2, hours))) #first convert to variance, then convert the sum back to SD
+  lower <- qnorm(0.025, cumEV, cumSD)
+  upper <- qnorm(0.975, cumEV, cumSD)
+  confidence <- data.frame(cbind(lower, upper))
+  confidence$ID <- seq.int(nrow(confidence))
+  
+  for (i in 1:players) {
+    test <- rnorm(hours, mean=ev, sd=SD)
+    test <- data.frame(run = test)
+    #names(test)[1] <- paste("Player ",i,sep="")
+    names(test)[1] <- i
+    simulations <- cbind(simulations, cumsum(test))
+    simulations$nrow <- NULL
+  }
+
+  max_value <- which(tail(simulations, 1) == max(tail(simulations, 1))) #Among the last row, which column has the highest value
+  min_value <- which(tail(simulations, 1) == min(tail(simulations, 1))) #Among the last row, which column has the lowest value
+  
+  simulations$ID <- seq.int(nrow(simulations))
+  
+  simulations.long <- simulations %>% 
+    gather(key, value, -ID) %>%
+    dplyr::mutate(profit = factor(ifelse(value > cumEV, 1, 0)))
+  
+  #Plot all "players"
+  plot <- simulations.long %>%
+    ggplot(aes(ID, value, group=key)) + #group here required for complex animation
+    geom_line(aes(colour = key)) +
+    geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    geom_abline(intercept = 0, slope = ev, linetype="dashed", size=1) +
+    xlab("Pelatut tunnit") + ylab("Voitettu raha (euroa)") +
+    theme_bw(base_size=14) +
+    guides(color="none")
+
+  
+  #Plot only the top and bottom "players"
+  plot2 <- simulations.long %>%
+    dplyr::filter(key == max_value | key == min_value) %>%
+    dplyr::mutate(key = factor(key, levels = c(max_value, min_value),
+                               labels = c("Onnekkain", "Epäonnekkain"))) %>%
+    ggplot(aes(ID, value, group=key)) +
+    geom_line(aes(colour = key)) +
+    geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    geom_abline(intercept = 0, slope = ev, linetype="dashed", size=1) +
+    xlab("Pelatut tunnit") + ylab("Voitettu raha (euroa)") +
+    theme_bw(base_size=14) +
+    guides(color="none")
+    
+  
+  if (topbottom == F) {
+    return(plot) 
+    } 
+  else {
+    return(plot2)
+    }
+}
+```
+
+
+##Korkea volatiliteetti
+```{r}
+volatility_simulator(100, -1, 5, 100, T)
+```
+
+##Matala volatiliteetti
+```{r}
+volatility_simulator(100, -1, 1, 100, T)
+```
+
+
+```{r}
+animation <- volatility_simulator(100, -1, 5, 100, T) + 
+  geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = 'grey') + 
+  geom_point(size=2) +
+  geom_text(aes(x = 100, label = key, color=profit), hjust = 0) +
+  scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
+  transition_reveal(ID) +
+  coord_cartesian(clip = 'off')
+
+animate(animation, duration = 25, fps = 10)
+```
