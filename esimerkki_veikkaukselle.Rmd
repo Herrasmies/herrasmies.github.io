@@ -15,7 +15,7 @@ library(gganimate)
 library(transformr)
 library(plotly)
 
-volatility_simulator <- function(hours, ev, SD, players, topbottom=F) {
+volatility_simulator <- function(hours, ev, SD, players, topbottom=F, volatility="low") {
   
   simulations = data.frame(nrow = 0)
   cumEV = cumsum(rep(ev, hours))
@@ -26,9 +26,25 @@ volatility_simulator <- function(hours, ev, SD, players, topbottom=F) {
   confidence$ID <- seq.int(nrow(confidence))
   
   for (i in 1:players) {
-    test <- rnorm(hours, mean=ev, sd=SD)
+    
+    if (volatility=="high") {
+      test <- data.frame(x = rnorm(hours, mean=ev, sd=SD))
+      test$x[sample(nrow(test), hours*0.05)] <- test$x[sample(nrow(test), hours*0.05)] + 50 #add 50 to 5% of hours
+      total_added <- hours*0.05*50
+      test$x <- test$x - total_added/hours #evenly subtract the added EV above (i.e. hours * 0.05 * 50 euros) ## NOTE!!! The subtracted number of elements needs to be lower than the number of hours so that it totals hours*0.05*50, so for 250 --> subtract 2.5
+
+    }
+    else if (volatility == "med") {
+      test <- data.frame(x = rnorm(hours, mean=ev, sd=SD))
+      test$x[sample(nrow(test), hours*0.20)] <- test$x[sample(nrow(test), hours*0.20)] + 5
+      total_added <- hours*0.2*5
+      test$x <- test$x - total_added/hours
+    }
+    else {
+      test <- rnorm(hours, mean=ev, sd=SD)
+    }
+    
     test <- data.frame(run = test)
-    #names(test)[1] <- paste("Player ",i,sep="")
     names(test)[1] <- i
     simulations <- cbind(simulations, cumsum(test))
     simulations$nrow <- NULL
@@ -82,7 +98,8 @@ volatility_simulator <- function(hours, ev, SD, players, topbottom=F) {
 
 ##Korkea volatiliteetti
 ```{r}
-volatility_simulator(100, -1, 5, 100, T)
+#hours, ev, SD, players
+volatility_simulator(100, -1, 5, 100, T, "med")
 ```
 
 ##Matala volatiliteetti
