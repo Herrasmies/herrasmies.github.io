@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="(c) Jussi Palomäki, 2023" />
+
+
+<title>Visualization of volatility and expected value</title>
+
+<script src="site_libs/header-attrs-2.18/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<script src="site_libs/navigation-1.1/codefolding.js"></script>
+<link href="site_libs/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-5.1.0/css/v4-shims.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+<link rel="stylesheet" href="styles.css" type="text/css" />
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+<style type="text/css">
+.code-folding-btn { margin-bottom: 4px; }
+</style>
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Jussi Palomäki</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Research
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="Research.html">Peer-reviewed publications</a>
+    </li>
+    <li>
+      <a href="academic_activity.html">Editorial work and peer review</a>
+    </li>
+    <li class="dropdown-header">TBA</li>
+  </ul>
+</li>
+<li>
+  <a href="Teaching.html">Teaching</a>
+</li>
+<li>
+  <a href="communication.html">Science communication</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Other
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li class="dropdown-header">Miscellaneous teaching materials</li>
+    <li>
+      <a href="adjusting_variables.html">Adjusting for variables in OLS regression</a>
+    </li>
+    <li>
+      <a href="poker_simulator_animation.html">Poker variance simulator</a>
+    </li>
+    <li class="divider"></li>
+    <li class="dropdown-header">Content to be added</li>
+    <li class="dropdown-header">TBA</li>
+    <li class="dropdown-header">TBA</li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="contact.html">
+    <span class="fa fa-envelope fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+<div class="btn-group pull-right float-right">
+<button type="button" class="btn btn-default btn-xs btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span>Code</span> <span class="caret"></span></button>
+<ul class="dropdown-menu dropdown-menu-right" style="min-width: 50px;">
+<li><a id="rmd-show-all-code" href="#">Show All Code</a></li>
+<li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li>
+</ul>
+</div>
+
+
+
+<h1 class="title toc-ignore">Visualization of volatility and expected
+value</h1>
+<h4 class="author">(c) Jussi Palomäki, 2023</h4>
+
+</div>
+
+
+<pre class="r"><code>library(tidyverse)
+library(gganimate)
+library(transformr)
+
+volatility_simulator &lt;- function(hours, ev, SD, players, topbottom=F, volatility=&quot;low&quot;) {
+  
+  simulations = data.frame(nrow = 0)
+  cumEV = cumsum(rep(ev, hours))
+  cumSD = sqrt(cumsum(rep(SD^2, hours))) #first convert to variance, then convert the sum back to SD
+  lower &lt;- qnorm(0.025, cumEV, cumSD)
+  upper &lt;- qnorm(0.975, cumEV, cumSD)
+  confidence &lt;- data.frame(cbind(lower, upper))
+  confidence$ID &lt;- seq.int(nrow(confidence))
+  
+  for (i in 1:players) {
+    
+    #High volatility: smaller frequent wins, larger rare wins (50)
+    if (volatility==&quot;high&quot;) {
+      test &lt;- data.frame(x = rnorm(hours, mean=ev, sd=SD))
+      test$x[sample(nrow(test), hours*0.05)] &lt;- test$x[sample(nrow(test), hours*0.05)] + 100 #add 50 to 5% of hours
+      total_added &lt;- hours*0.05*100
+      test$x &lt;- test$x - total_added/hours #evenly subtract the added EV above (i.e. hours * 0.05 * 50 euros) ## NOTE!!! The subtracted number of elements needs to be lower than the number of hours so that it totals hours*0.05*50, so for 250 --&gt; subtract 2.5
+    }
+    
+    #Medium volatility: semi-small frequent wins, medium rare wins (5)
+    else if (volatility == &quot;med&quot;) {
+      test &lt;- data.frame(x = rnorm(hours, mean=ev, sd=SD))
+      test$x[sample(nrow(test), hours*0.20)] &lt;- test$x[sample(nrow(test), hours*0.20)] + 30
+      total_added &lt;- hours*0.2*30
+      test$x &lt;- test$x - total_added/hours
+    }
+    
+    #Low volatility: medium frequent wins
+    else {
+      test &lt;- rnorm(hours, mean=ev, sd=SD)
+    }
+    
+    test &lt;- data.frame(run = test)
+    names(test)[1] &lt;- i
+    simulations &lt;- cbind(simulations, cumsum(test))
+    simulations$nrow &lt;- NULL
+  }
+
+  max_value &lt;- which(tail(simulations, 1) == max(tail(simulations, 1))) #Among the last row, which column has the highest value
+  min_value &lt;- which(tail(simulations, 1) == min(tail(simulations, 1))) #Among the last row, which column has the lowest value
+  
+  simulations$ID &lt;- seq.int(nrow(simulations))
+  
+  simulations.long &lt;- simulations %&gt;% 
+    gather(key, value, -ID) %&gt;%
+    dplyr::mutate(profit = factor(ifelse(value &gt; 0, 1, 0))) #Pelaaja voitolla vs. ei
+  
+  #Plot all &quot;players&quot;
+  plot &lt;- simulations.long %&gt;%
+    ggplot(aes(ID, value, group=key)) + #group here required for complex animation
+    geom_line(aes(colour = key)) +
+    # geom_line(data = confidence, aes(x = ID, y = lower), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
+    # geom_line(data = confidence, aes(x = ID, y = upper), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
+    geom_abline(intercept = 0, slope = ev, linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
+    geom_hline(yintercept = 0, size=0.5, alpha=.5) +
+    xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
+    theme_bw(base_size=14) +
+    guides(color=&quot;none&quot;)
+
+  
+  #Plot only the top and bottom &quot;players&quot;
+  plot2 &lt;- simulations.long %&gt;%
+    dplyr::filter(key == max_value | key == min_value) %&gt;%
+    dplyr::mutate(key = factor(key, levels = c(max_value, min_value),
+                               labels = c(&quot;Onnekkain&quot;, &quot;Epäonnekkain&quot;))) %&gt;%
+    ggplot(aes(ID, value, group=key)) +
+    geom_line(aes(colour = key)) +
+    #geom_line(data = confidence, aes(x = ID, y = lower), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
+    #geom_line(data = confidence, aes(x = ID, y = upper), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
+    geom_abline(intercept = 0, slope = ev, linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
+    geom_hline(yintercept = 0, size=0.5, alpha=.5) +
+    xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
+    theme_bw(base_size=14) +
+    guides(color=&quot;none&quot;)
+    
+  
+  if (topbottom == F) {
+    return(plot) 
+    } 
+  else {
+    return(plot2)
+    }
+}</code></pre>
+<div id="matala-volatiliteetti" class="section level2">
+<h2>Matala volatiliteetti</h2>
+<p>Pelatessasi 100 tuntia matalan volatiliteetin pelejä, rahoillesi käy
+hyvällä (“Onnekkain”) ja huonolla (“Epäonnekkain”) tuurilla näin:</p>
+<pre class="r"><code>animation &lt;- volatility_simulator(100, -1, 5, 100, T) + 
+  geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
+  geom_point(size=2) +
+  geom_text(aes(x = 95, label = key, color=profit), hjust = 0) +
+  geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
+  scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
+  transition_reveal(ID) +
+  coord_cartesian(clip = &#39;off&#39;)
+
+animate(animation, duration = 15, fps = 10)</code></pre>
+<p><img
+src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-2-1.gif" /><!-- --></p>
+</div>
+<div id="keskitason-volatiliteetti" class="section level2">
+<h2>Keskitason volatiliteetti</h2>
+<p>Pelatessasi 100 tuntia keskitason volatiliteetin pelejä, rahoillesi
+käy hyvällä (“Onnekkain”) ja huonolla (“Epäonnekkain”) tuurilla
+näin:</p>
+<pre class="r"><code>animation &lt;- volatility_simulator(100, -1, 5, 100, T, &quot;med&quot;) + 
+  geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
+  geom_point(size=2) +
+  geom_text(aes(x = 95, label = key, color=profit), hjust = 0) +
+  geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
+  scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
+  transition_reveal(ID) +
+  coord_cartesian(clip = &#39;off&#39;)
+
+animate(animation, duration = 15, fps = 10)</code></pre>
+<p><img
+src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-3-1.gif" /><!-- --></p>
+</div>
+<div id="korkea-volatiliteetti" class="section level2">
+<h2>Korkea volatiliteetti</h2>
+<p>Pelatessasi 100 tuntia korkean volatiliteetin pelejä, rahoillesi käy
+hyvällä (“Onnekkain”) ja huonolla (“Epäonnekkain”) tuurilla näin:</p>
+<pre class="r"><code>animation &lt;- volatility_simulator(100, -1, 5, 100, T, &quot;high&quot;) + 
+  geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
+  geom_point(size=2) +
+  geom_text(aes(x = 95, label = key, color = profit), hjust = 0) +
+  geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
+  scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
+  transition_reveal(ID) +
+  coord_cartesian(clip = &#39;off&#39;)
+
+animate(animation, duration = 15, fps = 10)</code></pre>
+<p><img
+src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-4-1.gif" /><!-- --></p>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+<script>
+$(document).ready(function () {
+  window.initializeCodeFolding("hide" === "show");
+});
+</script>
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

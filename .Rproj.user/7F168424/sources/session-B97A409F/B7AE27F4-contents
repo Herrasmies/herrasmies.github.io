@@ -3,6 +3,9 @@ title: "Visualization of volatility and expected value"
 author: "(c) Jussi Palomäki, 2023"
 output:
   html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 2
     code_folding: hide
 ---
 ```{r setup, include=FALSE}
@@ -13,7 +16,6 @@ knitr::opts_chunk$set(include = TRUE, echo = TRUE, message = FALSE, warning = FA
 library(tidyverse)
 library(gganimate)
 library(transformr)
-library(plotly)
 
 volatility_simulator <- function(hours, ev, SD, players, topbottom=F, volatility="low") {
   
@@ -27,19 +29,23 @@ volatility_simulator <- function(hours, ev, SD, players, topbottom=F, volatility
   
   for (i in 1:players) {
     
+    #High volatility: smaller frequent wins, larger rare wins (50)
     if (volatility=="high") {
       test <- data.frame(x = rnorm(hours, mean=ev, sd=SD))
-      test$x[sample(nrow(test), hours*0.05)] <- test$x[sample(nrow(test), hours*0.05)] + 50 #add 50 to 5% of hours
-      total_added <- hours*0.05*50
+      test$x[sample(nrow(test), hours*0.05)] <- test$x[sample(nrow(test), hours*0.05)] + 100 #add 50 to 5% of hours
+      total_added <- hours*0.05*100
       test$x <- test$x - total_added/hours #evenly subtract the added EV above (i.e. hours * 0.05 * 50 euros) ## NOTE!!! The subtracted number of elements needs to be lower than the number of hours so that it totals hours*0.05*50, so for 250 --> subtract 2.5
-
     }
+    
+    #Medium volatility: semi-small frequent wins, medium rare wins (5)
     else if (volatility == "med") {
       test <- data.frame(x = rnorm(hours, mean=ev, sd=SD))
-      test$x[sample(nrow(test), hours*0.20)] <- test$x[sample(nrow(test), hours*0.20)] + 5
-      total_added <- hours*0.2*5
+      test$x[sample(nrow(test), hours*0.20)] <- test$x[sample(nrow(test), hours*0.20)] + 30
+      total_added <- hours*0.2*30
       test$x <- test$x - total_added/hours
     }
+    
+    #Low volatility: medium frequent wins
     else {
       test <- rnorm(hours, mean=ev, sd=SD)
     }
@@ -57,16 +63,17 @@ volatility_simulator <- function(hours, ev, SD, players, topbottom=F, volatility
   
   simulations.long <- simulations %>% 
     gather(key, value, -ID) %>%
-    dplyr::mutate(profit = factor(ifelse(value > cumEV, 1, 0)))
+    dplyr::mutate(profit = factor(ifelse(value > 0, 1, 0))) #Pelaaja voitolla vs. ei
   
   #Plot all "players"
   plot <- simulations.long %>%
     ggplot(aes(ID, value, group=key)) + #group here required for complex animation
     geom_line(aes(colour = key)) +
-    geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
-    geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
-    geom_abline(intercept = 0, slope = ev, linetype="dashed", size=1) +
-    xlab("Pelatut tunnit") + ylab("Voitettu raha (euroa)") +
+    # geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    # geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    geom_abline(intercept = 0, slope = ev, linetype="dashed", size=0.5, color="red", alpha=.5) +
+    geom_hline(yintercept = 0, size=0.5, alpha=.5) +
+    xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
     theme_bw(base_size=14) +
     guides(color="none")
 
@@ -78,10 +85,11 @@ volatility_simulator <- function(hours, ev, SD, players, topbottom=F, volatility
                                labels = c("Onnekkain", "Epäonnekkain"))) %>%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = key)) +
-    geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
-    geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
-    geom_abline(intercept = 0, slope = ev, linetype="dashed", size=1) +
-    xlab("Pelatut tunnit") + ylab("Voitettu raha (euroa)") +
+    #geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    #geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    geom_abline(intercept = 0, slope = ev, linetype="dashed", size=0.5, color="red", alpha=.5) +
+    geom_hline(yintercept = 0, size=0.5, alpha=.5) +
+    xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
     theme_bw(base_size=14) +
     guides(color="none")
     
@@ -95,27 +103,50 @@ volatility_simulator <- function(hours, ev, SD, players, topbottom=F, volatility
 }
 ```
 
+## Matala volatiliteetti
 
-##Korkea volatiliteetti
-```{r}
-#hours, ev, SD, players
-volatility_simulator(100, -1, 5, 100, T, "med")
-```
-
-##Matala volatiliteetti
-```{r}
-volatility_simulator(100, -1, 1, 100, T)
-```
-
-
+Pelatessasi 100 tuntia matalan volatiliteetin pelejä, rahoillesi käy hyvällä ("Onnekkain") ja huonolla ("Epäonnekkain") tuurilla näin:
 ```{r}
 animation <- volatility_simulator(100, -1, 5, 100, T) + 
   geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
-  geom_text(aes(x = 100, label = key, color=profit), hjust = 0) +
+  geom_text(aes(x = 95, label = key, color=profit), hjust = 0) +
+  geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
   scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
   transition_reveal(ID) +
   coord_cartesian(clip = 'off')
 
-animate(animation, duration = 25, fps = 10)
+animate(animation, duration = 15, fps = 10)
+```
+
+## Keskitason volatiliteetti
+
+Pelatessasi 100 tuntia keskitason volatiliteetin pelejä, rahoillesi käy hyvällä ("Onnekkain") ja huonolla ("Epäonnekkain") tuurilla näin:
+```{r}
+animation <- volatility_simulator(100, -1, 5, 100, T, "med") + 
+  geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = 'grey') + 
+  geom_point(size=2) +
+  geom_text(aes(x = 95, label = key, color=profit), hjust = 0) +
+  geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
+  scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
+  transition_reveal(ID) +
+  coord_cartesian(clip = 'off')
+
+animate(animation, duration = 15, fps = 10)
+```
+
+## Korkea volatiliteetti
+
+Pelatessasi 100 tuntia korkean volatiliteetin pelejä, rahoillesi käy hyvällä ("Onnekkain") ja huonolla ("Epäonnekkain") tuurilla näin:
+```{r}
+animation <- volatility_simulator(100, -1, 5, 100, T, "high") + 
+  geom_segment(aes(xend = 110, yend = value), linetype = 2, colour = 'grey') + 
+  geom_point(size=2) +
+  geom_text(aes(x = 95, label = key, color = profit), hjust = 0) +
+  geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
+  scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
+  transition_reveal(ID) +
+  coord_cartesian(clip = 'off')
+
+animate(animation, duration = 15, fps = 10)
 ```
