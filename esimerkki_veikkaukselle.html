@@ -478,7 +478,7 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     geom_abline(intercept = 0, slope = ev, linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
-    theme_bw(base_size=14) +
+    theme_minimal(base_size=14) +
     scale_x_continuous(labels=function(x)round(x/60)) +
     guides(color=&quot;none&quot;)
 
@@ -495,7 +495,7 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     geom_abline(intercept = 0, slope = ev, linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
-    theme_bw(base_size=14) +
+    theme_minimal(base_size=14) +
     scale_x_continuous(labels=function(x)round(x/60)) +
     guides(color=&quot;none&quot;)
   
@@ -513,7 +513,7 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
     scale_color_manual(values=c(&quot;red&quot;, &quot;blue&quot;, &quot;grey97&quot;)) +
-    theme_bw(base_size=14) +
+    theme_minimal(base_size=14) +
     scale_x_continuous(labels=function(x)round(x/60)) +
     guides(color=&quot;none&quot;)
     
@@ -533,11 +533,12 @@ näin:</p>
 <pre class="r"><code>animation &lt;- volatility_simulator(720, -0.5, 4, 50, T) + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
-  geom_text(aes(x = 710, label = key, color=profit), hjust = 0) +
+  geom_text(aes(x = 720, label = key, color=profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
   scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
   transition_reveal(ID) +
-  coord_cartesian(clip = &#39;off&#39;)
+  coord_cartesian(clip = &#39;off&#39;) +
+  theme(plot.margin = margin(5.5, 43, 5.5, 5.5))
 
 animate(animation, duration = 15, fps = 10)</code></pre>
 <p><img
@@ -551,11 +552,12 @@ näin:</p>
 <pre class="r"><code>animation &lt;- volatility_simulator(720, -0.5, 4, 50, T, &quot;med&quot;) + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
-  geom_text(aes(x = 710, label = key, color=profit), hjust = 0) +
+  geom_text(aes(x = 720, label = key, color=profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
   scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
   transition_reveal(ID) +
-  coord_cartesian(clip = &#39;off&#39;)
+  coord_cartesian(clip = &#39;off&#39;) +
+  theme(plot.margin = margin(5.5, 43, 5.5, 5.5))
 
 animate(animation, duration = 15, fps = 10)</code></pre>
 <p><img
@@ -569,11 +571,12 @@ näin:</p>
 <pre class="r"><code>animation &lt;- volatility_simulator(720, -0.5, 4, 50, T, &quot;high&quot;) + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
-  geom_text(aes(x = 710, label = key, color = profit), hjust = 0) +
+  geom_text(aes(x = 720, label = key, color = profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
   scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
   transition_reveal(ID) +
-  coord_cartesian(clip = &#39;off&#39;)
+  coord_cartesian(clip = &#39;off&#39;) +
+  theme(plot.margin = margin(5.5, 43, 5.5, 5.5))
 
 animate(animation, duration = 15, fps = 10)</code></pre>
 <p><img
@@ -588,11 +591,12 @@ näin:</p>
 <pre class="r"><code>animation &lt;- volatility_simulator(4320, -0.5, 4, 50, T, &quot;high&quot;) + 
   geom_segment(aes(xend = 4320, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
-  geom_text(aes(x = 4300, label = key, color = profit), hjust = 0) +
+  geom_text(aes(x = 4320, label = key, color = profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
   scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
   transition_reveal(ID) +
-  coord_cartesian(clip = &#39;off&#39;)
+  coord_cartesian(clip = &#39;off&#39;) +
+  theme(plot.margin = margin(5.5, 43, 5.5, 5.5))
 
 animate(animation, duration = 25, fps = 10)</code></pre>
 <p><img

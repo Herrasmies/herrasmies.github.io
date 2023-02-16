@@ -84,7 +84,7 @@ volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatili
     geom_abline(intercept = 0, slope = ev, linetype="dashed", size=0.5, color="red", alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
-    theme_bw(base_size=14) +
+    theme_minimal(base_size=14) +
     scale_x_continuous(labels=function(x)round(x/60)) +
     guides(color="none")
 
@@ -101,7 +101,7 @@ volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatili
     geom_abline(intercept = 0, slope = ev, linetype="dashed", size=0.5, color="red", alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
-    theme_bw(base_size=14) +
+    theme_minimal(base_size=14) +
     scale_x_continuous(labels=function(x)round(x/60)) +
     guides(color="none")
   
@@ -119,7 +119,7 @@ volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatili
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
     scale_color_manual(values=c("red", "blue", "grey97")) +
-    theme_bw(base_size=14) +
+    theme_minimal(base_size=14) +
     scale_x_continuous(labels=function(x)round(x/60)) +
     guides(color="none")
     
@@ -140,11 +140,12 @@ Jos sinä ja 49 kaveriasi pelaatte kaikki 12 tuntia matalan volatiliteetin pelej
 animation <- volatility_simulator(720, -0.5, 4, 50, T) + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
-  geom_text(aes(x = 710, label = key, color=profit), hjust = 0) +
+  geom_text(aes(x = 720, label = key, color=profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
   scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
   transition_reveal(ID) +
-  coord_cartesian(clip = 'off')
+  coord_cartesian(clip = 'off') +
+  theme(plot.margin = margin(5.5, 45, 5.5, 5.5))
 
 animate(animation, duration = 15, fps = 10)
 ```
@@ -156,11 +157,12 @@ Jos sinä ja 49 kaveriasi pelaatte kaikki 12 tuntia keskitason volatiliteetin pe
 animation <- volatility_simulator(720, -0.5, 4, 50, T, "med") + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
-  geom_text(aes(x = 710, label = key, color=profit), hjust = 0) +
+  geom_text(aes(x = 720, label = key, color=profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
   scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
   transition_reveal(ID) +
-  coord_cartesian(clip = 'off')
+  coord_cartesian(clip = 'off') +
+  theme(plot.margin = margin(5.5, 45, 5.5, 5.5))
 
 animate(animation, duration = 15, fps = 10)
 ```
@@ -172,11 +174,12 @@ Jos sinä ja 49 kaveriasi pelaatte kaikki 12 tuntia korkean volatiliteetin pelej
 animation <- volatility_simulator(720, -0.5, 4, 50, T, "high") + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
-  geom_text(aes(x = 710, label = key, color = profit), hjust = 0) +
+  geom_text(aes(x = 720, label = key, color = profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
   scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
   transition_reveal(ID) +
-  coord_cartesian(clip = 'off')
+  coord_cartesian(clip = 'off') +
+  theme(plot.margin = margin(5.5, 45, 5.5, 5.5))
 
 animate(animation, duration = 15, fps = 10)
 ```
@@ -188,11 +191,12 @@ Jos sinä ja 49 kaveriasi pelaatte kaikki 72 tuntia korkean volatiliteetin pelej
 animation <- volatility_simulator(4320, -0.5, 4, 50, T, "high") + 
   geom_segment(aes(xend = 4320, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
-  geom_text(aes(x = 4300, label = key, color = profit), hjust = 0) +
+  geom_text(aes(x = 4320, label = key, color = profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
   scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
   transition_reveal(ID) +
-  coord_cartesian(clip = 'off')
+  coord_cartesian(clip = 'off') +
+  theme(plot.margin = margin(5.5, 45, 5.5, 5.5))
 
 animate(animation, duration = 25, fps = 10)
 ```
