@@ -1,0 +1,456 @@
+---
+title: "Alustavia KOTT-aineiston analyysejä, huumausaineet"
+author: "(c) Jussi Palomäki"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 2
+    code_folding: hide
+  pdf_document:
+    toc: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+```{r, message=FALSE, echo=FALSE}
+#Load libraries (not everything is used)
+library(haven)
+library(survey)
+library(ggpubr)
+library(surveyCV)
+library(lavaan)
+library(tidyverse)
+library(poLCA)
+library(forcats)
+library(ggmosaic)
+library(emmeans)
+library(scales)
+library(fmsb)
+library(RColorBrewer)
+library(CDM)
+library(lavaan.survey)
+library(lavaanPlot)
+library(naniar)
+library(mice)
+library(jtools)
+library(MLmetrics)
+library(svyVGAM)
+library(boot)
+library(DT) #needs to be installed!
+```
+
+```{r}
+#load data
+#kott_drugs <- read_sas("\\\\helfs01.thl.fi\\groups4\\KOTT_V2022_013\\kott_v2022_013_2022_09_30.sas7bdat")
+kott_drugs <- read_sas("C:\\Users\\jpgk\\Desktop\\KOTT\\kott_v2022_013_2022_09_30.sas7bdat")
+
+
+#Select variables of interest
+kott_drugs <- kott_drugs %>% dplyr::select(id, ika, sukupuoli, kott_alcohol_freq, kott_alcohol_amount, kott_alcohol_more,
+                                           ko_smoke, ko_snuff, ko_tobacco, ko_alco, ko_alco_drunk, kott_alcohol_ever,
+                                           ko_alco_drunk, ko_cannabis, kott_drugs_use_12m_amount_1, ko_drug,
+                                           ohjauksenalakoodi, sektori, opintojen_aloitusvuosi, credit5, kott_corona_studies,
+                                           kott_corona_effect_eday_chg_11, ko_income_insuffient,
+                                           kott_tobacco_branch_x_1,
+                                           kott_tobacco_branch_x_2,
+                                           kott_learning_diffic_set_2,
+                                           kott_learning_diffic_set_4,
+                                           kott_learning_diffic_set_5,
+                                           kott_learning_diffic_set_6,
+                                           kott_learning_diffic_set_7,
+                                           rg_n, w_analysis, rg_stratum) #huom muuttujan kirjoitusvirhe datassa ("insuffient")
+
+
+#Learning difficulty -variable (opintovaikeudet) calculation manually (it was not in the data)
+kott_drugs <- kott_drugs %>% 
+  dplyr::mutate(kott_learning_difficulties = ifelse(kott_learning_diffic_set_2 == "t" | kott_learning_diffic_set_4 == "t" | kott_learning_diffic_set_5 == "t" | 
+                                                      kott_learning_diffic_set_6 == "t" | kott_learning_diffic_set_7 == "t", 1, 0),
+                kott_learning_difficulties = factor(kott_learning_difficulties, labels = c("No", "Yes")),
+                ko_income_insuffient = factor(ko_income_insuffient, labels = c("No", "Yes")))
+
+
+
+#Calculate AUDIT_C mean, NA-values removed (=listwise deletion)
+kott_drugs <- kott_drugs %>% 
+  group_by(id) %>% 
+  dplyr::mutate(AUDIT_C = mean(c(kott_alcohol_freq, kott_alcohol_amount, kott_alcohol_more), na.rm=T)) %>%
+  ungroup()
+
+
+#Replace "-1" by NA for a singular value in "ohjauksenalakoodi"
+#kott_drugs[which(kott_drugs$ohjauksenalakoodi == -1),]$ohjauksenalakoodi <- NA #also works
+kott_drugs$ohjauksenalakoodi[which(kott_drugs$ohjauksenalakoodi==-1)] <- NA
+
+#Add factor labels for ohjauksenalakoodi
+kott_drugs$ohjauksenalakoodi <- factor(kott_drugs$ohjauksenalakoodi, labels=c("Kasvatusalat",
+                                                                              "Taiteet ja kulttuurialat",
+                                                                              "Humanistiset alat",
+                                                                              "Yhteiskunnalliset alat",
+                                                                              "Kauppa, hallinto ja oikeustieteet",
+                                                                              "Luonnontieteet",
+                                                                              "Tietojenkäsittely ja tietoliikenne",
+                                                                              "Tekniikan alat",
+                                                                              "Maa- ja metsätalousalat",
+                                                                              "Lääketieteet",
+                                                                              "Terveys- ja hyvinvointialat",
+                                                                              "Palvelualat"))
+
+#Change Year studies started into Year of study (i.e. first year, second year, etc...)
+kott_drugs$opintojen_aloitusvuosi <- 2022-kott_drugs$opintojen_aloitusvuosi
+
+#Categorical variable, collapse levels with few observations
+kott_drugs <- kott_drugs %>% dplyr::mutate(opintojen_aloitusvuosi_cat = as.factor(opintojen_aloitusvuosi),
+                                           opintojen_aloitusvuosi_cat = fct_collapse(opintojen_aloitusvuosi_cat,
+                                                                                     rest = c("8", "9", "10", "11", "12", "13", "14", "15")))
+
+#Add variable: freshman vs. not
+kott_drugs <- kott_drugs %>% dplyr::mutate(fuksi = ifelse(opintojen_aloitusvuosi == 1 | opintojen_aloitusvuosi == 2, 1, 0),
+                                           fuksi = factor(fuksi, labels = c("Not freshman", "Freshman")))
+
+#Add categorical cannabis-use variable (note: categories are arbitrary! TODO: change categories?)
+#16.1. lisätty smoking_cat ja snus_cat, cannabis_cat- kategoriat muokattu uudestaan! Tarkista vielä että tässä menee oikein
+kott_drugs <- kott_drugs %>% dplyr::mutate(cannabis_cat3 = case_when(kott_drugs_use_12m_amount_1 > 0 & kott_drugs_use_12m_amount_1 < 3 ~ "1-2 times",
+                                                      kott_drugs_use_12m_amount_1 >= 3 ~ "More than 3 times",
+                                                      is.na(kott_drugs_use_12m_amount_1) ~ "Has not used"),
+                                           cannabis_cat3 = factor(cannabis_cat3, levels = c("1-2 times", "More than 3 times", "Has not used")), #mieti järjestystä
+                                           smoking_cat_day = as.factor(ifelse(kott_tobacco_branch_x_1 == 5, "Yes", "No")),
+                                           smoking_cat_week = as.factor(ifelse(kott_tobacco_branch_x_1 == 4, "Yes", "No")),
+                                           smoking_cat_dayweek = as.factor(case_when(kott_tobacco_branch_x_1 > 0 & kott_tobacco_branch_x_1 < 4 ~ "No",
+                                                                   kott_tobacco_branch_x_1 >= 4 ~ "Yes")),#vähintään viikoittain
+                                           snus_cat_day = as.factor(ifelse(kott_tobacco_branch_x_2 == 5, "Yes", "No")),
+                                           snus_cat_week = as.factor(ifelse(kott_tobacco_branch_x_2 == 4, "Yes", "No")),
+                                           snus_cat_dayweek = as.factor(case_when(kott_tobacco_branch_x_2 > 0 & kott_tobacco_branch_x_2 < 4 ~ "No",
+                                                                kott_tobacco_branch_x_2 >= 4 ~ "Yes")))
+
+
+#Fix ko_alco and XXX questions
+#if kott_alcohol_ever = 1 (reported having not used) AND ko_alco is NA, replace NA with 0 (==not a problem user)
+kott_drugs <- kott_drugs %>% dplyr::mutate(ko_alco = ifelse(kott_alcohol_ever == 1 & is.na(ko_alco), 0, ko_alco))
+
+# #if kott_drugs = 1 (reported having not used) AND ko_drug is NA, replace NA with 0 (==not a user)
+#THIS HAS NO EFFECT SO COMMENTED OUT FOR NOW (25.1.)
+#kott_drugs <- kott_drugs %>% dplyr::mutate(ko_cannabis = ifelse(kott_drugs == 1 & is.na(ko_cannabis), 0, ko_cannabis))
+
+
+#Survey design and weights
+svy_data_drugs <- svydesign(id = ~1,
+                      fpc = ~rg_n,
+                      weights = ~w_analysis,
+                      strata = ~rg_stratum,
+                      data = kott_drugs)
+
+
+
+crosstabs <- kott_drugs %>% dplyr::select(smoking_cat_day, smoking_cat_week, smoking_cat_dayweek, snus_cat_day, snus_cat_week, snus_cat_dayweek, cannabis_cat3, ko_cannabis, 
+                             AUDIT_C, ko_alco, sektori, 
+                             sukupuoli, ko_income_insuffient, 
+                             kott_learning_difficulties) %>%
+  dplyr::mutate(ko_alco = factor(ko_alco, labels=c("No", "Yes")),
+                cannabis_cat3 = factor(cannabis_cat3, labels=c("Cannabis: 1-2 times", 
+                                                             "Cannabis: More than 3 times", 
+                                                             "Cannabis: Has not used")),
+                ko_income_insuffient = factor(ko_income_insuffient, labels=c("Tulotaso: Riittää", "Tulotaso: Riittämätön")),
+                kott_learning_difficulties = factor(kott_learning_difficulties, labels=c("Ei opiskeluvaikeuksia", "Opiskeluvaikeuksia")))
+
+```
+
+## AUDIT
+
+```{r}
+crosstabs %>% 
+  group_by(sukupuoli, ko_alco) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sukupuoli) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+
+crosstabs %>% 
+  group_by(sektori, ko_alco) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sektori) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(kott_learning_difficulties, ko_alco) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(kott_learning_difficulties) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(ko_income_insuffient, ko_alco) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(ko_income_insuffient) %>%
+  dplyr::mutate(freq = count / sum(count))
+```
+
+## Päivittäinen tupakointi (kyllä/ei)
+
+```{r}
+crosstabs %>% 
+  group_by(sukupuoli, smoking_cat_day) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sukupuoli) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(sektori, smoking_cat_day) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sektori) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(kott_learning_difficulties, smoking_cat_day) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(kott_learning_difficulties) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(ko_income_insuffient, smoking_cat_day) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(ko_income_insuffient) %>%
+  dplyr::mutate(freq = count / sum(count))
+```
+
+## Viikottainen, mutta EI päivittäinen, tupakointi (kyllä/ei)
+
+```{r}
+crosstabs %>% 
+  group_by(sukupuoli, smoking_cat_week) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sukupuoli) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(sektori, smoking_cat_week) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sektori) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(kott_learning_difficulties, smoking_cat_week) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(kott_learning_difficulties) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(ko_income_insuffient, smoking_cat_day) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(ko_income_insuffient) %>%
+  dplyr::mutate(freq = count / sum(count))
+```
+
+## Vähintään viikoittainen (viikoittainen + päivittäinen) tupakointi (kyllä/ei)
+
+```{r}
+crosstabs %>% 
+  group_by(sukupuoli, smoking_cat_dayweek) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sukupuoli) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(sektori, smoking_cat_dayweek) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sektori) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(kott_learning_difficulties, smoking_cat_dayweek) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(kott_learning_difficulties) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(ko_income_insuffient, smoking_cat_dayweek) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(ko_income_insuffient) %>%
+  dplyr::mutate(freq = count / sum(count))
+```
+
+## Päivittäinen nuuska (kyllä/ei)
+
+```{r}
+crosstabs %>% 
+  group_by(sukupuoli, snus_cat_day) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sukupuoli) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(sektori, snus_cat_day) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sektori) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(kott_learning_difficulties, snus_cat_day) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(kott_learning_difficulties) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(ko_income_insuffient, snus_cat_day) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(ko_income_insuffient) %>%
+  dplyr::mutate(freq = count / sum(count))
+```
+
+## Viikottainen, mutta EI päivittäinen, nuuska (kyllä/ei)
+
+```{r}
+crosstabs %>% 
+  group_by(sukupuoli, snus_cat_week) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sukupuoli) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(sektori, snus_cat_week) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sektori) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(kott_learning_difficulties, snus_cat_week) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(kott_learning_difficulties) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(ko_income_insuffient, snus_cat_week) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(ko_income_insuffient) %>%
+  dplyr::mutate(freq = count / sum(count))
+```
+
+## Vähintään viikoittainen (viikoittainen + päivittäinen) tupakointi (kyllä/ei)
+
+```{r}
+crosstabs %>% 
+  group_by(sukupuoli, snus_cat_dayweek) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sukupuoli) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(sektori, snus_cat_dayweek) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sektori) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(kott_learning_difficulties, snus_cat_dayweek) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(kott_learning_difficulties) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(ko_income_insuffient, snus_cat_dayweek) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(ko_income_insuffient) %>%
+  dplyr::mutate(freq = count / sum(count))
+```
+
+## Kannabis kyllä/ei 12kk
+
+```{r}
+crosstabs %>% 
+  group_by(sukupuoli, ko_cannabis) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sukupuoli) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(sektori, ko_cannabis) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sektori) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(kott_learning_difficulties, ko_cannabis) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(kott_learning_difficulties) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(ko_income_insuffient, ko_cannabis) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(ko_income_insuffient) %>%
+  dplyr::mutate(freq = count / sum(count))
+```
+
+## Kannabis ei / 1-2krt / 3+krt 12kk aikana
+
+```{r}
+crosstabs %>% 
+  group_by(sukupuoli, cannabis_cat3) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sukupuoli) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(sektori, cannabis_cat3) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(sektori) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(kott_learning_difficulties, cannabis_cat3) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(kott_learning_difficulties) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+crosstabs %>% 
+  group_by(ko_income_insuffient, cannabis_cat3) %>%
+  dplyr::summarize(count = n()) %>%
+  ungroup() %>%
+  group_by(ko_income_insuffient) %>%
+  dplyr::mutate(freq = count / sum(count))
+
+```
+
+## Explore data
+
+```{r}
+
+datatable(crosstabs)
+
+```
