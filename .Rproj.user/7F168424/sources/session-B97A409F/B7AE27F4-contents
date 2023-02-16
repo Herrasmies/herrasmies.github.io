@@ -93,7 +93,7 @@ volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatili
   plot2 <- simulations.long %>%
     dplyr::filter(key == max_value | key == min_value) %>%
     dplyr::mutate(key = factor(key, levels = c(max_value, min_value),
-                               labels = c("Onnekkain", "Epäonnekkain"))) %>%
+                               labels = c("Onnekkain\npelaaja", "Epäonnekkain\npelaaja"))) %>%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = key)) +
     #geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
@@ -108,8 +108,8 @@ volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatili
   
   #Combined plot
   plot3 <- simulations.long %>%
-    dplyr::mutate(maxmin = case_when(key == max_value ~ "Onnekkain",
-                                     key == min_value ~ "Epäonnekkain",
+    dplyr::mutate(maxmin = case_when(key == max_value ~ "Onnekkain\npelaaja",
+                                     key == min_value ~ "Epäonnekkain\npelaaja",
                                      TRUE ~ as.character(NA))) %>%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = maxmin)) +
@@ -145,7 +145,7 @@ animation <- volatility_simulator(720, -0.5, 4, 50, T) +
   scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
   transition_reveal(ID) +
   coord_cartesian(clip = 'off') +
-  theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
+  theme(plot.margin = margin(5.5, 50, 5.5, 0))
 
 animate(animation, duration = 15, fps = 10)
 ```
@@ -162,7 +162,7 @@ animation <- volatility_simulator(720, -0.5, 4, 50, T, "med") +
   scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
   transition_reveal(ID) +
   coord_cartesian(clip = 'off') +
-  theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
+  theme(plot.margin = margin(5.5, 50, 5.5, 0))
 
 animate(animation, duration = 15, fps = 10)
 ```
@@ -179,7 +179,7 @@ animation <- volatility_simulator(720, -0.5, 4, 50, T, "high") +
   scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
   transition_reveal(ID) +
   coord_cartesian(clip = 'off') +
-  theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
+  theme(plot.margin = margin(5.5, 50, 5.5, 0))
 
 animate(animation, duration = 15, fps = 10)
 ```
@@ -196,7 +196,7 @@ animation <- volatility_simulator(4320, -0.5, 4, 50, T, "high") +
   scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
   transition_reveal(ID) +
   coord_cartesian(clip = 'off') +
-  theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
+  theme(plot.margin = margin(5.5, 50, 5.5, 0))
 
 animate(animation, duration = 25, fps = 10)
 ```

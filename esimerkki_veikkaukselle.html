@@ -487,7 +487,7 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
   plot2 &lt;- simulations.long %&gt;%
     dplyr::filter(key == max_value | key == min_value) %&gt;%
     dplyr::mutate(key = factor(key, levels = c(max_value, min_value),
-                               labels = c(&quot;Onnekkain&quot;, &quot;Epäonnekkain&quot;))) %&gt;%
+                               labels = c(&quot;Onnekkain\npelaaja&quot;, &quot;Epäonnekkain\npelaaja&quot;))) %&gt;%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = key)) +
     #geom_line(data = confidence, aes(x = ID, y = lower), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
@@ -502,8 +502,8 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
   
   #Combined plot
   plot3 &lt;- simulations.long %&gt;%
-    dplyr::mutate(maxmin = case_when(key == max_value ~ &quot;Onnekkain&quot;,
-                                     key == min_value ~ &quot;Epäonnekkain&quot;,
+    dplyr::mutate(maxmin = case_when(key == max_value ~ &quot;Onnekkain\npelaaja&quot;,
+                                     key == min_value ~ &quot;Epäonnekkain\npelaaja&quot;,
                                      TRUE ~ as.character(NA))) %&gt;%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = maxmin)) +
