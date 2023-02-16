@@ -3,7 +3,7 @@
     "path": "C:/Users/jpgk/Desktop/Henk.koht.nettisivu/herrasmies.github.io/esimerkki_veikkaukselle.Rmd",
     "project_path": "esimerkki_veikkaukselle.Rmd",
     "type": "r_markdown",
-    "hash": "0",
+    "hash": "4025802706",
     "contents": "",
     "dirty": false,
     "created": 1676315469689.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "192,22",
-        "scrollLine": "168"
+        "cursorPosition": "147,36",
+        "scrollLine": "124"
     },
     "folds": "",
-    "lastKnownWriteTime": 1676589618,
+    "lastKnownWriteTime": 1676589871,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1676589618024,
+    "last_content_update": 1676589871987,
     "read_only": false,
     "read_only_alternatives": []
 }
