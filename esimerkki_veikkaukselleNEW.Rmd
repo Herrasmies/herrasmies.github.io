@@ -17,6 +17,7 @@ Oletukset:
 - Jokaisessa panostuskierroksessa 1 euron panos
 - Pelataan 5 panostuskierrosta minuutissa, eli pelin odotusarvo minuuttia kohden on -0.5 euroa (-50 senttiä)
 - Keskihajonta on 4 (eli 8 kertaa suurempi kuin pelin odotusarvo)
+- Simulaatiossa käytössä nk. truncated normal distribution, joka huomioi sen, että maksimihäviömäärä per minuutti on 5 euroa
 - Korkeassa volatiliteetissa kerran tunnissa sattumanvaraisesti saadaan 100 euron voitto
 - Keskitason volatiliteetissa kerran 20 minuutissa sattumanvaraisesti saadaan 30 euron voitto
 - Matalassa volatiliteetissa ei ole sattumanvaraisia "isoja voittoja"
@@ -26,6 +27,12 @@ Oletukset:
 library(tidyverse)
 library(gganimate)
 library(transformr)
+library(truncnorm)
+
+#Helper function, mean of truncated normal distribution
+truncatedmean <- function(mu=0,sigma=1,a=-Inf,b=Inf){
+  mu+sigma*(dnorm((a-mu)/sigma)-dnorm((b-mu)/sigma))/(pnorm((b-mu)/sigma)-pnorm((a-mu)/sigma))
+}
 
 volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatility="low") {
   
@@ -41,23 +48,48 @@ volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatili
     
     #High volatility: smaller frequent wins, larger rare wins (100)
     if (volatility=="high") {
-      test <- data.frame(x = rnorm(minutes, mean=ev, sd=SD))
-      test$x[sample(nrow(test), minutes*0.0167)] <- test$x[sample(nrow(test), minutes*0.0167)] + 100 #add 100 once every hour (1/60 = 0.0167)
-      total_added <- minutes*0.0167*100
-      test$x <- test$x - total_added/minutes #evenly subtract the added EV above (i.e. minutes * 0.0167 * 100 euros)
+      
+      # Note! Below we truncate at -5 since that's the maximum that can be lost. The EV has to be set so that the mean of the truncated distribution is -0.5! (happens to be truncatedmean(-2.105, 4, -5)) == -0.5004906. TODO: automatize this!
+      
+      # Total added EV due to volatility (100e once every hour)
+      total_added <- (minutes/60)*100 
+      
+      # Add total_added/minutes to -5 since it will be later subtracted
+      test <- data.frame(x = rtruncnorm(minutes, -5+(total_added/minutes), Inf, mean=ev, sd=SD)) 
+      
+      #OLD VERSION, allows losses to be below -5:
+      #test <- data.frame(x = rnorm(minutes, mean=ev, sd=SD)) 
+      
+      test$x[sample(nrow(test), minutes/60)] <- test$x[sample(nrow(test), minutes/60)] + 100 #add 100 once every hour/60 minutes
+      test$x <- test$x - total_added/minutes #evenly subtract the added EV above (i.e. minutes/60 * 100 euros)
     }
     
     #Medium volatility: semi-small frequent wins, medium rare wins (30)
     else if (volatility == "med") {
-      test <- data.frame(x = rnorm(minutes, mean=ev, sd=SD))
-      test$x[sample(nrow(test), minutes*0.05)] <- test$x[sample(nrow(test), minutes*0.05)] + 30 #add 30 once every 20 minutes (1/20 = 0.05)
-      total_added <- minutes*0.05*30
+      
+      # Total added EV due to volatility (30e every 20 minutes)
+      total_added <- (minutes/20)*30
+      
+      # Add total_added/minutes to -5 since it will be later subtracted
+      test <- data.frame(x = rtruncnorm(minutes, -5+(total_added/minutes), Inf, mean=ev, sd=SD))
+      
+      #OLD VERSION, allows losses to be below -5:
+      #test <- data.frame(x = rnorm(minutes, mean=ev, sd=SD)) 
+      
+      test$x[sample(nrow(test), minutes/20)] <- test$x[sample(nrow(test), minutes/20)] + 30 #add 30 once every 20 minutes
+      total_added <- (minutes/20)*30
       test$x <- test$x - total_added/minutes
     }
     
     #Low volatility: medium frequent wins
     else {
-      test <- rnorm(minutes, mean=ev, sd=SD)
+      
+      # Total added EV due to volatility (nothing)
+      total_added <- 0
+      test <- rtruncnorm(minutes, -5, Inf, mean=ev, sd=SD) #could add -5+(total_added/minutes) for clarity, which is -5 + 0/minutes = 0
+      
+      #OLD VERSION, allows losses to be below -5:
+      #test <- data.frame(x = rnorm(minutes, mean=ev, sd=SD)) 
     }
     
     test <- data.frame(run = test)
@@ -79,9 +111,11 @@ volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatili
   plot <- simulations.long %>%
     ggplot(aes(ID, value, group=key)) + #group here required for complex animation
     geom_line(aes(colour = key)) +
-    # geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
-    # geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
-    geom_abline(intercept = 0, slope = ev, linetype="dashed", size=0.5, color="red", alpha=.5) +
+
+    # NOTE! Below slope is defined as per the mean of the truncated distribution! (-5 is manually set as the maximum amount that can be lost)
+    # TODO: AUTOMATIZE!
+    # Old version: slope = ev
+    geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added/minutes), Inf), linetype="dashed", size=0.5, color="red", alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
     theme_minimal(base_size=14) +
@@ -96,9 +130,9 @@ volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatili
                                labels = c("Onnekkain\npelaaja", "Epäonnekkain\npelaaja"))) %>%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = key)) +
-    #geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
-    #geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
-    geom_abline(intercept = 0, slope = ev, linetype="dashed", size=0.5, color="red", alpha=.5) +
+    
+    #Old version: slope = ev
+    geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added/minutes), Inf), linetype="dashed", size=0.5, color="red", alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
     theme_minimal(base_size=14) +
@@ -113,9 +147,9 @@ volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatili
                                      TRUE ~ as.character(NA))) %>%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = maxmin)) +
-    #geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
-    #geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
-    geom_abline(intercept = 0, slope = ev, linetype="dashed", size=0.5, color="red", alpha=.5) +
+    
+    #Old version: slope = ev
+    geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added/minutes), Inf), linetype="dashed", size=0.5, color="red", alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
     scale_color_manual(values=c("red", "blue", "grey97")) +
@@ -137,7 +171,10 @@ volatility_simulator <- function(minutes, ev, SD, players, topbottom=F, volatili
 
 Jos sinä ja 49 kaveriasi pelaatte kaikki 12 tuntia matalan volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
-animation <- volatility_simulator(720, -0.5, 4, 50, T) + 
+
+# Note! The EV has to be set so that the mean of the truncated distribution is -0.5! (happens to be truncatedmean(-2.105, 4, -5)) == -0.5004906 when SD = 4. TODO: automatize this!
+
+animation <- volatility_simulator(720, -2.105, 4, 50, T) + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
   geom_text(aes(x = 720, label = key, color=profit), hjust = 0) +
@@ -154,7 +191,11 @@ animate(animation, duration = 15, fps = 10)
 
 Jos sinä ja 49 kaveriasi pelaatte kaikki 12 tuntia keskitason volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
-animation <- volatility_simulator(720, -0.5, 4, 50, T, "med") + 
+
+# Manuaalinen korjaus keskitason volatiliteetin vaikutukselle odotusarvoon
+# 720/20*30 / 720 == 1.5; truncatedmean(-4.05, 4, (-5 + 1.5)) == -0.5002762
+
+animation <- volatility_simulator(720, -4.05, 4, 50, T, "med") + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
   geom_text(aes(x = 720, label = key, color=profit), hjust = 0) +
@@ -171,7 +212,11 @@ animate(animation, duration = 15, fps = 10)
 
 Jos sinä ja 49 kaveriasi pelaatte kaikki 12 tuntia korkean volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
-animation <- volatility_simulator(720, -0.5, 4, 50, T, "high") + 
+
+# Manuaalinen korjaus korkean volatiliteetin vaikutukselle odotusarvoon
+# 720/60*100 / 720 == 1.666677; truncatedmean(-4.403, 4, (-5 + 1.66667)) == -0.5007701
+
+animation <- volatility_simulator(720, -4.4032, 4, 50, T, "high") + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
   geom_text(aes(x = 720, label = key, color = profit), hjust = 0) +
@@ -188,7 +233,11 @@ animate(animation, duration = 15, fps = 10)
 
 Jos sinä ja 49 kaveriasi pelaatte kaikki 72 tuntia korkean volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
-animation <- volatility_simulator(4320, -0.5, 4, 50, T, "high") + 
+
+# Manuaalinen korjaus korkean volatiliteetin vaikutukselle odotusarvoon
+# 4320/60*100 / 4320 == 1.666677; truncatedmean(-4.403, 4, (-5+1.666667)) == -0.5007701
+
+animation <- volatility_simulator(4320, -4.403, 4, 50, T, "high") + 
   geom_segment(aes(xend = 4320, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
   geom_text(aes(x = 4320, label = key, color = profit), hjust = 0) +
