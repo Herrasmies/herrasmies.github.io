@@ -413,75 +413,77 @@ huomioi sen, että maksimihäviömäärä per minuutti on 5 euroa</li>
 saadaan 100 euron voitto</li>
 <li>Keskitason volatiliteetissa kerran 20 minuutissa sattumanvaraisesti
 saadaan 30 euron voitto</li>
-<li>Matalassa volatiliteetissa ei ole sattumanvaraisia “isoja
-voittoja”</li>
+<li>Matalassa volatiliteetissa ei ole sattumanvaraisia isompia
+voittoja</li>
 <li>Korkean ja keskitason volatiliteetteihin liittyvät “ylimääräiset”
-voitot vähennetään muiden panostuskierrosten voitoista tai lisätään
-häviöihin siten, että odotusarvo pysyy kokoajan samana.</li>
+voitot vähennetään tasaisesti muiden panostuskierrosten voitoista tai
+lisätään häviöihin siten, että odotusarvo pysyy kokoajan samana</li>
+<li>Kuvissa havainnollistetaan “onnekkain” ja “epäonnekkain” pelaaja,
+millä viitataan simuloidun jakson jälkeiseen lopputilanteeseen eli
+siihen, kenellä on eniten ja kenellä vähiten rahaa</li>
+<li>HUOM! Kyseessä on hypoteettinen tilanne, jossa rahapelaamista on
+simuloitu osittain puutteellisella taustatiedolla. Todellisuudessa
+esimerkiksi Veikkauksen rahapelien hajonta voittojen ja häviöiden
+suhteen voi jonkin verran poiketa alla esitetyistä malleista</li>
 </ul>
 <pre class="r"><code>library(tidyverse)
 library(gganimate)
 library(transformr)
 library(truncnorm)
 
-#Helper function, mean of truncated normal distribution
+# Helper function, mean of truncated normal distribution
+# UPDATE: 19.2., this is not strictly necessary, as truncnorm has its own function for it: etruncnorm(a=-Inf, b=Inf, mean=0, sd=1)
 truncatedmean &lt;- function(mu=0,sigma=1,a=-Inf,b=Inf){
   mu+sigma*(dnorm((a-mu)/sigma)-dnorm((b-mu)/sigma))/(pnorm((b-mu)/sigma)-pnorm((a-mu)/sigma))
 }
+
 
 volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volatility=&quot;low&quot;) {
   
   simulations = data.frame(nrow = 0)
   cumEV = cumsum(rep(ev, minutes))
-  cumSD = sqrt(cumsum(rep(SD^2, minutes))) #first convert to variance, then convert the sum back to SD
-  lower &lt;- qnorm(0.025, cumEV, cumSD)
-  upper &lt;- qnorm(0.975, cumEV, cumSD)
-  confidence &lt;- data.frame(cbind(lower, upper))
-  confidence$ID &lt;- seq.int(nrow(confidence))
-  
+
   for (i in 1:players) {
     
-    #High volatility: smaller frequent wins, larger rare wins (100)
+    # High volatility: smaller frequent wins, larger rare wins (here set at 100 euros)
     if (volatility==&quot;high&quot;) {
       
-      # Note! Below we truncate at -5 since that&#39;s the maximum that can be lost. The EV has to be set so that the mean of the truncated distribution is -0.5! (happens to be truncatedmean(-2.105, 4, -5)) == -0.5004906. TODO: automatize this!
-      
-      # Total added EV due to volatility (100e once every hour)
+      # Total added EV due to volatility (100e once every 60 minutes)
       total_added &lt;- (minutes/60)*100 
       
-      # Add total_added/minutes to -5 since it will be later subtracted
+      # Truncate normal distribution at (-5, +Inf) since 5 euros is the maximum that can be lost. The EV of the post-truncated normal distribution has to be set to -0.5! Further add total_added/minutes to -5 since it will be later subtracted as a constant value from the winnings/losses. This is because the volatility-related additional winnings (high = 100 euros every 60 minutes, med = 30 euros every 20 minutes) otherwise inflate the expected value
+    
       test &lt;- data.frame(x = rtruncnorm(minutes, -5+(total_added/minutes), Inf, mean=ev, sd=SD)) 
       
-      #OLD VERSION, allows losses to be below -5:
-      #test &lt;- data.frame(x = rnorm(minutes, mean=ev, sd=SD)) 
+      # OLD VERSION, allows losses to be below -5:
+      # test &lt;- data.frame(x = rnorm(minutes, mean=ev, sd=SD)) 
       
-      test$x[sample(nrow(test), minutes/60)] &lt;- test$x[sample(nrow(test), minutes/60)] + 100 #add 100 once every hour/60 minutes
-      test$x &lt;- test$x - total_added/minutes #evenly subtract the added EV above (i.e. minutes/60 * 100 euros)
+      test$x[sample(nrow(test), minutes/60)] &lt;- test$x[sample(nrow(test), minutes/60)] + 100 # randomly add 100 euros once every 60 minutes
+      test$x &lt;- test$x - total_added/minutes # evenly subtract the added EV above (i.e. minutes/60 * 100 euros)
     }
     
-    #Medium volatility: semi-small frequent wins, medium rare wins (30)
+    # Medium volatility: semi-small frequent wins, medium rare wins (30e every 20 minutes)
     else if (volatility == &quot;med&quot;) {
       
       # Total added EV due to volatility (30e every 20 minutes)
       total_added &lt;- (minutes/20)*30
       
-      # Add total_added/minutes to -5 since it will be later subtracted
+      # See explanation above.
       test &lt;- data.frame(x = rtruncnorm(minutes, -5+(total_added/minutes), Inf, mean=ev, sd=SD))
       
       #OLD VERSION, allows losses to be below -5:
       #test &lt;- data.frame(x = rnorm(minutes, mean=ev, sd=SD)) 
       
-      test$x[sample(nrow(test), minutes/20)] &lt;- test$x[sample(nrow(test), minutes/20)] + 30 #add 30 once every 20 minutes
-      total_added &lt;- (minutes/20)*30
-      test$x &lt;- test$x - total_added/minutes
+      test$x[sample(nrow(test), minutes/20)] &lt;- test$x[sample(nrow(test), minutes/20)] + 30 # explained above
+      test$x &lt;- test$x - total_added/minutes # explained above
     }
     
-    #Low volatility: medium frequent wins
+    #Low volatility: medium frequent wins, no infrequent larger wins
     else {
       
       # Total added EV due to volatility (nothing)
       total_added &lt;- 0
-      test &lt;- rtruncnorm(minutes, -5, Inf, mean=ev, sd=SD) #could add -5+(total_added/minutes) for clarity, which is -5 + 0/minutes = 0
+      test &lt;- rtruncnorm(minutes, -5, Inf, mean=ev, sd=SD) # could spell out -5+(total_added/minutes) for clarity, which is -5 + 0/minutes = 0
       
       #OLD VERSION, allows losses to be below -5:
       #test &lt;- data.frame(x = rnorm(minutes, mean=ev, sd=SD)) 
@@ -493,23 +495,24 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     simulations$nrow &lt;- NULL
   }
 
-  max_value &lt;- which(tail(simulations, 1) == max(tail(simulations, 1))) #Among the last row, which column has the highest value
-  min_value &lt;- which(tail(simulations, 1) == min(tail(simulations, 1))) #Among the last row, which column has the lowest value
+  max_value &lt;- which(tail(simulations, 1) == max(tail(simulations, 1))) # Among the last row, which column has the highest value
+  min_value &lt;- which(tail(simulations, 1) == min(tail(simulations, 1))) # Among the last row, which column has the lowest value
   
   simulations$ID &lt;- seq.int(nrow(simulations))
   
   simulations.long &lt;- simulations %&gt;% 
     gather(key, value, -ID) %&gt;%
-    dplyr::mutate(profit = factor(ifelse(value &gt; 0, 1, 0))) #Pelaaja voitolla vs. ei
+    dplyr::mutate(profit = factor(ifelse(value &gt; 0, 1, 0))) # Is the player winning or not
   
-  #Plot all &quot;players&quot;
+  # Plot all players
   plot &lt;- simulations.long %&gt;%
-    ggplot(aes(ID, value, group=key)) + #group here required for complex animation
+    ggplot(aes(ID, value, group=key)) + # group=key here required for complex animation
     geom_line(aes(colour = key)) +
 
     # NOTE! Below slope is defined as per the mean of the truncated distribution! (-5 is manually set as the maximum amount that can be lost)
-    # TODO: AUTOMATIZE!
+    # The ev-argument should be such that the post-truncated mean of the distribution is -0.5 (which is defined as per the assumption of 90% return to player)
     # Old version: slope = ev
+    
     geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added/minutes), Inf), linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
@@ -517,8 +520,7 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     scale_x_continuous(labels=function(x)round(x/60)) +
     guides(color=&quot;none&quot;)
 
-  
-  #Plot only the top and bottom &quot;players&quot;
+  # Plot only the top and bottom &quot;players&quot;
   plot2 &lt;- simulations.long %&gt;%
     dplyr::filter(key == max_value | key == min_value) %&gt;%
     dplyr::mutate(key = factor(key, levels = c(max_value, min_value),
@@ -534,62 +536,79 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     scale_x_continuous(labels=function(x)round(x/60)) +
     guides(color=&quot;none&quot;)
   
-  
-  #Combined plot
+  # Combined plot
   plot3 &lt;- simulations.long %&gt;%
     dplyr::mutate(maxmin = case_when(key == max_value ~ &quot;Onnekkain\npelaaja&quot;,
                                      key == min_value ~ &quot;Epäonnekkain\npelaaja&quot;,
-                                     TRUE ~ as.character(NA))) %&gt;%
+                                     TRUE ~ &quot;Muut&quot;),
+                  maxmin = factor(maxmin, levels = c(&quot;Onnekkain\npelaaja&quot;, &quot;Epäonnekkain\npelaaja&quot;, &quot;Muut&quot;))) %&gt;%
     ggplot(aes(ID, value, group=key)) +
-    geom_line(aes(colour = maxmin)) +
+    geom_line(aes(colour = maxmin, alpha = maxmin, size = maxmin)) +
     
     #Old version: slope = ev
     geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added/minutes), Inf), linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
-    scale_color_manual(values=c(&quot;red&quot;, &quot;blue&quot;, &quot;grey97&quot;)) +
+    scale_color_manual(values=c(&quot;blue&quot;, &quot;red&quot;, &quot;grey&quot;)) +
     theme_minimal(base_size=14) +
+    theme(legend.title = element_blank(),
+          legend.position = &quot;top&quot;) +
     scale_x_continuous(labels=function(x)round(x/60)) +
-    guides(color=&quot;none&quot;)
-    
+    scale_alpha_manual(values = c(1, 1, .3)) +
+    scale_size_manual(values = c(1, 1, .5))
+  
   
   if (topbottom == F) {
-    return(plot) 
+    return(plot3) 
     } 
   else {
-    return(plot2) #Change to &quot;plot3&quot; to visualize all simulations
+    return(plot2)
     }
+}</code></pre>
+<pre class="r"><code># Helper function 19.2.: Find out which post-truncated distribution mean corresponds to the pre-truncated distribution mean of -0.5
+trunc_helper &lt;- function(volatility, minutes, sd) {
+  
+  if (volatility == &quot;low&quot;) {
+    total_added = 0
+  }
+  
+  else if (volatility == &quot;med&quot;) {
+    total_added = minutes/20*30
+  }
+  
+  else {
+    total_added = minutes/60*100
+  }
+
+  trunc_sims &lt;- c()
+  trunc_iter &lt;- c()
+  
+  # Iterate from -0.00001 through to -50, and see which value gives a post-truncated mean of -0.5. NOTE: This function breaks if the standard deviation of the original simulation is set too high (no warning message is displayed, but the dashed red EV-line will not be correct). In that case, truncating at -5 and not allowing for a large enough pre-truncated mean will not result in low enough post-truncated mean.
+  
+  for (i in seq(-0.001, -50, by=-0.001)) {
+    trunc_value &lt;- truncatedmean(i, sd, -5+(total_added/minutes), Inf)
+    difference &lt;- trunc_value - (-0.5)
+    trunc_sims[i*(-1000)] &lt;- difference # *(-1000) must reflect the &quot;by&quot; -argument (todo: write a better code later)
+    trunc_iter[i*(-1000)] &lt;- i
+  }
+  
+  min_index &lt;- which.min(abs(trunc_sims))
+  correct_trunc_value &lt;- trunc_iter[min_index]
+  return(correct_trunc_value) # This will be the closest observed value to -0.5 (within rounding error)
 }</code></pre>
 <div id="matala-volatiliteetti" class="section level2">
 <h2>Matala volatiliteetti</h2>
-<p>Jos sinä ja 49 kaveriasi pelaatte kaikki 12 tuntia matalan
-volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy
-näin:</p>
+<div id="animaatio" class="section level3">
+<h3>Animaatio</h3>
+<p>Jos sinä ja 99 kaveriasi pelaatte kaikki 12 tuntia matalan
+volatiliteetin pelejä, teistä lopulta onnekkain ja epäonnekkain pelaaja
+menestyy näin:</p>
 <pre class="r"><code># Note! The EV has to be set so that the mean of the truncated distribution is -0.5! (happens to be truncatedmean(-2.105, 4, -5)) == -0.5004906 when SD = 4. TODO: automatize this!
 
-animation &lt;- volatility_simulator(720, -2.105, 4, 50, T) + 
-  geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
-  geom_point(size=2) +
-  geom_text(aes(x = 720, label = key, color=profit), hjust = 0) +
-  geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
-  scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
-  transition_reveal(ID) +
-  coord_cartesian(clip = &#39;off&#39;) +
-  theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
+#Update 19.2.: Now automated with trunc_helper(&quot;low&quot;, 720, 4). The arguments (volatility, minutes, sd) must match the ones given to volatility_simulator()
 
-animate(animation, duration = 15, fps = 10)</code></pre>
-<p><img
-src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-2-1.gif" /><!-- --></p>
-</div>
-<div id="keskitason-volatiliteetti" class="section level2">
-<h2>Keskitason volatiliteetti</h2>
-<p>Jos sinä ja 49 kaveriasi pelaatte kaikki 12 tuntia keskitason
-volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy
-näin:</p>
-<pre class="r"><code># Manuaalinen korjaus keskitason volatiliteetin vaikutukselle odotusarvoon
-# 720/20*30 / 720 == 1.5; truncatedmean(-4.05, 4, (-5 + 1.5)) == -0.5002762
-
-animation &lt;- volatility_simulator(720, -4.05, 4, 50, T, &quot;med&quot;) + 
+set.seed(1)
+animation &lt;- volatility_simulator(720, trunc_helper(&quot;low&quot;, 720, 4), 4, 100, T, &quot;low&quot;) + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
   geom_text(aes(x = 720, label = key, color=profit), hjust = 0) +
@@ -603,15 +622,55 @@ animate(animation, duration = 15, fps = 10)</code></pre>
 <p><img
 src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-3-1.gif" /><!-- --></p>
 </div>
+<div id="kaikki-havainnot" class="section level3">
+<h3>Kaikki havainnot</h3>
+<pre class="r"><code>set.seed(1)
+volatility_simulator(720, trunc_helper(&quot;low&quot;, 720, 4), 4, 100, F, &quot;low&quot;)</code></pre>
+<p><img src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+</div>
+</div>
+<div id="keskitason-volatiliteetti" class="section level2">
+<h2>Keskitason volatiliteetti</h2>
+<div id="animaatio-1" class="section level3">
+<h3>Animaatio</h3>
+<p>Jos sinä ja 99 kaveriasi pelaatte kaikki 12 tuntia keskitason
+volatiliteetin pelejä, teistä lopulta onnekkain ja epäonnekkain pelaaja
+menestyy näin:</p>
+<pre class="r"><code># See above for explanation
+
+set.seed(2)
+animation &lt;- volatility_simulator(720, trunc_helper(&quot;med&quot;, 720, 4), 4, 100, T, &quot;med&quot;) + 
+  geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
+  geom_point(size=2) +
+  geom_text(aes(x = 720, label = key, color=profit), hjust = 0) +
+  geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
+  scale_color_manual(values=c(&quot;red&quot;, &quot;darkgreen&quot;, &quot;salmon&quot;, &quot;lightblue&quot;)) +
+  transition_reveal(ID) +
+  coord_cartesian(clip = &#39;off&#39;) +
+  theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
+
+animate(animation, duration = 15, fps = 10)</code></pre>
+<p><img
+src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-5-1.gif" /><!-- --></p>
+</div>
+<div id="kaikki-havainnot-1" class="section level3">
+<h3>Kaikki havainnot</h3>
+<pre class="r"><code>set.seed(2)
+volatility_simulator(720, trunc_helper(&quot;med&quot;, 720, 4), 4, 100, F, &quot;med&quot;)</code></pre>
+<p><img src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+</div>
+</div>
 <div id="korkea-volatiliteetti" class="section level2">
 <h2>Korkea volatiliteetti</h2>
-<p>Jos sinä ja 49 kaveriasi pelaatte kaikki 12 tuntia korkean
-volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy
-näin:</p>
-<pre class="r"><code># Manuaalinen korjaus korkean volatiliteetin vaikutukselle odotusarvoon
-# 720/60*100 / 720 == 1.666677; truncatedmean(-4.403, 4, (-5 + 1.66667)) == -0.5007701
+<div id="animaatio-2" class="section level3">
+<h3>Animaatio</h3>
+<p>Jos sinä ja 99 kaveriasi pelaatte kaikki 12 tuntia korkean
+volatiliteetin pelejä, teistä lopulta onnekkain ja epäonnekkain pelaaja
+menestyy näin:</p>
+<pre class="r"><code># See above for explanation
 
-animation &lt;- volatility_simulator(720, -4.4032, 4, 50, T, &quot;high&quot;) + 
+set.seed(3)
+animation &lt;- volatility_simulator(720, trunc_helper(&quot;high&quot;, 720, 4), 4, 100, T, &quot;high&quot;) + 
   geom_segment(aes(xend = 720, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
   geom_text(aes(x = 720, label = key, color = profit), hjust = 0) +
@@ -623,18 +682,27 @@ animation &lt;- volatility_simulator(720, -4.4032, 4, 50, T, &quot;high&quot;) +
 
 animate(animation, duration = 15, fps = 10)</code></pre>
 <p><img
-src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-4-1.gif" /><!-- --></p>
+src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-7-1.gif" /><!-- --></p>
+</div>
+<div id="kaikki-havainnot-2" class="section level3">
+<h3>Kaikki havainnot</h3>
+<pre class="r"><code>set.seed(3)
+volatility_simulator(720, trunc_helper(&quot;high&quot;, 720, 4), 4, 100, F, &quot;high&quot;)</code></pre>
+<p><img src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+</div>
 </div>
 <div id="korkea-volatiliteetti-pidempi-ajanjakso"
 class="section level2">
 <h2>Korkea volatiliteetti, pidempi ajanjakso</h2>
-<p>Jos sinä ja 49 kaveriasi pelaatte kaikki 72 tuntia korkean
-volatiliteetin pelejä, teistä onnekkain ja epäonnekkain pelaaja menestyy
-näin:</p>
-<pre class="r"><code># Manuaalinen korjaus korkean volatiliteetin vaikutukselle odotusarvoon
-# 4320/60*100 / 4320 == 1.666677; truncatedmean(-4.403, 4, (-5+1.666667)) == -0.5007701
+<div id="animaatio-3" class="section level3">
+<h3>Animaatio</h3>
+<p>Jos sinä ja 99 kaveriasi pelaatte kaikki 72 tuntia korkean
+volatiliteetin pelejä, teistä lopulta onnekkain ja epäonnekkain pelaaja
+menestyy näin:</p>
+<pre class="r"><code># See above for explanation
 
-animation &lt;- volatility_simulator(4320, -4.403, 4, 50, T, &quot;high&quot;) + 
+set.seed(4)
+animation &lt;- volatility_simulator(4320, trunc_helper(&quot;high&quot;, 4320, 4), 4, 100, T, &quot;high&quot;) + 
   geom_segment(aes(xend = 4320, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
   geom_text(aes(x = 4320, label = key, color = profit), hjust = 0) +
@@ -646,7 +714,14 @@ animation &lt;- volatility_simulator(4320, -4.403, 4, 50, T, &quot;high&quot;) +
 
 animate(animation, duration = 25, fps = 10)</code></pre>
 <p><img
-src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-5-1.gif" /><!-- --></p>
+src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-9-1.gif" /><!-- --></p>
+</div>
+<div id="kaikki-havainnot-3" class="section level3">
+<h3>Kaikki havainnot</h3>
+<pre class="r"><code>set.seed(4)
+volatility_simulator(4320, trunc_helper(&quot;high&quot;, 4320, 4), 4, 100, F, &quot;high&quot;)</code></pre>
+<p><img src="esimerkki_veikkaukselle_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+</div>
 </div>
 
 
@@ -703,7 +778,7 @@ $(document).ready(function ()  {
 
     // establish options
     var options = {
-      selectors: "h1,h2",
+      selectors: "h1,h2,h3",
       theme: "bootstrap3",
       context: '.toc-content',
       hashGenerator: function (text) {
