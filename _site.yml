@@ -21,6 +21,8 @@ navbar:
           href: adjusting_variables.html
         - text: "Poker variance simulator"
           href: poker_simulator_animation.html
+        - text: "Videopokerisimulaattori (in Finnish)"
+          href: videopoker_simulator.html
         - text: "---------"
         - text: "Content to be added"
         - text: "TBA"

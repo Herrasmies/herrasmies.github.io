@@ -12,37 +12,26 @@ output:
 knitr::opts_chunk$set(include = TRUE, echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
-Videopokerisimulaation taustaoletukset:
+Videopokerisimulaattorin tarkoitus on havainnollistaa tyypillisen videopokeripelin voittojen ja häviöiden jakautumista useiden eri pelaajien välillä. Simulaattori on viestinnällinen työkalu. Se on tarkoitettu erityisesti pelaajille, jotka eivät ole perehtyneet rahapelien logiikkaan ja joilla on tavanomaista korkeampi rahapeliongelman riski. Videopokerisimulaation taustaoletukset:
 
-* Pelin palautusprosentti ≈ 90%
 * Jokaisessa panostuskierroksessa on 1 euron panos
 * Pelataan 5 panostuskierrosta minuutissa
-* Käsien voittosumma (ja todennäköisyys):
-  + Korkea volatiliteetti
-    - Kuningasvärisuora: 500 (0.002%)
-    - Värisuora: 55 (0.011%)
-    - Neljä samaa: 45 (0.236%)
-    - Täyskäsi: 13 (1.151%)
-    - Väri: 7 (1.101%)
-    - Suora: 6 (1.123%)
-    - Kolme samaa: 3 (7.445%)
-    - Kaksi paria: 2 (12.928%)
-  + Matala volatiliteetti
-    - Kuningasvärisuora: 100 (0.002%)
-    - Värisuora: 50 (0.011%)
-    - Neljä samaa: 30 (0.236%)
-    - Täyskäsi: 15 (1.151%)
-    - Väri: 8 (1.101%)
-    - Suora: 7 (1.123%)
-    - Kolme samaa: 3 (7.445%)
-    - Kaksi paria: 2 (12.928%)
-* Kuvissa havainnollistetaan "onnekkain" ja "epäonnekkain" pelaaja, millä viitataan simuloidun jakson jälkeiseen lopputilanteeseen eli siihen, kenellä on eniten ja kenellä vähiten rahaa
-* Simulaatiot eivät välttämättä vastaa yksityiskohdiltaan esimerkiksi Veikkauksen tarjoamia videopokeripelejä
-* Huom! Simulaatioissa oletetaan, että pelaajat pelaavat peliä optimistrategiaa hyödyntäen
+* Käsien voittosumma euroissa korkean / matalan volatiliteetin pelissä (sulkeissa todennäköisyys optimistrategialla)
+  + Kuningasvärisuora: 500e / 100e (0.002%)
+  + Värisuora: 55e / 50e (0.011%)
+  + Neljä samaa: 45e / 30e (0.236%)
+  + Täyskäsi: 13e / 15e (1.151%)
+  + Väri: 7e / 8e (1.101%)
+  + Suora: 6e / 7e (1.123%)
+  + Kolme samaa: 3e / 3e (7.445%)
+  + Kaksi paria: 2e / 2e (12.928%)
+* Palautusprosentit optimistrategialla: 89.955% (korkea volatiliteetti) ja 89.934% (matala volatiliteetti)
+* Simulaatioissa oletetaan, että pelaajat pelaavat peliä optimistrategiaa hyödyntäen
+* Kuvissa havainnollistetaan "onnekkain" ja "epäonnekkain" pelaaja, eli parhaiten ja heikoiten simulaation lopussa menestynyt pelaaja
+* Simulaatiot eivät todennäköisesti vastaa yksityiskohdiltaan esimerkiksi Veikkauksen tarjoamia videopokeripelejä (Veikkauksen yksityiskohtaiset pelitiedot eivät ole saatavilla)
 
 <b>TL;DR:</b>
-
-Alla esitetään videopokerisimulaatioita Mitä enemmän peliä pelaa, sitä enemmän rahaa häviää. Jotkut harvat ja onnekkaat voivat jäädä pelistä lyhyellä aikavälillä voitolle, erityisesti jos pelissä on korkea volatiliteetti, mutta riittävän pitkällä aikavälillä kaikki lopulta häviävät.
+Alla esitetään videopokerisimulaatioita tyypillisestä videopokeripelistä. Mitä enemmän peliä pelaa, sitä enemmän rahaa häviää. Jotkut harvat ja onnekkaat saattavat jäädä pelistä lyhyellä aikavälillä voitolle, erityisesti jos pelissä on korkea volatiliteetti. Riittävän pitkällä aikavälillä kaikki kuitenkin lopulta häviävät.
 
 
 ```{r, message=FALSE}
@@ -63,9 +52,9 @@ casino_simulator <- function(rounds, players, topbottom = F, volatility = "low")
   }
   
   else {
-    payout <- c(500, 55, 45, 13, 7, 6, 3, 2, 0) - 1
+    payout <- c(500, 65, 45, 13, 7, 6, 3, 2, 0) - 1
     probability <- c(0.002, 0.011, 0.236, 1.151, 1.101, 1.123, 7.445, 12.928, 76.003)/100
-    ev <- sum(payout*probability) #ev = -0.1076
+    ev <- sum(payout*probability) #ev = -0.10066
   }
 
   for (i in 1:players) {
@@ -104,7 +93,6 @@ casino_simulator <- function(rounds, players, topbottom = F, volatility = "low")
                                labels = c("Onnekkain\npelaaja", "Epäonnekkain\npelaaja"))) %>%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = key)) +
-    
     geom_abline(intercept = 0, slope = ev, linetype="dashed", size=0.5, color="red", alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
@@ -120,8 +108,6 @@ casino_simulator <- function(rounds, players, topbottom = F, volatility = "low")
                   maxmin = factor(maxmin, levels = c("Onnekkain\npelaaja", "Epäonnekkain\npelaaja", "Muut"))) %>%
     ggplot(aes(ID, value, group=key)) +
     geom_line(aes(colour = maxmin, alpha = maxmin, size = maxmin)) +
-    
-    #Old version: slope = ev
     geom_abline(intercept = 0, slope = ev, linetype="dashed", size=0.5, color="red", alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
@@ -174,7 +160,7 @@ casino_simulator(3000, 100, F, "low")
 
 Jos sinä ja 99 kaveriasi pelaatte kaikki 10 tuntia korkean volatiliteetin videopokeria, teistä lopulta onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
-set.seed(1)
+set.seed(123)
 animation <- casino_simulator(3000, 100, T, "high") + 
   geom_segment(aes(xend = 3000, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
@@ -191,7 +177,7 @@ animate(animation, duration = 15, fps = 10)
 ### Kaikki havainnot
 
 ```{r}
-set.seed(1)
+set.seed(123)
 casino_simulator(3000, 100, F, "high")
 ```
 
@@ -200,7 +186,7 @@ casino_simulator(3000, 100, F, "high")
 
 Jos sinä ja 99 kaveriasi pelaatte kaikki 30 tuntia korkean volatiliteetin videopokeria, teistä lopulta onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
-set.seed(1)
+set.seed(1234)
 animation <- casino_simulator(9000, 100, T, "high") + 
   geom_segment(aes(xend = 9000, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
@@ -217,7 +203,7 @@ animate(animation, duration = 25, fps = 10)
 ### Kaikki havainnot
 
 ```{r}
-set.seed(1)
+set.seed(1234)
 casino_simulator(9000, 100, F, "high")
 ```
 
