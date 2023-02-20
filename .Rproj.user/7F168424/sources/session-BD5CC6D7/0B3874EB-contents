@@ -27,7 +27,7 @@ Simulaatioiden oletukset:
 
 <b>TL;DR:</b>
 
-Alla esitetään rahapelisimulaatioita. Mitä enemmän rahapelejä pelaa, sitä enemmän rahaa häviää. Jotkut harvat ja onnekkaat voivat jäädä pelistä lyhyellä aikavälillä voitolle, erityisesti jos pelissä in korkea volatiliteetti, mutta riittävän pitkällä aikavälillä kaikki lopulta häviävät.
+Alla esitetään rahapelisimulaatioita. Mitä enemmän rahapelejä pelaa, sitä enemmän rahaa häviää. Jotkut harvat ja onnekkaat voivat jäädä pelistä lyhyellä aikavälillä voitolle, erityisesti jos pelissä on korkea volatiliteetti, mutta riittävän pitkällä aikavälillä kaikki lopulta häviävät.
 
 
 ```{r, message=FALSE}
