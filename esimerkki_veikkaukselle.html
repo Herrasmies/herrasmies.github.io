@@ -400,32 +400,37 @@ visualisointi</h1>
 </div>
 
 
-<p>Oletukset:</p>
+<p>Simulaatioiden oletukset:</p>
 <ul>
-<li>Simuloidun pelin palautusprosentti on 90% per panostuskierros</li>
-<li>Jokaisessa panostuskierroksessa 1 euron panos</li>
+<li>Pelin palautusprosentti on 90%</li>
+<li>Jokaisessa panostuskierroksessa on 1 euron panos</li>
 <li>Pelataan 5 panostuskierrosta minuutissa, eli pelin odotusarvo
 minuuttia kohden on -0.5 euroa (-50 senttiä)</li>
-<li>Keskihajonta on 4 (eli 8 kertaa suurempi kuin pelin odotusarvo)</li>
-<li>Simulaatiossa käytössä nk. truncated normal distribution, joka
-huomioi sen, että maksimihäviömäärä per minuutti on 5 euroa</li>
-<li>Korkeassa volatiliteetissa kerran tunnissa sattumanvaraisesti
-saadaan 100 euron voitto</li>
-<li>Keskitason volatiliteetissa kerran 20 minuutissa sattumanvaraisesti
-saadaan 30 euron voitto</li>
+<li>Minuuttikohtainen keskihajonta on 4, eli 8 kertaa suurempi kuin
+odotusarvo</li>
+<li>Simulaatiossa huomioidaan, että maksimihäviömäärä per minuutti on 5
+euroa</li>
+<li>Korkeassa volatiliteetissa saadaan lisäksi keskimäärin kerran
+kahdessa tunnissa (keskihajonta = 0.2) 200 euron voitto</li>
+<li>Keskitason volatiliteetissa saadaan lisäksi keskimäärin kerran 20
+minuutissa (keskihajonta = 0.2) 33 euron voitto</li>
 <li>Matalassa volatiliteetissa ei ole sattumanvaraisia isompia
 voittoja</li>
 <li>Korkean ja keskitason volatiliteetteihin liittyvät “ylimääräiset”
 voitot vähennetään tasaisesti muiden panostuskierrosten voitoista tai
-lisätään häviöihin siten, että odotusarvo pysyy kokoajan samana</li>
+lisätään häviöihin siten, että odotusarvo pysyy koko ajan samana</li>
 <li>Kuvissa havainnollistetaan “onnekkain” ja “epäonnekkain” pelaaja,
 millä viitataan simuloidun jakson jälkeiseen lopputilanteeseen eli
 siihen, kenellä on eniten ja kenellä vähiten rahaa</li>
-<li>HUOM! Kyseessä on hypoteettinen tilanne, jossa rahapelaamista on
-simuloitu osittain puutteellisella taustatiedolla. Todellisuudessa
-esimerkiksi Veikkauksen rahapelien hajonta voittojen ja häviöiden
-suhteen voi jonkin verran poiketa alla esitetyistä malleista</li>
+<li>Simulaatiot eivät välttämättä vastaa yksityiskohdiltaan esimerkiksi
+Veikkauksen tarjoamia pelejä</li>
 </ul>
+<p><b>TL;DR:</b></p>
+<p>Alla esitetään rahapelisimulaatioita. Mitä enemmän rahapelejä pelaa,
+sitä enemmän rahaa häviää. Jotkut harvat ja onnekkaat voivat jäädä
+pelistä lyhyellä aikavälillä voitolle, erityisesti jos pelissä in korkea
+volatiliteetti, mutta riittävän pitkällä aikavälillä kaikki lopulta
+häviävät.</p>
 <pre class="r"><code>library(tidyverse)
 library(gganimate)
 library(transformr)
@@ -448,8 +453,13 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     # High volatility: smaller frequent wins, larger rare wins (here set at 100 euros)
     if (volatility==&quot;high&quot;) {
       
-      # Total added EV due to volatility (100e once every 60 minutes)
-      total_added &lt;- (minutes/60)*100 
+      # Total added EV due to volatility (200e once every 60 minutes)
+      # OLD VERSION:
+      # total_added &lt;- (minutes/120)*200 
+      
+      # New 20.2. Randomly added amount (mean = minutes/120, SD = minutes/120*0.2). Thus, while &quot;high volatility&quot; means that players will get a 200e win on average once per 120 minutes, variance is introduced around that amount.
+      total_added &lt;- round(sample(abs(rnorm(100, minutes/120, (minutes/120)*0.2)), 1)*200)
+      total_added_theor &lt;- (minutes/120)*200
       
       # Truncate normal distribution at (-5, +Inf) since 5 euros is the maximum that can be lost. The EV of the post-truncated normal distribution has to be set to -0.5! Further add total_added/minutes to -5 since it will be later subtracted as a constant value from the winnings/losses. This is because the volatility-related additional winnings (high = 100 euros every 60 minutes, med = 30 euros every 20 minutes) otherwise inflate the expected value
     
@@ -458,24 +468,43 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
       # OLD VERSION, allows losses to be below -5:
       # test &lt;- data.frame(x = rnorm(minutes, mean=ev, sd=SD)) 
       
-      test$x[sample(nrow(test), minutes/60)] &lt;- test$x[sample(nrow(test), minutes/60)] + 100 # randomly add 100 euros once every 60 minutes
-      test$x &lt;- test$x - total_added/minutes # evenly subtract the added EV above (i.e. minutes/60 * 100 euros)
+      # OLD VERSION:
+      #test$x[sample(nrow(test), minutes/120)] &lt;- test$x[sample(nrow(test), minutes/120)] + 200 # randomly add 200 euros once every 120 minutes
+      
+      #Update 20.2.: add the bonus of 200 randomly, with a mean number of minutes/120 (defined above)
+      test$x[sample(nrow(test), total_added/200)] &lt;- test$x[sample(nrow(test), total_added/200)] + 200
+      
+      test$x &lt;- test$x - total_added/minutes # evenly subtract the added EV above (i.e. minutes/120 * 200 euros)
+    
+      
     }
     
-    # Medium volatility: semi-small frequent wins, medium rare wins (30e every 20 minutes)
+    # Medium volatility: semi-small frequent wins, medium rare wins (33e every 20 minutes)
     else if (volatility == &quot;med&quot;) {
       
-      # Total added EV due to volatility (30e every 20 minutes)
-      total_added &lt;- (minutes/20)*30
+      # Total added EV due to volatility (33e every 20 minutes)
+      # OLD VERSION:
+      # total_added &lt;- (minutes/20)*33
       
-      # See explanation above.
+      # New 20.2. Randomly added amount, with a mean of minutes/20 and SD of minutes/20*0.2
+      total_added &lt;- round(sample(abs(rnorm(100, minutes/20, (minutes/20)*0.2)), 1)*33)
+      total_added_theor &lt;- (minutes/20)*33
+      
+      # See explanation above
       test &lt;- data.frame(x = rtruncnorm(minutes, -5+(total_added/minutes), Inf, mean=ev, sd=SD))
       
       #OLD VERSION, allows losses to be below -5:
       #test &lt;- data.frame(x = rnorm(minutes, mean=ev, sd=SD)) 
       
-      test$x[sample(nrow(test), minutes/20)] &lt;- test$x[sample(nrow(test), minutes/20)] + 30 # explained above
+      # OLD VERSION:
+      # test$x[sample(nrow(test), minutes/20)] &lt;- test$x[sample(nrow(test), minutes/20)] + 33 # explained above
+      
+      #Update 20.2.: add the bonus of 200 randomly, with a mean number of minutes/120
+      test$x[sample(nrow(test), total_added/33)] &lt;- test$x[sample(nrow(test), total_added/33)] + 33
+      
       test$x &lt;- test$x - total_added/minutes # explained above
+      
+      
     }
     
     #Low volatility: medium frequent wins, no infrequent larger wins
@@ -483,10 +512,13 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
       
       # Total added EV due to volatility (nothing)
       total_added &lt;- 0
+      total_added_theor &lt;- 0
       test &lt;- rtruncnorm(minutes, -5, Inf, mean=ev, sd=SD) # could spell out -5+(total_added/minutes) for clarity, which is -5 + 0/minutes = 0
       
       #OLD VERSION, allows losses to be below -5:
       #test &lt;- data.frame(x = rnorm(minutes, mean=ev, sd=SD)) 
+      
+      
     }
     
     test &lt;- data.frame(run = test)
@@ -494,7 +526,7 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     simulations &lt;- cbind(simulations, cumsum(test))
     simulations$nrow &lt;- NULL
   }
-
+  
   max_value &lt;- which(tail(simulations, 1) == max(tail(simulations, 1))) # Among the last row, which column has the highest value
   min_value &lt;- which(tail(simulations, 1) == min(tail(simulations, 1))) # Among the last row, which column has the lowest value
   
@@ -513,7 +545,7 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     # The ev-argument should be such that the post-truncated mean of the distribution is -0.5 (which is defined as per the assumption of 90% return to player)
     # Old version: slope = ev
     
-    geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added/minutes), Inf), linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
+    geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added_theor/minutes), Inf), linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
     theme_minimal(base_size=14) +
@@ -529,7 +561,7 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     geom_line(aes(colour = key)) +
     
     #Old version: slope = ev
-    geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added/minutes), Inf), linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
+    geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added_theor/minutes), Inf), linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
     theme_minimal(base_size=14) +
@@ -546,7 +578,7 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
     geom_line(aes(colour = maxmin, alpha = maxmin, size = maxmin)) +
     
     #Old version: slope = ev
-    geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added/minutes), Inf), linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
+    geom_abline(intercept = 0, slope = truncatedmean(ev, SD, -5+(total_added_theor/minutes), Inf), linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
     scale_color_manual(values=c(&quot;blue&quot;, &quot;red&quot;, &quot;grey&quot;)) +
@@ -569,15 +601,15 @@ volatility_simulator &lt;- function(minutes, ev, SD, players, topbottom=F, volat
 trunc_helper &lt;- function(volatility, minutes, sd) {
   
   if (volatility == &quot;low&quot;) {
-    total_added = 0
+    total_added_theor = 0
   }
   
   else if (volatility == &quot;med&quot;) {
-    total_added = minutes/20*30
+    total_added_theor = minutes/20*33
   }
   
   else {
-    total_added = minutes/60*100
+    total_added_theor = minutes/120*200
   }
 
   trunc_sims &lt;- c()
@@ -586,7 +618,7 @@ trunc_helper &lt;- function(volatility, minutes, sd) {
   # Iterate from -0.00001 through to -50, and see which value gives a post-truncated mean of -0.5. NOTE: This function breaks if the standard deviation of the original simulation is set too high (no warning message is displayed, but the dashed red EV-line will not be correct). In that case, truncating at -5 and not allowing for a large enough pre-truncated mean will not result in low enough post-truncated mean.
   
   for (i in seq(-0.001, -50, by=-0.001)) {
-    trunc_value &lt;- truncatedmean(i, sd, -5+(total_added/minutes), Inf)
+    trunc_value &lt;- truncatedmean(i, sd, -5+(total_added_theor/minutes), Inf)
     difference &lt;- trunc_value - (-0.5)
     trunc_sims[i*(-1000)] &lt;- difference # *(-1000) must reflect the &quot;by&quot; -argument (todo: write a better code later)
     trunc_iter[i*(-1000)] &lt;- i
