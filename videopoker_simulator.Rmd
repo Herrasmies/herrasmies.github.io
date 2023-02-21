@@ -83,7 +83,8 @@ casino_simulator <- function(rounds, players, topbottom = F, volatility = "low")
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
     theme_minimal(base_size=14) +
-    scale_x_continuous(labels=function(x)round(x/5/60)) +
+    scale_x_continuous(breaks = seq(0, rounds, by = 600), #by = 600 on by 2 hours (i.e. 600 rounds / 5 / 60)
+                       labels=function(x)round(x/5/60, 1)) +
     guides(color="none")
 
   # Plot only the top and bottom "players"
@@ -97,7 +98,8 @@ casino_simulator <- function(rounds, players, topbottom = F, volatility = "low")
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab("Pelatut tunnit") + ylab("Raha (euroja)") +
     theme_minimal(base_size=14) +
-    scale_x_continuous(labels=function(x)round(x/5/60)) +
+    scale_x_continuous(breaks = seq(0, rounds, by = 600), # Jos visualisoidaan alle tunti, x-akseli ei näy oikein!
+                       labels=function(x)round(x/5/60, 1)) +
     guides(color="none")
   
   # Combined plot
@@ -115,7 +117,8 @@ casino_simulator <- function(rounds, players, topbottom = F, volatility = "low")
     theme_minimal(base_size=14) +
     theme(legend.title = element_blank(),
           legend.position = "top") +
-    scale_x_continuous(labels=function(x)round(x/5/60)) +
+    scale_x_continuous(breaks = seq(0, rounds, by = 600),
+                       labels=function(x)round(x/5/60, 1)) +
     scale_alpha_manual(values = c(1, 1, .3)) +
     scale_size_manual(values = c(1, 1, .5))
   
@@ -160,7 +163,7 @@ casino_simulator(3000, 100, F, "low")
 
 Jos sinä ja 99 kaveriasi pelaatte kaikki 10 tuntia korkean volatiliteetin videopokeria, teistä lopulta onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
-set.seed(123)
+set.seed(1)
 animation <- casino_simulator(3000, 100, T, "high") + 
   geom_segment(aes(xend = 3000, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
@@ -177,7 +180,7 @@ animate(animation, duration = 15, fps = 10)
 ### Kaikki havainnot
 
 ```{r}
-set.seed(123)
+set.seed(1)
 casino_simulator(3000, 100, F, "high")
 ```
 
@@ -186,7 +189,7 @@ casino_simulator(3000, 100, F, "high")
 
 Jos sinä ja 99 kaveriasi pelaatte kaikki 30 tuntia korkean volatiliteetin videopokeria, teistä lopulta onnekkain ja epäonnekkain pelaaja menestyy näin:
 ```{r}
-set.seed(1234)
+set.seed(1)
 animation <- casino_simulator(9000, 100, T, "high") + 
   geom_segment(aes(xend = 9000, yend = value), linetype = 2, colour = 'grey') + 
   geom_point(size=2) +
@@ -203,7 +206,7 @@ animate(animation, duration = 25, fps = 10)
 ### Kaikki havainnot
 
 ```{r}
-set.seed(1234)
+set.seed(1)
 casino_simulator(9000, 100, F, "high")
 ```
 
