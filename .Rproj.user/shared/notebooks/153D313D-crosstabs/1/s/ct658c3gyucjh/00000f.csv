@@ -1,0 +1,244 @@
+"0",""
+"0","m_snus_m1 <- svyglm(snus_cat_dayweek ~ ika + sukupuoli + sektori,"
+"0","                         design = svy_data_drugs,"
+"0","                         family = quasibinomial())"
+"0",""
+"0","#Summary"
+"0","summ(m_snus_m1, exp=T, confint=T)"
+"1","[4mMODEL INFO:[24m"
+"1",""
+"1","
+"
+"1",""
+"1","[3mObservations:[23m"
+"1",""
+"1"," "
+"1",""
+"1","5826"
+"1",""
+"1","
+"
+"1",""
+"1","[3mDependent Variable:[23m"
+"1",""
+"1"," "
+"1",""
+"1","snus_cat_dayweek"
+"1",""
+"1","
+"
+"1","[3mType:[23m"
+"1"," "
+"1","Analysis of complex survey design 
+ [3mFamily:[23m quasibinomial 
+ [3mLink function:[23m logit"
+"1"," "
+"1","
+
+"
+"1","[4mMODEL FIT:[24m"
+"1",""
+"1","
+"
+"1","[3mPseudo-R² (Cragg-Uhler)[23m = 0.14
+[3mPseudo-R² (McFadden)[23m = 0.11
+[3mAIC[23m =  NA"
+"1"," "
+"1","
+
+"
+"1","----------------------------------------------------------------
+                        exp(Est.)   2.5%   97.5%   t val.      p
+--------------------- ----------- ------ ------- -------- ------
+(Intercept)                  0.33   0.16    0.70    -2.91   0.00
+ika                          0.98   0.95    1.01    -1.10   0.27
+sukupuolinainen              0.14   0.11    0.18   -15.25   0.00
+sektoriYO                    0.53   0.42    0.66    -5.55   0.00
+----------------------------------------------------------------"
+"1","
+"
+"1","
+"
+"1","Estimated dispersion parameter ="
+"1"," "
+"1","1.03"
+"1"," "
+"1","
+"
+"0","#Cross-validated (5-fold) log-loss"
+"0","cv.svyglm(m_snus_m1, nfolds = 5)"
+"1","        "
+"1","    mean"
+"1","     SE"
+"1","
+.Model_1"
+"1"," 0.24463"
+"1"," 0.0085"
+"1","
+"
+"0","m_snus_m2 <- svyglm(snus_cat_dayweek ~ ika + sukupuoli + sektori + "
+"0","                        ko_alco + smoking_cat_dayweek + cannabis_cat2,"
+"0","                      design = svy_data_drugs,"
+"0","                      family = quasibinomial())"
+"0",""
+"0","#Summary"
+"0","summ(m_snus_m2, exp=T, confint=T)"
+"1","[4mMODEL INFO:[24m"
+"1",""
+"1","
+"
+"1",""
+"1","[3mObservations:[23m"
+"1",""
+"1"," "
+"1",""
+"1","5774"
+"1",""
+"1","
+"
+"1",""
+"1","[3mDependent Variable:[23m"
+"1",""
+"1"," "
+"1",""
+"1","snus_cat_dayweek"
+"1",""
+"1","
+"
+"1","[3mType:[23m"
+"1"," "
+"1","Analysis of complex survey design 
+ [3mFamily:[23m quasibinomial 
+ [3mLink function:[23m logit"
+"1"," "
+"1","
+
+"
+"1","[4mMODEL FIT:[24m"
+"1",""
+"1","
+"
+"1","[3mPseudo-R² (Cragg-Uhler)[23m = 0.21
+[3mPseudo-R² (McFadden)[23m = 0.17
+[3mAIC[23m =  NA"
+"1"," "
+"1","
+
+"
+"1","-----------------------------------------------------------------------
+                               exp(Est.)   2.5%   97.5%   t val.      p
+---------------------------- ----------- ------ ------- -------- ------
+(Intercept)                         0.12   0.05    0.26    -5.23   0.00
+ika                                 1.00   0.97    1.03    -0.07   0.95
+sukupuolinainen                     0.17   0.13    0.22   -13.60   0.00
+sektoriYO                           0.52   0.41    0.66    -5.41   0.00
+ko_alcoYes                          3.41   2.67    4.37     9.75   0.00
+smoking_cat_dayweekYes              0.56   0.35    0.89    -2.47   0.01
+cannabis_cat2Has used               2.25   1.69    3.01     5.49   0.00
+-----------------------------------------------------------------------"
+"1","
+"
+"1","
+"
+"1","Estimated dispersion parameter ="
+"1"," "
+"1","1.01"
+"1"," "
+"1","
+"
+"0","#Cross-validated (5-fold) log-loss"
+"0","cv.svyglm(m_snus_m2, nfolds = 5)"
+"1","        "
+"1","    mean"
+"1","     SE"
+"1","
+.Model_1"
+"1"," 0.22475"
+"1"," 0.0082"
+"1","
+"
+"0","m_snus_m3 <- svyglm(snus_cat_dayweek ~ ika + sukupuoli + sektori + "
+"0","                        ko_alco + smoking_cat_dayweek + cannabis_cat2 +"
+"0","                      kott_learning_difficulties + ko_income_insuffient,"
+"0","                      design = svy_data_drugs,"
+"0","                      family = quasibinomial())"
+"0",""
+"0","#Summary"
+"0","summ(m_snus_m3, exp=T, confint=T)"
+"1","[4mMODEL INFO:[24m"
+"1",""
+"1","
+"
+"1",""
+"1","[3mObservations:[23m"
+"1",""
+"1"," "
+"1",""
+"1","5741"
+"1",""
+"1","
+"
+"1",""
+"1","[3mDependent Variable:[23m"
+"1",""
+"1"," "
+"1",""
+"1","snus_cat_dayweek"
+"1",""
+"1","
+"
+"1","[3mType:[23m"
+"1"," "
+"1","Analysis of complex survey design 
+ [3mFamily:[23m quasibinomial 
+ [3mLink function:[23m logit"
+"1"," "
+"1","
+
+"
+"1","[4mMODEL FIT:[24m"
+"1",""
+"1","
+"
+"1","[3mPseudo-R² (Cragg-Uhler)[23m = 0.21
+[3mPseudo-R² (McFadden)[23m = 0.17
+[3mAIC[23m =  NA"
+"1"," "
+"1","
+
+"
+"1","---------------------------------------------------------------------------------------------
+                                                     exp(Est.)   2.5%   97.5%   t val.      p
+-------------------------------------------------- ----------- ------ ------- -------- ------
+(Intercept)                                               0.12   0.05    0.26    -5.15   0.00
+ika                                                       1.00   0.96    1.03    -0.26   0.80
+sukupuolinainen                                           0.17   0.13    0.22   -13.57   0.00
+sektoriYO                                                 0.54   0.43    0.69    -5.02   0.00
+ko_alcoYes                                                3.38   2.64    4.33     9.65   0.00
+smoking_cat_dayweekYes                                    0.53   0.33    0.84    -2.69   0.01
+cannabis_cat2Has used                                     2.26   1.69    3.02     5.50   0.00
+kott_learning_difficultiesOpiskeluvaikeuksia              1.07   0.76    1.50     0.37   0.71
+ko_income_insuffientTulotaso:                             1.46   1.05    2.02     2.27   0.02
+Riittämätön                                                                                  
+---------------------------------------------------------------------------------------------"
+"1","
+"
+"1","
+"
+"1","Estimated dispersion parameter ="
+"1"," "
+"1","1.01"
+"1"," "
+"1","
+"
+"0","#Cross-validated (5-fold) log-loss"
+"0","cv.svyglm(m_snus_m3, nfolds = 5)"
+"1","        "
+"1","    mean"
+"1","     SE"
+"1","
+.Model_1"
+"1"," 0.22494"
+"1"," 0.0083"
+"1","
+"

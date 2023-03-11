@@ -1,0 +1,5 @@
+"0","ggplot(data, aes(x=x, y=y)) + "
+"0","  geom_smooth(method=""lm"") + "
+"0","  geom_point() +"
+"0","  theme_bw() + "
+"0","  geom_abline(intercept = intercept, slope = x_coef, colour=""red"", size=1)"

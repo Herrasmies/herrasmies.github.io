@@ -1,0 +1,511 @@
+#Load libraries
+#Wrangling and LCA
+library(tidyverse)
+library(poLCA)
+library(forcats)
+library(ggmosaic)
+library(emmeans)
+
+#For radarcharts
+library(scales)
+library(fmsb)
+library(RColorBrewer)
+
+#LCA with weights? (reglca())
+library(CDM)
+
+#Import data
+lca_data <- read.csv("C:\\Users\\jpgk\\Desktop\\LCA stuff with Joe\\lca_data.csv", sep=";")
+
+#Select variables
+lca_data <- lca_data %>% 
+  dplyr::select(Year_ID, B1, B2, B3, B4B, B4A, B6, B5, B7, B8B, B8C, B8A, B9, B10, B13, B14, B16, B18, B18YY,
+                                       PGSI_1, PGSI_2, PGSI_3, PGSI_4, PGSI_5, PGSI_6, PGSI_7, PGSI_8, PGSI_9,
+                                       Gender, Age, Highest_Education_Attained, Average_Monthly_Income, wcal,
+                ATG_1, ATG_2, ATG_3, ATG_4, ATG_5, ATG_6, ATG_7, ATG_8,
+                B26A,
+                Average_Weekly_Spend, Average_Monthly_Spend, Average_Annual_Spend) %>%
+  group_by(Year_ID) %>%
+  dplyr::mutate(gambled_any_dich = sum(B1, B2, B3, B4B, B4A, B6, B5, B7, B8B, B8C, B8A,
+                                       B9, B10, B13, B14, B16, B18, B18YY, na.rm=T), #if 36 then has not gambled at all (2 (=no) x 18 = 36)
+                PGSI_mean = mean(c(PGSI_1, PGSI_2, PGSI_3, PGSI_4, PGSI_5, PGSI_6, PGSI_7, PGSI_8, PGSI_9), na.rm=T),
+                PGSI_sum = sum(c(PGSI_1-1, PGSI_2-1, PGSI_3-1, PGSI_4-1, PGSI_5-1, PGSI_6-1, PGSI_7-1, PGSI_8-1, PGSI_9-1), na.rm=T),
+                ATGS_mean = mean(c(6-ATG_1, ATG_2, ATG_3, 6-ATG_4, ATG_5, 6-ATG_6, 6-ATG_7, ATG_8), na.rm=T), #HUOM! Skooraus 1 = agree, 5 = disagreee!!!
+                PGSI_category = as.factor(case_when(PGSI_sum == 0 ~ "No problems",
+                                          PGSI_sum > 0 & PGSI_sum < 3 ~ "Low level of problems",
+                                          PGSI_sum >= 3 & PGSI_sum < 8 ~ "Moderate level of problems",
+                                          PGSI_sum >= 8 ~ "High level of problems"))) %>%
+  ungroup() %>%
+  dplyr::rename(weekly_lottery = B1, #slow
+                quick_raffle = B2, #online
+                other_daily_lottery = B3, #slow
+                scratch_card = B4B,
+                scratch_card_web = B4A, #online
+                horse_betting = B6, #skill, slow
+                sports_betting = B5, #skill, slow
+                casino_gambling = B7,
+                slot_machine_phys = B8B,
+                slot_machine_arcade = B8C,
+                slot_machine_web = B8A, #online
+                table_games_croupier = B9, #skill
+                online_poker_veikkaus = B10, #online, skill
+                private_betting_pools = B13, #slow
+                cruise_gambling_paf = B14,
+                online_gambling_paf = B16, #online
+                online_gambling_foreign = B18, #online
+                gambling_paf_land_notfin = B18YY,
+                age = Age,
+                gender = Gender,
+                education = Highest_Education_Attained,
+                income = Average_Monthly_Income,
+                weights = wcal,
+                main_reason = B26A,
+                spent_weekly = Average_Weekly_Spend,
+                spent_monthly = Average_Monthly_Spend,
+                spent_yearly = Average_Annual_Spend) %>%
+  dplyr::filter(gambled_any_dich != 36) #jos halutaan vain ne jotka on pelanneet joskus
+
+lca_data$gender <- as.factor(lca_data$gender)
+lca_data$main_reason <- factor(lca_data$main_reason, labels=c("Excitement, entertainment, fun", "To win money",
+                                                              "To develop skills", "To compete or challenge yourself",
+                                                              "To socialize", "To support worthy causes",
+                                                              "To escape, relax or relieve stress",
+                                                              "Because it made me feel good or skilful",
+                                                              "Other reason"))
+
+
+#fix education variable (change "have not finished school" as 0, then remove "other education")
+lca_data <- lca_data %>% dplyr::mutate(education = ifelse(education == 8, 0,
+                                                          ifelse(education == 7, NA, education))) 
+
+
+#fix money spent as all weekly
+lca_data <- lca_data %>% dplyr::mutate(spent_monthly2 = spent_monthly/4,
+                                      spent_yearly2 = spent_yearly/52,
+                                      spent_weekly = ifelse(is.na(spent_weekly), spent_monthly2, spent_weekly),
+                                      spent_weekly = ifelse(is.na(spent_weekly), spent_yearly2, spent_weekly))
+
+
+#impute age, education, and income by median
+lca_data$age[which(is.na(lca_data$age))] <- median(lca_data$age, na.rm=T)
+lca_data$education[which(is.na(lca_data$education))] <- median(lca_data$education, na.rm=T)
+lca_data$income[which(is.na(lca_data$income))] <- median(lca_data$income, na.rm=T)
+
+
+
+##online vs. offline factor
+lca_data <- lca_data %>% dplyr::mutate(slots = ifelse(slot_machine_phys+slot_machine_arcade+slot_machine_web !=6, 1, 2), #1 = on kokeillut jotain ainakin kerran, 2 = ei ole
+                                       lottery = ifelse(weekly_lottery+quick_raffle+other_daily_lottery !=6, 1, 2),
+                                       scratch = ifelse(scratch_card+scratch_card_web != 4, 1, 2),
+                                       casino = ifelse(casino_gambling+table_games_croupier != 4, 1, 2),
+                                       online = ifelse(online_gambling_paf+online_gambling_foreign != 4, 1, 2)) #1 = on kokeillut jotain ainakin kerran, 2 = ei ole
+
+
+# define function
+# f<-with(lca_data, cbind(weekly_lottery, #lottery
+#                         quick_raffle, #lottery
+#                         other_daily_lottery, #lottery
+#                         scratch_card, #scratch
+#                         scratch_card_web, #scratch
+#                         horse_betting,
+#                         sports_betting,
+#                         casino_gambling, #casino
+#                         slot_machine_phys, #slots
+#                         slot_machine_arcade, #slots
+#                         slot_machine_web, #slots
+#                         table_games_croupier, #casino
+#                         online_poker_veikkaus, 
+#                         private_betting_pools, 
+#                         cruise_gambling_paf, 
+#                         online_gambling_paf, #online
+#                         online_gambling_foreign, #online
+#                         gambling_paf_land_notfin)~1) #add: age+gender+education (for example)
+
+
+
+#alternatively:
+
+f<-with(lca_data, cbind(lottery, scratch, horse_betting, sports_betting, casino, slots, online, online_poker_veikkaus, 
+                        private_betting_pools, cruise_gambling_paf,
+                        gambling_paf_land_notfin)~1) #add: age+gender+education (for example)
+
+#------ run a sequence of models with 1-10 classes and print out the model with the lowest BIC
+#TRY : graphs = TRUE
+#STRATEGIA: ensin tee ilman covariaatteja 2:10, sitten valitse classien lukumäärä ja laske sen mukaan kovariaattien kanssa
+max_II <- -100000
+min_bic <- 100000
+for(i in 1:5){ #change if needed
+  lc <- poLCA(f, lca_data, nclass=i, maxiter=3000, 
+              tol=1e-5, na.rm=FALSE,  
+              nrep=10, verbose=TRUE, calc.se=TRUE, graphs=TRUE)
+  if(lc$bic < min_bic){
+    min_bic <- lc$bic
+    LCA_best_model<-lc
+  }
+}    	
+LCA_best_model
+
+
+  
+#HUOM näissä visualisoinnneissa pitää aina huomioida se kuinka monta classia löytyy
+##11 predictors, some combined items:
+LCA_plot <- tibble(unlist(LCA_best_model$probs))
+
+LCA_plot <- LCA_plot %>% dplyr::mutate(game_type = as.factor(c(rep("lottery", 8), #number reflects classes x options (responses 1 or 2)
+                                                               rep("scratch", 8),
+                                                               rep("horse_betting", 8),
+                                                               rep("sports_betting", 8),
+                                                               rep("casino", 8),
+                                                               rep("slots", 8),
+                                                               rep("online", 8),
+                                                               rep("online_poker_veikkaus", 8),
+                                                               rep("private_betting_pools", 8),
+                                                               rep("cruise_gambling_paf", 8),
+                                                               rep("gambling_paf_land_notfin", 8))),
+                                       response = rep(c(1,1,1,1,2,2,2,2), 11),
+                                       class = rep(c(1,2,3,4,1,2,3,4), 11)) %>%
+  dplyr::rename("probability" = `unlist(LCA_best_model$probs)`) %>%
+  dplyr::filter(response == 1)
+
+
+LCA_plot %>% dplyr::mutate(game_type = fct_reorder(game_type, probability)) %>%
+  ggplot(aes(game_type, probability)) +
+  geom_col() +
+  facet_wrap("class") +
+  labs(y = "Probability of having played within past 12 months", x = "Game type") +
+  geom_text(aes(label=round(probability, 2)), size=2.3, hjust=-.1, vjust=.15) +
+  theme_bw() +
+  coord_flip()
+
+#alternative:
+LCA_plot %>% dplyr::mutate(game_type = fct_reorder(game_type, probability)) %>%
+  dplyr::mutate(class = factor(class, labels = c("Class 1", "Class 2", "Class 3", "Class 4"))) %>%
+  ggplot(aes(game_type, probability, fill=as.factor(class))) +
+  geom_point(aes(color=as.factor(class)), size=3, alpha=.25) +
+  geom_line(aes(group=class, color=as.factor(class)), size=0.8) +
+  labs(y = "Probability of having played within past 12 months", x = "Game type") +
+  theme_bw(base_size=14) +
+  coord_flip() +
+  labs(color=NULL, fill=NULL) +
+  theme(legend.position = "top")
+  
+#HUOM näissä visualisoinnneissa pitää aina huomioida se kuinka monta classia löytyy
+#18 predictors, all items:
+# LCA_plot <- tibble(unlist(LCA_best_model$probs))
+# LCA_plot <- LCA_plot %>% dplyr::mutate(game_type = as.factor(c(rep("weekly_lottery", 10),
+#                                                      rep("quick_raffle", 10),
+#                                                      rep("other_daily_lottery", 10),
+#                                                      rep("scratch_card", 10),
+#                                                      rep("scratch_card_web", 10),
+#                                                      rep("horse_betting", 10),
+#                                                      rep("sports_betting", 10),
+#                                                      rep("casino_gambling", 10),
+#                                                      rep("slot_machine_phys", 10),
+#                                                      rep("slot_machine_arcade", 10),
+#                                                      rep("slot_machine_web", 10),
+#                                                      rep("table_games_croupier", 10),
+#                                                      rep("online_poker_veikkaus", 10),
+#                                                      rep("private_betting_pools", 10),
+#                                                      rep("cruise_gambling_paf", 10),
+#                                                      rep("online_gambling_paf", 10),
+#                                                      rep("online_gambling_foreign", 10),
+#                                                      rep("gambling_paf_land_notfin", 10))),
+#                                        response = rep(c(1,1,1,1,1,2,2,2,2,2), 18),
+#                                        class = rep(c(1,2,3,4,5,1,2,3,4,5), 18)) %>%
+#   dplyr::rename("probability" = `unlist(LCA_best_model$probs)`) %>%
+#   dplyr::filter(response == 1)
+# 
+# 
+# LCA_plot %>% dplyr::mutate(game_type = fct_reorder(game_type, probability),
+#                            class = factor(class, labels=c("Class 1", "Class 2", "Class 3", "Class 4", "Class 5"))) %>%
+#   ggplot(aes(game_type, probability)) +
+#   geom_col() +
+#   facet_wrap("class") +
+#   labs(y = "Probability of having played within past 12 months", x = "Game type") +
+#   theme_bw() +
+#   geom_text(aes(label=round(probability, 2)), size=2.3, hjust=-.1, vjust=.15) +
+#   coord_flip()
+
+
+
+lca_full <- cbind(lca_data, LCA_best_model$predclass)
+names(lca_full)[58] <- "predictions"
+lca_full$predictions <- as.factor(lca_full$predictions)
+
+
+lca_full %>% ggplot(aes(predictions, PGSI_mean)) + 
+  #geom_jitter(alpha=.25, width=.20) + 
+  geom_boxplot(aes(group=predictions)) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", color="red", width=.15, size=1.3, alpha=.5) +
+  stat_summary(fun=mean, geom="point", size=3, color="red", alpha=.5) + 
+  #facet_wrap("gender") +
+  theme_bw()
+
+lca_full %>% group_by(predictions) %>% dplyr::summarize(pgsi_mean = mean(PGSI_mean, na.rm=T)-1,
+                                                        atgs_mean = mean(ATGS_mean, na.rm=T),
+                                                        age_mean = mean(age, na.rm=T),
+                                                        education_median= median(education, na.rm=T),
+                                                        income_mean = mean(income, na.rm=T),
+                                                        spent_weekly_median = median(spent_weekly, na.rm=T), 
+                                                        #monthly_median = median(spent_monthly, na.rm=T), #note this was transformed to weekly
+                                                        #yearly_median = median(spent_yearly, na.rm=T), #note this was transformed to weekly
+                                                        males = sum(gender==1, na.rm=T) / sum(gender==1 | gender==2, na.rm=T)) #female = 2, male = 1 (KOODIKIRJASSA VÄÄRIN!!!)
+
+
+##frequencies
+lca_full %>% gather(key, value, weekly_lottery:gambling_paf_land_notfin) %>%
+  group_by(key) %>% dplyr::summarize(yes = sum(value==1, na.rm=T),
+                                     no = sum(value==2, na.rm=T))
+
+#ATGS
+lca_anova <- lm(ATGS_mean ~ predictions+gender+log(income+1)+age+education, data=lca_full)
+summary(lca_anova)
+margins <- as_tibble(emmeans(lca_anova, ~ predictions)) # at = list(muuttuja = c(levelit)) jos haluaa simple slopeseja
+#means <- as_tibble(emmeans(lm(ATGS_mean ~ predictions, lca_full), ~predictions))
+#plot(emmeans(lca_anova, "predictions"), comparison=T)
+
+lca_full %>% ggplot(aes(predictions, ATGS_mean)) + 
+  geom_jitter(width=.15, height=.25, alpha=.1) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", color="blue", width=.1, size=1, alpha=.5) +
+  stat_summary(fun=mean, geom="point", size=4, color="blue", alpha=.5) +
+  theme_bw() +
+  #geom_errorbar(data=margins, aes(x=predictions, y=emmean, min=lower.CL, max=upper.CL), width=.1, color="blue") +
+  labs(y = "ATGS score", x = "Predicted Class")
+
+#Money spent
+lca_anova <- lm(log(spent_yearly+1) ~ predictions+gender+log(income+1)+age+education, data=lca_full)
+summary(lca_anova)
+margins <- as_tibble(emmeans(lca_anova, ~ predictions)) # at = list(muuttuja = c(levelit)) jos haluaa simple slopeseja
+#means <- as_tibble(emmeans(lm(ATGS_mean ~ predictions, lca_full), ~predictions))
+#plot(emmeans(lca_anova, "predictions"), comparison=T)
+
+
+# lca_full %>% 
+#   gather(key, value, spent_weekly, spent_monthly, spent_yearly) %>%
+#   dplyr::mutate(key = factor(key, labels=c("Weekly", "Monthly", "Yearly"))) %>%
+#   ggplot(aes(predictions, log(value+1))) + 
+#   geom_boxplot() +
+#   geom_jitter(width=.15, height=.25, alpha=.03) +
+#   stat_summary(fun.data=mean_cl_boot, geom="errorbar", color="blue", width=.1, size=1, alpha=.5) +
+#   stat_summary(fun=mean, geom="point", size=4, color="blue", alpha=.75) +
+#   theme_bw() +
+#   labs(y = "Log-transformed money spent", x = "Predicted Class") +
+#   facet_wrap("key")
+
+
+lca_full %>% 
+  ggplot(aes(predictions, log(spent_weekly+1))) + 
+  geom_boxplot() +
+  geom_jitter(width=.15, height=.25, alpha=.03) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", color="blue", width=.1, size=1, alpha=.5) +
+  stat_summary(fun=mean, geom="point", size=4, color="blue", alpha=.75) +
+  theme_bw() +
+  labs(y = "Log-transformed money spent", x = "Predicted Class")
+
+
+#chi squared for group memberships
+chisq.test(table(lca_full$PGSI_category, lca_full$predictions))
+
+#approximations may be incorrect, too small cell sizes? Let's combine two cagtegories
+lca_full$PGSI_category2 <- fct_collapse(lca_full$PGSI_category, "High level of problems" = c("Moderate level of problems", "High level of problems"))
+lca_full$PGSI_category2 <- factor(lca_full$PGSI_category2, labels = c("No problems", "Low", "High"))
+chisq.test(table(lca_full$PGSI_category2, lca_full$predictions))
+
+mosaicplot(table(lca_full$PGSI_category2, lca_full$predictions),
+           main = "PGSI problem level",
+           color = TRUE,
+           ylab = "Predicted class",
+           xlab = "Chi-squared = 349, df = 6, p < 2.2e-16")
+
+
+
+#contrast(emmeans(lm(ATGS_mean ~ predictions, data=lca_full), "predictions"), list(predictions=c(1,0,-1,0)))
+# lca_effects <- as.data.frame(effect("predictions", lca_anova))
+# 
+# lca_effects %>% ggplot(aes(predictions, fit)) + 
+#   geom_bar(stat="identity") +
+#   geom_errorbar(aes(min=lower, max=upper), width=0.5, color="blue") +
+#   theme_bw()
+
+# lca_full %>% ggplot(aes(predictions, ATGS_mean)) + 
+#   #geom_jitter(width=.10, height=.10, alpha=.10) +
+#   stat_summary(fun.data=mean_cl_boot, geom="errorbar", color="red", width=.15, size=1.3, alpha=.5) +
+#   stat_summary(fun=mean, geom="point", size=3, color="red", alpha=.5) +
+#   theme_bw()
+
+
+#####
+#####
+##RADAR chart attempts
+# Set graphic colors
+# coul <- brewer.pal(5, "BuPu")
+# colors_border <- alpha(coul, 0.8)
+# colors_in <- alpha(coul,0.15)
+# 
+# 
+# LCA_radarplot <- LCA_plot %>% spread(game_type, probability) %>% dplyr::select(-response) %>%
+#   dplyr::filter(class==5) %>% 
+#   dplyr::select(-class)
+# 
+# LCA_radarplot <- rbind(rep(1, 18), rep(0, 18), LCA_radarplot) #18 = number of variables
+# 
+# 
+# radarchart(LCA_radarplot, axistype=1 , 
+#             #custom polygon
+#             pcol="salmon", pfcol=alpha("salmon", .45), plwd=4 , plty=1, #pfcol=colors_in
+#             #custom the grid
+#             cglcol="grey", cglty=1, axislabcol="grey", caxislabels=seq(0,1,0.25), cglwd=0.8,
+#             #custom labels
+#             vlcex=0.8)
+
+#####
+#####
+
+###TRY REGLCA, WEIGHTED LCA:
+#Data has to be in matrix form and 0/1
+reglca_data <- lca_data %>% dplyr::select(lottery, scratch, horse_betting, sports_betting, casino, slots, online, online_poker_veikkaus, 
+                                                      private_betting_pools, cruise_gambling_paf,
+                                                      gambling_paf_land_notfin, weights) %>%
+                             dplyr::mutate(weights = weights / mean(weights, na.rm=T)) %>%
+                             dplyr::mutate_at(vars(-weights), function(x) ifelse(x==1, 1, 0)) %>% #variables need to be 0/1
+                             dplyr::filter(!is.na(weights)) 
+
+#Weights in separate vector
+weights <- reglca_data$weights
+
+#Data needs to be a matrix
+reglca_matrix <- reglca_data %>% dplyr::select(-weights) %>% as.matrix()
+
+
+
+max_II <- -100000
+min_bic <- 100000
+for(i in 3:5){ #change if needed
+  lc <- reglca(reglca_matrix, i, weights=weights, group=NULL, regular_type="scad",
+              regular_lam=0, sd_noise_init=1, item_probs_init=NULL, class_probs_init=NULL,
+              random_starts=1, random_iter=20, conv=1e-05, h=1e-04, mstep_iter=10,
+              maxit=1000, verbose=TRUE, prob_min=.0001)
+  if(lc$BIC < min_bic){
+    min_bic <- lc$BIC
+    LCA_best_model<-lc
+  }
+}    	
+LCA_best_model
+
+
+
+fig_data <- as_tibble(LCA_best_model$item_probs) %>%
+  dplyr::mutate(game_type = c("Lottery", "Scratch", "Horse betting", "Sports betting", "Casino", "Slots", "Online",
+                              "Online poker Veikkaus", "Private betting pools", "Cruise gambling PAF", "Gambling PAF on land"))
+
+fig_data %>% 
+  gather(key, value, Class1, Class2, Class3, Class4) %>%
+  dplyr::mutate(game_type = fct_reorder(game_type, value)) %>%
+  ggplot(aes(game_type, value)) + 
+  geom_col() +
+  facet_wrap("key") +
+  labs(y = "Probability of having played within past 12 months", x = "Game type") +
+  geom_text(aes(label=round(value, 2)), size=2.3, hjust=-.1, vjust=.15) +
+  theme_bw() +
+  coord_flip()
+
+predicted_class <- as.data.frame(LCA_best_model$p.aj.xi)
+names(predicted_class) <- c("Class 1", "Class 2", "Class 3", "Class 4")
+
+
+#This cannot be the simplest way to wrangle predicted class, but it works...
+##combine these data with the original dataframe to get models with predicted classes from weighted analyses
+predicted_class <- predicted_class %>% 
+  dplyr::mutate(ID = seq(1:n())) %>%
+  gather(key, value, -ID) %>% 
+  group_by(ID, key) %>% 
+  dplyr::mutate(max_value = max(value)) %>%
+  dplyr::mutate(class = ifelse(value == max_value, key, NA)) %>%
+  spread(key, value) %>%
+  dplyr::select(-c("Class 1", "Class 2", "Class 3", "Class 4")) %>%
+  ungroup() %>%
+  group_by(ID) %>%
+  dplyr::mutate(predicted_class = ifelse(max_value == max(max_value), class, NA)) %>%
+  na.omit() %>%
+  dplyr::select(-class)
+
+
+#These are identical analyses to above (with unweighted data)
+reglca_full <- lca_data %>% dplyr::filter(!is.na(weights))
+reglca_full <- cbind(reglca_full, predicted_class$predicted_class)
+names(reglca_full)[58] <- "predictions"
+reglca_full$predictions <- as.factor(reglca_full$predictions)
+
+# reglca_full %>% ggplot(aes(predictions, PGSI_mean)) + 
+#   #geom_jitter(alpha=.25, width=.20) + 
+#   geom_boxplot(aes(group=predictions)) +
+#   stat_summary(fun.data=mean_cl_boot, geom="errorbar", color="red", width=.15, size=1.3, alpha=.5) +
+#   stat_summary(fun=mean, geom="point", size=3, color="red", alpha=.5) + 
+#   #facet_wrap("gender") +
+#   theme_bw()
+
+reglca_full %>% group_by(predictions) %>% dplyr::summarize(pgsi_mean = mean(PGSI_mean, na.rm=T)-1,
+                                                        atgs_mean = mean(ATGS_mean, na.rm=T),
+                                                        age_mean = mean(age, na.rm=T),
+                                                        education_median= median(education, na.rm=T),
+                                                        income_mean = mean(income, na.rm=T),
+                                                        spent_weekly_median = median(spent_weekly, na.rm=T), 
+                                                        #monthly_median = median(spent_monthly, na.rm=T), #note this was transformed to weekly
+                                                        #yearly_median = median(spent_yearly, na.rm=T), #note this was transformed to weekly
+                                                        males = sum(gender==1, na.rm=T) / sum(gender==1 | gender==2, na.rm=T)) #female = 2, male = 1 (KOODIKIRJASSA VÄÄRIN!!!)
+
+
+
+reglca_full %>% ggplot(aes(predictions, ATGS_mean)) + 
+  geom_jitter(width=.15, height=.25, alpha=.1) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", color="blue", width=.1, size=1, alpha=.5) +
+  stat_summary(fun=mean, geom="point", size=4, color="blue", alpha=.5) +
+  theme_bw() +
+  #geom_errorbar(data=margins, aes(x=predictions, y=emmean, min=lower.CL, max=upper.CL), width=.1, color="blue") +
+  labs(y = "ATGS score", x = "Predicted Class")
+
+reglca_full %>% 
+  ggplot(aes(predictions, log(spent_weekly+1))) + 
+  geom_boxplot() +
+  geom_jitter(width=.15, height=.25, alpha=.03) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", color="blue", width=.1, size=1, alpha=.5) +
+  stat_summary(fun=mean, geom="point", size=4, color="blue", alpha=.75) +
+  theme_bw() +
+  labs(y = "Log-transformed money spent", x = "Predicted Class")
+
+
+
+#chi squared for group memberships
+chisq.test(table(reglca_full$PGSI_category, reglca_full$predictions))
+
+#approximations may be incorrect, too small cell sizes? Let's combine two cagtegories
+reglca_full$PGSI_category2 <- fct_collapse(reglca_full$PGSI_category, "High level of problems" = c("Moderate level of problems", "High level of problems"))
+reglca_full$PGSI_category2 <- factor(reglca_full$PGSI_category2, labels = c("No problems", "Low", "High"))
+chisq.test(table(reglca_full$PGSI_category2, reglca_full$predictions))
+
+mosaicplot(table(reglca_full$PGSI_category2, reglca_full$predictions),
+           main = "PGSI problem level",
+           color = TRUE,
+           ylab = "Predicted class",
+           xlab = "Chi-squared = 349, df = 6, p < 2.2e-16")
+
+# #test with weighted gender (after predictions being formed unweighted)
+# 
+# library(survey)
+# lca_data_weighted <- lca_full %>% dplyr::mutate(weights = weights / mean(weights, na.rm=T)) %>% 
+#   dplyr::filter(!is.na(weights))
+# 
+# lca_data_svy <- svydesign(id = ~1,
+#                       weights = ~weights,
+#                       data = lca_data_weighted)
+# 
+# 
+# summary(svyglm(ATGS_mean ~ gender, design=lca_data_svy))
+
+#misc
+# test <- lca_full %>% 
+#   dplyr::select(predictions, PGSI_1:PGSI_9) %>% 
+#   gather(key, value, PGSI_1:PGSI_9) %>%
+#   dplyr::group_by(predictions, key) %>%
+#   summarize(mean_PGSI = mean(value, na.rm=T))
+

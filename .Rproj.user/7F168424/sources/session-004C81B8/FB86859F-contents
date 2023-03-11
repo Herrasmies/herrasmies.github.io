@@ -1,0 +1,636 @@
+#KOTT-aineisto
+#Load libraries
+
+#HUOM! kott_analyses.Rmd ei vastaa tätä dokumenttia 1:1 visualisointien osalta
+#write.csv(kott_f,"Path to export the DataFrame\\File Name.csv", row.names = FALSE)
+
+library(haven)
+library(survey)
+library(ggpubr)
+library(surveyCV)
+library(lavaan)
+library(tidyverse)
+library(poLCA)
+library(forcats)
+library(ggmosaic)
+library(emmeans)
+library(scales)
+library(fmsb)
+library(RColorBrewer)
+library(CDM)
+library(lavaan.survey)
+library(lavaanPlot)
+library(naniar)
+library(mice)
+library(interactions)
+library(jtools)
+library(ggcorrplot)
+
+#load data
+#kott <- read_sas("\\\\helfs01.thl.fi\\groups4\\KOTT_V2022_013\\kott_v2022_013_2022_09_30.sas7bdat")
+kott <- read_sas("C:\\Users\\jpgk\\Desktop\\KOTT\\kott_v2022_013_2022_09_30.sas7bdat")
+
+#visualize missing values in GHQ, CIUS5, AUDIT_C
+
+#GHQ
+kott %>% dplyr::select(kott_concentration_to_work, kott_staying_up, kott_presence,
+                       kott_making_decision, kott_stressed, kott_surmounting, kott_enjoying_life,
+                       kott_ability_face_difficulties, kott_depressed, kott_happy,
+                       kott_worthless, kott_losing_self_confidence) %>% vis_miss()
+
+#AUDIT_C
+kott %>% dplyr::select(kott_alcohol_freq, kott_alcohol_amount, kott_alcohol_more) %>% vis_miss()
+
+#CIUS5
+kott %>% dplyr::select(kott_net_addictions_x_1, kott_net_addictions_x_2, kott_net_addictions_x_3,
+                       kott_net_addictions_x_4, kott_net_addictions_x_5) %>% vis_miss()
+
+#SBI9
+kott %>% dplyr::select(kott_study_stress_x_1,
+                       kott_study_stress_x_2,
+                       kott_study_stress_x_3,
+                       kott_study_stress_x_4,
+                       kott_study_stress_x_5,
+                       kott_study_stress_x_6,
+                       kott_study_stress_x_7,
+                       kott_study_stress_x_8,
+                       kott_study_stress_x_9) %>% vis_miss()
+
+
+
+kott <- kott %>% group_by(id) %>% dplyr::mutate(GHQ_mean = mean(c(5-kott_concentration_to_work,
+                                                             5-kott_staying_up,
+                                                             5-kott_presence,
+                                                             5-kott_making_decision,
+                                                             5-kott_stressed,
+                                                             5-kott_surmounting,
+                                                             5-kott_enjoying_life,
+                                                             5-kott_ability_face_difficulties,
+                                                             5-kott_depressed,
+                                                             5-kott_worthless,
+                                                             5-kott_happy,
+                                                             5-kott_losing_self_confidence), na.rm=T),
+                                             MHI5_mean = mean(c(kott_mentalht_mhi5_time_1,
+                                                              kott_mentalht_mhi5_time_2,
+                                                              7-kott_mentalht_mhi5_time_3,
+                                                              kott_mentalht_mhi5_time_4,
+                                                              7-kott_mentalht_mhi5_time_5), na.rm=T),
+                                             AUDIT_C = mean(c(kott_alcohol_freq, 
+                                                            kott_alcohol_amount, 
+                                                            kott_alcohol_more), na.rm=T),
+                                             CIUS5_mean = mean(c(kott_net_addictions_x_1,
+                                                               kott_net_addictions_x_2,
+                                                               kott_net_addictions_x_3,
+                                                               kott_net_addictions_x_4,
+                                                               kott_net_addictions_x_5), na.rm=T),
+                                             SBI9_mean = mean(c(kott_study_stress_x_1,
+                                                                kott_study_stress_x_2,
+                                                                kott_study_stress_x_3,
+                                                                kott_study_stress_x_4,
+                                                                kott_study_stress_x_5,
+                                                                kott_study_stress_x_6,
+                                                                kott_study_stress_x_7,
+                                                                kott_study_stress_x_8,
+                                                                kott_study_stress_x_9))) %>%
+  ungroup() %>%
+  dplyr::mutate(ika_z = scale(ika))
+
+
+#Create learning difficulties variable, was not present in the data
+kott <- kott %>% 
+  dplyr::mutate(kott_learning_difficulties = ifelse(kott_learning_diffic_set_2 == "t" | kott_learning_diffic_set_4 == "t" | kott_learning_diffic_set_5 == "t" | 
+                                                      kott_learning_diffic_set_6 == "t" | kott_learning_diffic_set_7 == "t", 1, 0),
+                kott_learning_difficulties = factor(kott_learning_difficulties, labels = c("No", "Yes")),
+                ko_income_insuffient = factor(ko_income_insuffient, labels = c("No", "Yes")),
+                sukupuoli = factor(sukupuoli, labels=c("Mies", "Nainen")),
+                credit5 = as.factor(credit5),
+                sektori = as.factor(sektori),
+                kott_net_cius5_set_1 = factor(kott_net_cius5_set_1, labels=c(0, 1)),
+                kott_net_cius5_set_2 = factor(kott_net_cius5_set_2, labels=c(0, 1)),
+                kott_net_cius5_set_3 = factor(kott_net_cius5_set_3, labels=c(0, 1)),
+                kott_net_cius5_set_4 = factor(kott_net_cius5_set_4, labels=c(0, 1)))
+
+  
+#Predictive mean matching imputation
+
+#Create temporary dataframe for predicting missing values
+tempkott <- kott %>% 
+  dplyr::select(ko_gambling_problem, ko_gambling_weekly, GHQ_mean, MHI5_mean, AUDIT_C, CIUS5_mean, 
+                kott_instant_loan, kott_study_involvement, kott_relationship, kott_mentalht_loneliness, kott_income, 
+                sukupuoli, ika, sektori, agegroup) %>%
+  mice(m=5,maxit=50,meth='pmm',seed=500) %>% #impute 3 datasets
+  complete(action=5) %>% #replace missing values by first iterated dataset // single imputation! TODO: multiple imputation (pooling) later on; action = "wide"
+  dplyr::select(-c(sukupuoli, ika, sektori, agegroup)) #de-select demographic variables (no missing values, only used for predicting)
+
+names(tempkott) <- c("ko_gambling_problem_imp", "ko_gambling_weekly_imp", "GHQ_mean_imp", "MHI5_mean_imp", "AUDIT_C_imp", "CIUS5_mean_imp",
+                     "kott_instant_loan_imp", "kott_study_involvement_imp", "kott_relationship_imp", "kott_mentalht_loneliness_imp",
+                     "kott_income_imp") #rename imputed variables
+
+#manual multiple imputation, aja yllä oleva koodi uudestaan, tallenna eri imputoitu setti alla
+kott.1 <- cbind(kott, tempkott) #include imputed variables in full dataset
+kott.2 <- cbind(kott, tempkott) #include imputed variables in full dataset
+kott.3 <- cbind(kott, tempkott) #include imputed variables in full dataset
+kott.4 <- cbind(kott, tempkott) #include imputed variables in full dataset
+kott.5 <- cbind(kott, tempkott) #include imputed variables in full dataset
+
+
+svy_data <- svydesign(id = ~1,
+                      fpc = ~rg_n,
+                      weights = ~w_analysis,
+                      strata = ~rg_stratum,
+                      data = kott) #change this
+
+#NOTE: For imputed variables, add "...__imp" to the variable, e.g. AUDIT_C_imp
+malli5 <- svyglm(ko_gambling_problem_imp ~
+                   factor(sukupuoli)+
+                   factor(kott_net_cius5_set_1)+
+                   factor(kott_net_cius5_set_2)+
+                   factor(kott_net_cius5_set_3)+
+                   factor(kott_net_cius5_set_4)+
+                   factor(sektori)+
+                   as.numeric(as.factor(agegroup))+ #tulkitaan järjestysasteikollisena
+                   AUDIT_C_imp+
+                   GHQ_mean_imp+
+                   CIUS5_mean_imp+
+                   factor(kott_instant_loan_imp)+
+                   factor(kott_study_involvement_imp)+
+                   factor(kott_relationship_imp)+
+                   kott_mentalht_loneliness_imp+
+                   kott_income_imp, #korkeat pisteet = sitä vaikeampi tulla taloudellisesti toimeen
+                 design=svy_data,
+                 family = quasibinomial())
+
+
+#Tallenna mallit erikseen sen jälkeen kun on imputoitu, sitten:
+#mallit <- list(malli1, malli2, malli3, malli4, malli5)
+#summary(pool(mallit))
+
+#kott_instant_loan pikavippi
+#kott_study_involvement kuuluuko ryhmään
+#kott_mentalht_loneliness yksinäisyys
+#kott_relationship parisuhde
+#kott_tobacco_branch_x_1 tupakka
+#kott_tobacco_branch_x_2 nuuska
+#kott_drugs_use_12m_x_1 kannabis
+#kott_drugs_use_12m_x_2 ekstaasi
+#kott_drugs_use_12m_x_3 amfetamiini/metamfetamiini
+#kott_drugs_use_12m_x_4 kokaiini
+#kott_drugs_use_12m_x_6 lääkkeet ja alkoholi yhdessä
+#NOTE: voiko NA:t korvata arvolla "ei"? vaikka kyseessä varmaan ei halua vastata...
+
+summary(malli5)
+cv.svyglm(malli5, nfolds = 5)
+# log(1 / x) = 0.16244
+# 1/x = exp(1.176378)
+# 1/x - 1.176378 = 0
+# 1 / x - 1.176378 * x / x = 0
+# 1 - 1.176378x / x = 0
+# 1 - 1.176378x / x * x = 0 * x
+# 1- 1.176378x = 0
+# 1.176378x = 1
+# x = 1 / 1.176378 = 0.8500669
+# log(1/0.85)
+# -log(0.85)
+#=== Eli keskimääräinen negatiivinen log-probability (log loss, binary cross-entropy) on 0.16181, 
+#mikä vastaa keskimääräistä todennäköisyyttä 0.85
+#eli 1 / exp(cv.svyglm(malli1, nfolds = 5)) ### TÄMÄ YLLÄ EI OLE OIKEIN!!!
+
+
+
+# #Linearity to logits
+# kott %>% dplyr::filter(!is.na(sukupuoli), !is.na(sektori), 
+#                        !is.na(agegroup), 
+#                        !is.na(AUDIT_C), 
+#                        !is.na(GHQ_mean),
+#                        !is.na(ko_gambling_problem)) %>% 
+#   ggplot(aes(GHQ_mean, predict(malli1, type = "link"))) + 
+#   geom_point() + 
+#   geom_smooth(method="loess", aes(color="loess")) + 
+#   geom_smooth(method="lm", aes(color="linear")) +
+#   labs(x="predictor", y="logit") + 
+#   theme_bw(base_size=19)
+
+
+malli2 <- svyglm(ko_gambling_weekly ~
+                   factor(sukupuoli)+
+                   factor(kott_net_cius5_set_1)+
+                   factor(kott_net_cius5_set_2)+
+                   factor(kott_net_cius5_set_3)+
+                   factor(kott_net_cius5_set_4)+ 
+                   factor(sektori)+
+                   as.numeric(as.factor(agegroup))+ #tulkitaan järjestysasteikollisena
+                   AUDIT_C+
+                   GHQ_mean+
+                   CIUS5_mean+
+                   factor(kott_instant_loan)+
+                   factor(kott_study_involvement)+
+                   factor(kott_relationship)+
+                   kott_mentalht_loneliness +
+                   kott_income ,
+                 design=svy_data,
+                 family = quasibinomial())
+
+summary(malli2)
+
+cv.svyglm(malli2, nfolds = 5)
+1 / exp(cv.svyglm(malli2, nfolds = 5)) #Tulkinta: EOS, älä käytä
+
+
+
+#GHQ riippuvana muuttujana:
+malli3 <- svyglm(GHQ_mean ~
+                   ko_gambling_problem +
+                   ko_gambling_weekly +
+                   factor(sukupuoli)+
+                   factor(kott_net_cius5_set_1)+
+                   factor(kott_net_cius5_set_2)+
+                   factor(kott_net_cius5_set_3)+
+                   factor(kott_net_cius5_set_4)+
+                   factor(sektori)+
+                   agegroup+
+                   AUDIT_C+
+                   CIUS5_mean+
+                   factor(kott_instant_loan)+
+                   factor(kott_study_involvement)+
+                   factor(kott_relationship)+
+                   kott_mentalht_loneliness+
+                   kott_income,
+                 design = svy_data)
+
+summary(malli3)
+
+
+#LAVAAN MEDIATION MODEL (GHQ, GAMBLING PROB and CIUS5)
+#SKip measurement model, before that consider replacing missing values for individual items
+# measurement model
+# GHQ =~ kott_concentration_to_work + kott_staying_up + kott_presence +
+#   kott_making_decision + kott_stressed + kott_surmounting + kott_enjoying_life +
+#   kott_ability_face_difficulties + kott_depressed + kott_worthless + kott_worthless + kott_happy +
+#   kott_losing_self_confidence
+# CIUS5 =~ kott_net_addictions_x_1 + kott_net_addictions_x_2 + kott_net_addictions_x_3 + 
+#   kott_net_addictions_x_4 + kott_net_addictions_x_5
+
+model <- '
+
+
+# measurement model
+GHQ =~ kott_concentration_to_work + kott_staying_up + kott_presence +
+  kott_making_decision + kott_stressed + kott_surmounting + kott_enjoying_life +
+  kott_ability_face_difficulties + kott_depressed + kott_worthless + kott_worthless + kott_happy +
+  kott_losing_self_confidence
+CIUS5 =~ kott_net_addictions_x_1 + kott_net_addictions_x_2 + kott_net_addictions_x_3 +
+  kott_net_addictions_x_4 + kott_net_addictions_x_5
+  
+  # direct effect
+    GHQ ~ c*ko_gambling_problem
+  # mediator
+    CIUS5 ~ a*ko_gambling_problem
+    GHQ ~ b*CIUS5
+  # indirect effect (a*b)
+    ab := a*b
+  # total effect
+    total := c + (a*b)
+
+  # residual correlations (none yet)
+'
+fit <- sem(model, data = kott)
+summary(fit, standardized=T, fit.measures=T, modindices=F)
+
+
+#WEIGHTED LAVAAN
+#Fit the model using weighted data (by passing the survey-design object we generated above)
+survey.fit <- lavaan.survey(fit, 
+                            svy_data, 
+                            estimator="ML") 
+#inspect output
+summary(survey.fit,
+        fit.measures=TRUE, 
+        standardized=TRUE,
+        rsquare=TRUE,
+        modindices=F)
+
+#Plot
+lavaanPlot(model = survey.fit, coefs = TRUE, stand = TRUE,
+           node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"),
+           stars=c("covs"))
+
+
+
+##FIGURES
+kott_kuva1 <- kott %>% 
+  dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+                sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+  ggplot(aes(CIUS5_mean, ko_gambling_problem, color=sukupuoli, fill=sukupuoli)) +
+  geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+  theme_bw(base_size=13) +
+  theme(legend.position = "bottom",
+        axis.title.y=element_text(size=10)) +
+  xlab("test") + ylab("test") +
+  scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+  scale_color_manual(values=c("blue", "red", "orange")) +
+  scale_fill_manual(values=c("blue", "red", "orange")) +
+  labs(x = "CIUS5 score (higher=more compulsive)", y = "Probability of gambling being problematic in past year", color = NULL, fill=NULL) +
+  #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+  facet_wrap("sektori")
+
+
+kott_kuva2 <- kott %>% 
+  dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+                sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+  ggplot(aes(CIUS5_mean, ko_gambling_weekly, color=sukupuoli, fill=sukupuoli)) +
+  geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+  theme_bw(base_size=13) +
+  theme(legend.position = "bottom",
+        axis.title.y = element_text(size=10)) +
+  xlab("test") + ylab("test") +
+  scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+  scale_color_manual(values=c("blue", "red", "orange")) +
+  scale_fill_manual(values=c("blue", "red", "orange")) +
+  labs(x = "CIUS5 score (higher=more compulsive)", y = "Probability of gambling weekly for past year", color = NULL, fill=NULL) +
+  #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+  facet_wrap("sektori")
+
+
+
+kott_kuva3 <- kott %>% 
+  dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+                sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+  ggplot(aes(AUDIT_C, ko_gambling_problem, color=sukupuoli, fill=sukupuoli)) +
+  geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+  theme_bw(base_size=13) +
+  theme(legend.position = "bottom") +
+  xlab("test") + ylab("test") +
+  scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+  scale_color_manual(values=c("blue", "red", "orange")) +
+  scale_fill_manual(values=c("blue", "red", "orange")) +
+  labs(x = "AUDIT_C score (higher=more alcohol use)", y = "", color = NULL, fill=NULL) +
+  #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+  facet_wrap("sektori")
+
+
+kott_kuva4 <- kott %>% 
+  dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+                sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+  ggplot(aes(AUDIT_C, ko_gambling_weekly, color=sukupuoli, fill=sukupuoli)) +
+  geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+  theme_bw(base_size=13) +
+  theme(legend.position = "bottom") +
+  xlab("test") + ylab("test") +
+  scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+  scale_color_manual(values=c("blue", "red", "orange")) +
+  scale_fill_manual(values=c("blue", "red", "orange")) +
+  labs(x = "AUDIT_C score (higher=more alcohol use)", y = "", color = NULL, fill=NULL) +
+  #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+  facet_wrap("sektori")
+
+
+ggarrange(kott_kuva1, kott_kuva3, kott_kuva2, kott_kuva4, 
+          ncol=2, nrow=2, common.legend = T, legend="top")
+
+
+#########
+#########
+#OLD
+#########
+#########
+# kott_kuva1 <- kott %>% gather(key, value, kott_depressed, kott_worthless, kott_happy) %>%
+#   dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+#                 sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen")),
+#                 key = factor(key, labels = c("Have felt depressed", "Have felt lack of happiness", "Have felt worthless")),
+#                 sukupuoli_sektori = interaction(sukupuoli, sektori)) %>%
+#   ggplot(aes(value, ko_gambling_problem, color=key)) +
+#   geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+#   theme_bw(base_size=13) +
+#   xlab("test") + ylab("test") +
+#   scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+#   scale_color_manual(values=c("blue", "red", "orange")) +
+#   #scale_fill_manual(values=c("blue", "red", "orange")) +
+#   scale_x_continuous(breaks = 1:4, labels = c("Much less\nthan usual",
+#                                               "Less\nthan usual",
+#                                               "Usual\namount",
+#                                               "More\nthan\nusual")) +
+#   theme(legend.position = "right",
+#         axis.text.x=element_text(angle = -60, hjust = 0),
+#         axis.title.y=element_text(size=11)) +
+#   labs(x = NULL, y = "Probability of reporting problems with gambling", color = NULL) +
+#   #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+#   facet_grid(sukupuoli~sektori)
+# 
+# 
+# kott_kuva2 <- kott %>% gather(key, value, kott_depressed, kott_worthless, kott_happy) %>%
+#   dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+#                 sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen")),
+#                 key = factor(key, labels = c("Have felt depressed", "Have felt lack of happiness", "Have felt worthless")),
+#                 sukupuoli_sektori = interaction(sukupuoli, sektori)) %>%
+#   ggplot(aes(value, ko_gambling_weekly, color=key)) +
+#   geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+#   theme_bw(base_size=13) +
+#   xlab("test") + ylab("test") +
+#   scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+#   scale_color_manual(values=c("blue", "red", "orange")) +
+#   #scale_fill_manual(values=c("blue", "red", "orange")) +
+#   scale_x_continuous(breaks = 1:4, labels = c("Much less\nthan usual",
+#                                               "Less\nthan usual",
+#                                               "Usual\namount",
+#                                               "More\nthan\nusual")) +
+#   theme(legend.position = "right",
+#         axis.text.x=element_text(angle = -60, hjust = 0),
+#         axis.title.y=element_text(size=11)) +
+#   labs(x = NULL, y = "Probability of gambling past week", color = NULL) +
+#   #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+#   facet_grid(sukupuoli~sektori)
+
+
+
+##Opiskelu-uupumusanalyysit
+
+malli_opintouupumus <- svyglm(SBI9_mean ~ 
+                                ika_z*sukupuoli + 
+                                credit5 +
+                                kott_learning_difficulties + 
+                                ko_smoke + 
+                                ko_snuff + 
+                                ko_alco +
+                                ko_drug +
+                                ko_gambling_problem + 
+                                ko_gambling_weekly +
+                                CIUS5_mean +
+                                kott_net_cius5_set_1+
+                                kott_net_cius5_set_2+
+                                kott_net_cius5_set_3+
+                                kott_net_cius5_set_4+
+                                sektori +
+                                kott_mentalht_loneliness +
+                                kott_current_health +
+                                I(5-kott_income),
+                              design = svy_data)
+
+summary(malli_opintouupumus)
+summ(malli_opintouupumus, vifs=T)
+
+
+# f1 <- interact_plot(malli_opintouupumus, pred = ika_z, modx = sukupuoli, johnson_neyman = FALSE, interval=TRUE) +
+#   labs(title="Mallin ennuste")
+
+# Raw data
+f1 <- kott %>% 
+  dplyr::mutate(sukupuoli = factor(sukupuoli, levels=c("Nainen", "Mies"))) %>%
+  ggplot(aes(ika, SBI9_mean)) + 
+  theme_classic(base_size=14) + 
+  geom_smooth(aes(color=sukupuoli, fill=sukupuoli, linetype=sukupuoli, weight=w_analysis), method="lm", alpha=.25) +
+  geom_jitter(aes(size=w_analysis), alpha=.07) +
+  labs(title="Painotettu raakadata") +
+  theme(legend.position="none") +
+  scale_color_manual(values=c("Salmon", "Blue")) +
+  scale_fill_manual(values=c("Salmon", "Blue")) +
+  scale_size(range=c(0,3), guide="none") +
+  labs(color=NULL, fill=NULL, linetype=NULL, size=NULL, x="Ikä", y="SBI9")
+
+#Calculate estimated marginal means for z-standardized age-variable given gender
+effects_kott <- as_tibble(effect(c("ika_z:sukupuoli"), 
+                                 malli_opintouupumus,
+                                 xlevels=list(ika_z=seq(-2,2,by=0.25))))
+
+f2 <- effects_kott %>%
+  dplyr::mutate(sukupuoli = factor(sukupuoli, levels=c("Nainen", "Mies"))) %>%
+  ggplot(aes(ika_z, fit, color=sukupuoli, fill=sukupuoli, linetype=sukupuoli)) +
+  geom_smooth(method = "lm") +
+  geom_ribbon(aes(ymin=lower, ymax=upper, color=NULL), alpha=.08) +
+  scale_color_manual(values=c("Salmon", "Blue")) +
+  scale_fill_manual(values=c("Salmon", "Blue")) +
+  labs(color=NULL, fill=NULL, linetype=NULL, x="Ikä (standardoitu)", y="SBI9", title="Mallin ennuste") +
+  theme_classic(base_size=14) +
+  theme(legend.position=c(0.75,0.8)) +
+  geom_text(x=-1.1, y=3.245, label="B = 0.03, t = 1.36, p = .17", color="Black", angle=10) +
+  geom_text(x=-1, y=3.55, label="B = -0.09, t = -4.9, p < .0001", color="Black", angle=-28) +
+  guides(colour = guide_legend(override.aes = list(alpha = .08)))
+  
+
+#ggarrange(f1, f2, legend = "bottom", common.legend=T)
+ggarrange(f1, f2)
+
+ggsave("f1f2.pdf", height=5, width=10)
+
+#Interaktion simple slopes!
+
+#note that simple slope for males is the same as the age coefficient in the model, since 
+#the age coefficient equals the slope of age when all other interacting variables are 0 (i.e. gender == 0 == male) 
+#--> holding an interacting variable "constant" is only possible when it's 0
+sim_slopes(malli_opintouupumus, pred = ika_z, modx = sukupuoli, johnson_neyman = FALSE) 
+test(emtrends(malli_opintouupumus, "sukupuoli", var = "ika_z", rg.limit=50000))
+
+# mylist2 <- list(ika = c(18,30,70), sukupuoli = c("mies", "nainen"))
+# fittiD.mms <- emmeans(malli_opintouupumus, ~ ika | sukupuoli, at=mylist2, rg.limit=130000)
+# contrast(fittiD.mms, "pairwise", by="sukupuoli", adjust = "none")
+# probe_interaction(malli_opintouupumus, pred = ika, modx =sukupuoli, interval=TRUE)
+#plot_model(malli_opintouupumus, type = "pred", terms = c("ika", "sukupuoli"), mdrt.values = "meansd") #needs sjPlot
+
+
+
+
+#removed due to high VIFs = ko_cannabis, ko_tobacco; removed due to similarity with AUDIT_C: ko_alco, ko_alco_drunk
+
+
+#LAVAAN MEDIATION MODEL (SBI9, MHI5, AUDIT)
+
+model <- '
+  # measurement model
+    AUDIT =~ kott_alcohol_freq + kott_alcohol_amount + kott_alcohol_more
+
+    SBI =~ kott_study_stress_x_1 + kott_study_stress_x_2 + 
+    kott_study_stress_x_3 + kott_study_stress_x_4 + 
+    kott_study_stress_x_5 + kott_study_stress_x_6 + 
+    kott_study_stress_x_7 + kott_study_stress_x_8 +
+    kott_study_stress_x_9
+
+   MHI5 =~ kott_mentalht_mhi5_time_1 + kott_mentalht_mhi5_time_2 + 
+   (7-kott_mentalht_mhi5_time_3) + kott_mentalht_mhi5_time_4 + 
+   (7-kott_mentalht_mhi5_time_5)
+
+
+  # direct effect
+    SBI ~ c*AUDIT
+  # mediator
+    MHI5 ~ a*AUDIT
+    SBI ~ b*MHI5
+  # indirect effect (a*b)
+    ab := a*b
+  # total effect
+    total := c + (a*b)
+
+  # residual correlations (none yet)
+'
+fit <- sem(model, data = kott)
+summary(fit, standardized=T, fit.measures=T, modindices=F)
+
+
+#WEIGHTED LAVAAN
+#Fit the model using weighted data (by passing the survey-design object we generated above)
+survey.fit <- lavaan.survey(fit, 
+                            svy_data, 
+                            estimator="ML") 
+#inspect output
+summary(survey.fit,
+        fit.measures=TRUE, 
+        standardized=TRUE,
+        rsquare=TRUE,
+        modindices=F)
+
+#Plot
+lavaanPlot(model = survey.fit, coefs = TRUE, stand = TRUE,
+           node_options = list(shape = "box", fontname = "Helvetica"), edge_options = list(color = "grey"),
+           stars=c("covs"))
+
+
+
+####
+#### Korrelaatioplotit
+####
+####
+
+#Correlation matrix
+
+cors <- svycor(~SBI9_mean + ika_z + as.numeric(sukupuoli)-1 + as.numeric(kott_learning_difficulties)-1 +
+                 as.numeric(ko_smoke) + as.numeric(ko_snuff) + as.numeric(ko_alco) + as.numeric(ko_drug) +
+                 as.numeric(ko_gambling_problem) + as.numeric(ko_gambling_weekly) + CIUS5_mean + 
+                 as.numeric(sektori)-1 + kott_mentalht_loneliness + kott_current_health + I(5-kott_income), design = svy_data, na.rm=T)
+
+cors <- round(cors$cors, 2)
+rownames(cors) <- c("SBI9", "Ikä", "Sukupuoli", "Oppimisvaikeudet", "Tupakoi", "Nuuskaa", 
+                    "Alkoholin liikakäyttö" ,"Huumeet" ,"Rahapeliongelma", "Rahapeli viikottain", "CIUS5", "Sektori", "Yksinäisyys", 
+                    "Terveydentila", "Tulotaso")
+colnames(cors) <- c("SBI9", "Ikä", "Sukupuoli", "Oppimisvaikeudet", "Tupakoi", "Nuuskaa", 
+                    "Alkoholin liikakäyttö" ,"Huumeet" ,"Rahapeliongelma", "Rahapeli viikottain", "CIUS5", "Sektori", "Yksinäisyys", 
+                    "Terveydentila", "Tulotaso")
+
+p.mat <- cor_pmat(cors)
+
+#ggcorrplot(cors)
+#ggcorrplot(cors, method = "circle")
+ggcorrplot(cors, hc.order = TRUE, type = "lower", p.mat = p.mat,
+           lab = TRUE, lab_size=3, sig.level=.20, 
+           insig = "pch", pch = 4, pch.col="black", pch.cex = 2)
+
+ggcorrplot(cors, hc.order = TRUE, type = "upper", lab = TRUE, lab_size=3)
+# ggcorrplot(cors, hc.order = TRUE,
+#            type = "lower", p.mat = p.mat)
+# ggcorrplot(cors, p.mat = p.mat, hc.order = TRUE,
+#            type = "lower", insig = "blank")
+
+
+####
+#OLD:
+corrplot(cors, method="color", col=col(200),
+         type="upper", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         p.mat = p.mat, sig.level = 0.1, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE)$corrPos -> p1
+
+text(p1$x, p1$y, round(p1$corr, 2))
+
+
+ggsave("correlations.png", height=5, width=10)
+

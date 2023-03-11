@@ -1,0 +1,806 @@
+#Peli poikki -aineiston analyysi?, vuodet 2019-2020, Tuiren gradupaperi (c) Jussi Palom?ki
+
+#Load libraries
+library(foreign)
+library(psych) #new addition
+library(ltm)
+library(tidyverse)
+library(ggpubr)
+library(lme4)
+library(effects)
+library(lmerTest)
+library(ggrepel)
+library(jtools)
+library(blme)
+library(lavaan)
+library(ggh4x)
+library(emmeans)
+library(lubridate)
+library(stringr)
+library(margins)
+library(pROC)
+library(ggstance)
+library(hrbrthemes)
+library(patchwork)
+library(rms)
+library(mice)
+
+
+#options(contrasts=c("contr.sum", "contr.poly"))
+options(contrasts=c("contr.treatment", "contr.poly"))
+
+
+setwd("C:\\Users\\jpgk\\Desktop\\Tuiren gradupaperi\\")
+
+
+#Tässä välissä piti manuaalisesti muuttaa tiedostojen koodaus UTF-8:ksi (avasin muistiolla ja save as)
+screen_raw <- read.csv("seulonta.csv", sep=";")
+pre_raw <- read.csv("esitutkimus.csv", sep=";")
+post_raw <- read.csv("jalkitutkimus.csv", sep=";")
+followup6_raw <- read.csv("jalkitutkimus6kk.csv", sep=";")
+followup12_raw <- read.csv("jalkitutkimus12kk.csv", sep=";")
+
+
+#Changing the variable names.
+
+
+#SCREEN
+names_screen <-  c("Id", "Created", "Labels", "Registered", "gender", "yob", "education", "employed", "income_own",
+                   "income_household", "residence_a", "residence_b", "NODS2_1", "NODS2_2", "NODS2_3", "NODS2_4",
+                   "NODS2_5", "NODS2_6", "NODS2_7", "NODS2_8", "NODS2_9", "NODS2_10", "NODS2_11", "NODS2_12",
+                   "NODS2_13", "NODS2_14", "NODS2_15", "NODS2_16", "NODS2_17", 
+                   "probgames1","probgames2","probgames3","probgames4","probgames5","probgames6","probgames7","probgames8","probgames9","probgames10",
+                   "probgames11","probgames12","probgames13","probgames14","probgames15","probgames16","probgames17","probgames18","probgames19","probgames20",
+                   "gamblingstartage","whichgame1","whichgame2","whichgame3","whichgame4","whichgame5","whichgame6","whichgame7","whichgame8","whichgame9","whichgame10",
+                   "whichgame11","whichgame12","whichgame13","whichgame14","whichgame15","whichgame16","whichgame17","whichgamewhere","problem_years",
+                   "psych_health", "phys_health",
+                   "MADRS_1", "MADRS_2", "MADRS_3", "MADRS_4", "MADRS_5", "MADRS_6", "MADRS_7", "MADRS_8", "MADRS_9",
+                   "AUDIT_1", "AUDIT_2", "AUDIT_3", "finance_sit", "relation_mom", "relation_dad", "relation_siblings", "relation_spouse",
+                   "relation_own_children", "relation_friends", "debt_dich", "debt_likert", "RCQ1", "RCQ2", "RCQ3", "RCQ4", "RCQ5",
+                   "RCQ6", "RCQ7", "RCQ8", "RCQ9", "RCQ10", "RCQ11", "RCQ12","sought_help","got_help")
+
+
+names(screen_raw)[c(2,3,7,14,18,21,30,33,55,
+                    58, 62, 64, 145, 148, 151, 154, 
+                    157, 160, 163, 166, 169, 172, 175, 178, 
+                    181, 184, 187, 190, 193,
+                    275, 277, 279, 281, 283, 285, 287, 289, 291, 293, 
+                    295, 297, 299, 301, 303, 305, 307, 309, 311, 313, 
+                    327, 328, 330, 332, 334, 336, 338, 340, 342, 344, 346, 
+                    348, 350, 352, 354, 356, 358, 360, 368, 362,
+                    388, 391,
+                    394, 397, 400, 403, 406, 409, 412, 415, 418,
+                    421, 424, 427, 469, 472, 475, 478, 481, 
+                    484, 487, 490, 493, 522, 525, 528, 531, 534, 
+                    537, 540, 543, 546, 549, 552, 555, 502, 505)] <- names_screen
+
+
+
+screen <- screen_raw %>% dplyr::select(Id, Created, Labels, Registered, gender, yob, education, employed, income_own, income_household, residence_a, residence_b, 
+                                       NODS2_1, NODS2_2, NODS2_3, NODS2_4, NODS2_5, NODS2_6, NODS2_7, NODS2_8,
+                                       NODS2_9, NODS2_10, NODS2_11, NODS2_12, NODS2_13, NODS2_14, NODS2_15, NODS2_16,NODS2_17,
+                                       probgames1,probgames2,probgames3,probgames4,probgames5,probgames6,probgames7,probgames8,probgames9,probgames10,
+                                       probgames11,probgames12,probgames13,probgames14,probgames15,probgames16,probgames17,probgames18,probgames19,probgames20,
+                                       gamblingstartage, whichgame1,whichgame2,whichgame3,whichgame4,whichgame5,whichgame6,whichgame7,whichgame8,whichgame9,whichgame10,
+                                       whichgame11,whichgame12,whichgame13,whichgame14,whichgame15,whichgame16,whichgame17,whichgamewhere,problem_years,
+                                       psych_health, phys_health, 
+                                       MADRS_1, MADRS_2, MADRS_3, MADRS_4, MADRS_5, MADRS_6, MADRS_7, MADRS_8, MADRS_9,
+                                       AUDIT_1, AUDIT_2, AUDIT_3, finance_sit, relation_mom, relation_dad, relation_siblings, relation_spouse, relation_own_children,
+                                       relation_friends, debt_dich, debt_likert,
+                                       RCQ1, RCQ2, RCQ3, RCQ4, RCQ5, RCQ6, RCQ7, RCQ8, RCQ9, RCQ10, RCQ11, RCQ12,
+                                       sought_help, got_help) %>% 
+  dplyr::mutate(ID = seq(1:n())) %>% dplyr::relocate(ID, .before = Id)
+
+
+
+#PRE STUDY
+names_pre <- c("Id", "Created", "last_answer", "NODS2_1", "NODS2_2", "NODS2_3", "NODS2_4",
+               "NODS2_5", "NODS2_6", "NODS2_7", "NODS2_8", "NODS2_9", "NODS2_10", "NODS2_11", "NODS2_12",
+               "NODS2_13", "NODS2_14", "NODS2_15", "NODS2_16", "NODS2_17", "psych_health", "phys_health",
+               "MADRS_1", "MADRS_2", "MADRS_3", "MADRS_4", "MADRS_5", "MADRS_6", "MADRS_7", "MADRS_8", "MADRS_9",
+               "AUDIT_1", "AUDIT_2", "AUDIT_3", "finance_sit", "relation_mom", "relation_dad", "relation_siblings", "relation_spouse",
+               "relation_own_children", "relation_friends", "debt_dich", "debt_likert", "disso1", "disso2", "disso3", "disso4", "help", "stresshelp", "freetime")
+
+names(pre_raw)[c(2,3,17,18,21,24,27,
+                 30,33,36,39,42,45,48,51,
+                 54,57,60,63,66,189,192,
+                 195,198,201,204,207,210,213,216,219,
+                 222,225,228,260,263,266,269,272,
+                 275,278,281,284,364,367,370,373,287,290,361)] <- names_pre
+
+
+pre <- pre_raw %>% dplyr::select(Id, Created, last_answer, NODS2_1, NODS2_2, NODS2_3, NODS2_4, NODS2_5, NODS2_6, NODS2_7, NODS2_8,
+                                 NODS2_9, NODS2_10, NODS2_11, NODS2_12, NODS2_13, NODS2_14, NODS2_15, NODS2_16, 
+                                 NODS2_17, psych_health, phys_health, 
+                                 MADRS_1, MADRS_2, MADRS_3, MADRS_4, MADRS_5, MADRS_6, MADRS_7, MADRS_8, MADRS_9,
+                                 AUDIT_1, AUDIT_2, AUDIT_3, finance_sit, relation_mom, relation_dad, relation_siblings, relation_spouse, relation_own_children,
+                                 relation_friends, debt_dich, debt_likert, disso1, disso2, disso3, disso4, help, stresshelp, freetime) %>%
+  mutate(ID = seq(1:n())) %>% relocate(ID, .before=Id)
+
+
+
+#POST STUDY
+names_post <- c("Id", "Created", "NODS2_1", "NODS2_2", "NODS2_3", "NODS2_4",
+                "NODS2_5", "NODS2_6", "NODS2_7", "NODS2_8", "NODS2_9", "NODS2_10", "NODS2_11", "NODS2_12",
+                "NODS2_13", "NODS2_14", "NODS2_15", "NODS2_16", "NODS2_17", "psych_health", "phys_health",
+                "MADRS_1", "MADRS_2", "MADRS_3", "MADRS_4", "MADRS_5", "MADRS_6", "MADRS_7", "MADRS_8", "MADRS_9",
+                "AUDIT_1", "AUDIT_2", "AUDIT_3", "finance_sit", "relation_mom", "relation_dad", "relation_siblings", "relation_spouse",
+                "relation_own_children", "relation_friends", "debt_dich", "debt_likert","disso1", "disso2", "disso3", "disso4")
+
+
+names(post_raw)[c(2,3,18,21,24,27,
+                  30,33,36,39,42,45,48,51,
+                  54,57,60,63,66,189,192,
+                  195,198,201,204,207,210,213,216,219,
+                  222,225,228,260,263,266,269,272,
+                  275,278,281,284,364,367,370,373)] <- names_post
+
+
+post <- post_raw %>% dplyr::select(Id, Created, NODS2_1, NODS2_2, NODS2_3, NODS2_4, NODS2_5, NODS2_6, NODS2_7, NODS2_8,
+                                   NODS2_9, NODS2_10, NODS2_11, NODS2_12, NODS2_13, NODS2_14, NODS2_15, NODS2_16, 
+                                   NODS2_17, psych_health, phys_health, 
+                                   MADRS_1, MADRS_2, MADRS_3, MADRS_4, MADRS_5, MADRS_6, MADRS_7, MADRS_8, MADRS_9,
+                                   AUDIT_1, AUDIT_2, AUDIT_3, finance_sit, relation_mom, relation_dad, relation_siblings, relation_spouse, relation_own_children,
+                                   relation_friends, debt_dich, debt_likert, disso1, disso2, disso3, disso4) %>%
+  mutate(ID = seq(1:n())) %>% relocate(ID, .before=Id)
+
+
+
+#FOLLOW UP 6 MONTHS
+names_followup6 <- c("Id", "Created", "NODS6_1", "NODS6_2", "NODS6_3", "NODS6_4",
+                     "NODS6_5", "NODS6_6", "NODS6_7", "NODS6_8", "NODS6_9", "NODS6_10", "NODS6_11", "NODS6_12",
+                     "NODS6_13", "NODS6_14", "NODS6_15", "NODS6_16", "NODS6_17", "psych_health", "phys_health",
+                     "MADRS_1", "MADRS_2", "MADRS_3", "MADRS_4", "MADRS_5", "MADRS_6", "MADRS_7", "MADRS_8", "MADRS_9",
+                     "AUDIT_1", "AUDIT_2", "AUDIT_3", "finance_sit", "relation_mom", "relation_dad", "relation_siblings", "relation_spouse",
+                     "relation_own_children", "relation_friends", "debt_dich", "debt_likert", "disso1", "disso2", "disso3", "disso4")
+
+names(followup6_raw)[c(2,3,69,72,75,78,
+                       81,84,87,90,93,96,99,102,
+                       105,108,111,114,117,240,243,
+                       246,249,252,255,258,261,264,267,270,
+                       273,276,279,311,314,317,320,323,
+                       326,329,332,335,415,418,421,424)] <- names_followup6 #Huom valitse t?ss? 6kk NODS
+
+
+
+followup6 <- followup6_raw %>% dplyr::select(Id, Created, NODS6_1, NODS6_2, NODS6_3, NODS6_4, NODS6_5, NODS6_6, NODS6_7, NODS6_8,
+                                             NODS6_9, NODS6_10, NODS6_11, NODS6_12, NODS6_13, NODS6_14, NODS6_15, NODS6_16, 
+                                             NODS6_17, psych_health, phys_health, 
+                                             MADRS_1, MADRS_2, MADRS_3, MADRS_4, MADRS_5, MADRS_6, MADRS_7, MADRS_8, MADRS_9,
+                                             AUDIT_1, AUDIT_2, AUDIT_3, finance_sit, relation_mom, relation_dad, relation_siblings, relation_spouse, relation_own_children,
+                                             relation_friends, debt_dich, debt_likert, disso1, disso2, disso3, disso4) %>%
+  mutate(ID = seq(1:n())) %>% relocate(ID, .before=Id)
+
+
+
+#FOLLOW UP 12 MONTHS
+names_followup12 <- c("Id", "Created", "NODS6_1", "NODS6_2", "NODS6_3", "NODS6_4",
+                      "NODS6_5", "NODS6_6", "NODS6_7", "NODS6_8", "NODS6_9", "NODS6_10", "NODS6_11", "NODS6_12",
+                      "NODS6_13", "NODS6_14", "NODS6_15", "NODS6_16", "NODS6_17", "psych_health", "phys_health",
+                      "MADRS_1", "MADRS_2", "MADRS_3", "MADRS_4", "MADRS_5", "MADRS_6", "MADRS_7", "MADRS_8", "MADRS_9",
+                      "AUDIT_1", "AUDIT_2", "AUDIT_3", "finance_sit", "relation_mom", "relation_dad", "relation_siblings", "relation_spouse",
+                      "relation_own_children", "relation_friends", "debt_dich", "debt_likert", "disso1", "disso2", "disso3", "disso4")
+
+names(followup12_raw)[c(2,3,69,72,75,78,
+                        81,84,87,90,93,96,99,102,
+                        105,108,111,114,117,240,243,
+                        246,249,252,255,258,261,264,267,270,
+                        273,276,279,311,314,317,320,323,
+                        326,329,332,335,415,418,421,424)] <- names_followup12 
+
+
+followup12 <- followup12_raw %>% dplyr::select(Id, Created, NODS6_1, NODS6_2, NODS6_3, NODS6_4, NODS6_5, NODS6_6, NODS6_7, NODS6_8,
+                                               NODS6_9, NODS6_10, NODS6_11, NODS6_12, NODS6_13, NODS6_14, NODS6_15, NODS6_16, 
+                                               NODS6_17, psych_health, phys_health, 
+                                               MADRS_1, MADRS_2, MADRS_3, MADRS_4, MADRS_5, MADRS_6, MADRS_7, MADRS_8, MADRS_9,
+                                               AUDIT_1, AUDIT_2, AUDIT_3, finance_sit, relation_mom, relation_dad, relation_siblings, relation_spouse, relation_own_children,
+                                               relation_friends, debt_dich, debt_likert, disso1, disso2, disso3, disso4) %>%
+  mutate(ID = seq(1:n())) %>% relocate(ID, .before=Id)
+
+
+
+
+#Mutate all NODS-scores from 1/2 to 1/0
+screen <- data.frame(screen[,1:13], lapply(screen[,14:30], function(x) ifelse(x==1, 1, 0)), screen[,31:107])
+
+pre <- data.frame(pre[,1:4], lapply(pre[,5:21], function(x) ifelse(x==1, 1, 0)), pre[,22:51])
+
+post <- data.frame(post[,1:3], lapply(post[,4:20], function(x) ifelse(x==1, 1, 0)), post[,21:47])
+
+followup6 <- data.frame(followup6[,1:3], lapply(followup6[,4:20], function(x) ifelse(x==1, 1, 0)), followup6[,21:47])
+
+followup12 <- data.frame(followup12[,1:3], lapply(followup12[,4:20], function(x) ifelse(x==1, 1, 0)), followup12[,21:47])
+
+
+#Calculate MADRS mean
+MADRS_mean_s <- screen %>% dplyr::select(MADRS_1:MADRS_9) %>% rowMeans(na.rm=TRUE)
+MADRS_mean_pr <- pre %>% dplyr::select(MADRS_1:MADRS_9) %>% rowMeans(na.rm=TRUE)
+MADRS_mean_po <- post %>% dplyr::select(MADRS_1:MADRS_9) %>% rowMeans(na.rm=TRUE)
+MADRS_mean_f6 <- followup6 %>% dplyr::select(MADRS_1:MADRS_9) %>% rowMeans(na.rm=TRUE)
+MADRS_mean_f12 <- followup12 %>% dplyr::select(MADRS_1:MADRS_9) %>% rowMeans(na.rm=TRUE)
+
+screen <- cbind(screen, MADRS_mean_s)
+pre <- cbind(pre, MADRS_mean_pr)
+post <- cbind(post, MADRS_mean_po)
+followup6 <- cbind(followup6, MADRS_mean_f6)
+followup12 <- cbind(followup12, MADRS_mean_f12)
+
+
+#Calculate AUDIT mean
+AUDIT_mean_s <- screen %>% dplyr::select(AUDIT_1:AUDIT_3) %>% rowMeans(na.rm=TRUE)
+AUDIT_mean_pr <- pre %>% dplyr::select(AUDIT_1:AUDIT_3) %>% rowMeans(na.rm=TRUE)
+AUDIT_mean_po <- post %>% dplyr::select(AUDIT_1:AUDIT_3) %>% rowMeans(na.rm=TRUE)
+AUDIT_mean_f6 <- followup6 %>% dplyr::select(AUDIT_1:AUDIT_3) %>% rowMeans(na.rm=TRUE)
+AUDIT_mean_f12 <- followup12 %>% dplyr::select(AUDIT_1:AUDIT_3) %>% rowMeans(na.rm=TRUE)
+
+screen <- cbind(screen, AUDIT_mean_s)
+pre <- cbind(pre, AUDIT_mean_pr)
+post <- cbind(post, AUDIT_mean_po)
+followup6 <- cbind(followup6, AUDIT_mean_f6)
+followup12 <- cbind(followup12, AUDIT_mean_f12)
+
+#Calculate NODS scores
+screen <- screen %>% mutate(NODS2_2 = ifelse(NODS2_1 == 1, NA, NODS2_2),
+                            NODS2_5 = ifelse(NODS2_4 == 1, NODS2_5, NA),
+                            NODS2_6 = ifelse(NODS2_4 == 1, NODS2_6, NA),
+                            NODS2_7 = ifelse(NODS2_6 == 1, NODS2_6, NA),
+                            NODS2_9 = ifelse(NODS2_8 == 1, NA, NODS2_9),
+                            NODS2_12 = ifelse(NODS2_11 == 1, NODS2_12, NA),
+                            NODS2_15 = ifelse(NODS2_14 == 1, NA, NODS2_15),
+                            NODS2_16 = ifelse(NODS2_14 == 1 | NODS2_15 == 1, NA, NODS2_16),
+                            add_nods1 = case_when(NODS2_4 == 1 | NODS2_5 == 1 ~ 1),
+                            add_nods2 = case_when(NODS2_6 == 1 | NODS2_7 == 1 ~ 1),
+                            add_nods3 = case_when(NODS2_11 == 1 | NODS2_12 == 1 ~ 1))
+
+pre <- pre %>% mutate(NODS2_2 = ifelse(NODS2_1 == 1, NA, NODS2_2),
+                      NODS2_5 = ifelse(NODS2_4 == 1, NODS2_5, NA),
+                      NODS2_6 = ifelse(NODS2_4 == 1, NODS2_6, NA),
+                      NODS2_7 = ifelse(NODS2_6 == 1, NODS2_6, NA),
+                      NODS2_9 = ifelse(NODS2_8 == 1, NA, NODS2_9),
+                      NODS2_12 = ifelse(NODS2_11 == 1, NODS2_12, NA),
+                      NODS2_15 = ifelse(NODS2_14 == 1, NA, NODS2_15),
+                      NODS2_16 = ifelse(NODS2_14 == 1 | NODS2_15 == 1, NA, NODS2_16),
+                      add_nods1 = case_when(NODS2_4 == 1 | NODS2_5 == 1 ~ 1),
+                      add_nods2 = case_when(NODS2_6 == 1 | NODS2_7 == 1 ~ 1),
+                      add_nods3 = case_when(NODS2_11 == 1 | NODS2_12 == 1 ~ 1))
+
+post <- post %>% mutate(NODS2_2 = ifelse(NODS2_1 == 1, NA, NODS2_2),
+                        NODS2_5 = ifelse(NODS2_4 == 1, NODS2_5, NA),
+                        NODS2_6 = ifelse(NODS2_4 == 1, NODS2_6, NA),
+                        NODS2_7 = ifelse(NODS2_6 == 1, NODS2_6, NA),
+                        NODS2_9 = ifelse(NODS2_8 == 1, NA, NODS2_9),
+                        NODS2_12 = ifelse(NODS2_11 == 1, NODS2_12, NA),
+                        NODS2_15 = ifelse(NODS2_14 == 1, NA, NODS2_15),
+                        NODS2_16 = ifelse(NODS2_14 == 1 | NODS2_15 == 1, NA, NODS2_16),
+                        add_nods1 = case_when(NODS2_4 == 1 | NODS2_5 == 1 ~ 1),
+                        add_nods2 = case_when(NODS2_6 == 1 | NODS2_7 == 1 ~ 1),
+                        add_nods3 = case_when(NODS2_11 == 1 | NODS2_12 == 1 ~ 1))
+
+followup6 <- followup6 %>% mutate(NODS6_2 = ifelse(NODS6_1 == 1, NA, NODS6_2),
+                                  NODS6_5 = ifelse(NODS6_4 == 1, NODS6_5, NA),
+                                  NODS6_6 = ifelse(NODS6_4 == 1, NODS6_6, NA),
+                                  NODS6_7 = ifelse(NODS6_6 == 1, NODS6_6, NA),
+                                  NODS6_9 = ifelse(NODS6_8 == 1, NA, NODS6_9),
+                                  NODS6_12 = ifelse(NODS6_11 == 1, NODS6_12, NA),
+                                  NODS6_15 = ifelse(NODS6_14 == 1, NA, NODS6_15),
+                                  NODS6_16 = ifelse(NODS6_14 == 1 | NODS6_15 == 1, NA, NODS6_16),
+                                  add_nods1 = case_when(NODS6_4 == 1 | NODS6_5 == 1 ~ 1),
+                                  add_nods2 = case_when(NODS6_6 == 1 | NODS6_7 == 1 ~ 1),
+                                  add_nods3 = case_when(NODS6_11 == 1 | NODS6_12 == 1 ~ 1))
+
+followup12 <- followup12 %>% mutate(NODS6_2 = ifelse(NODS6_1 == 1, NA, NODS6_2),
+                                    NODS6_5 = ifelse(NODS6_4 == 1, NODS6_5, NA),
+                                    NODS6_6 = ifelse(NODS6_4 == 1, NODS6_6, NA),
+                                    NODS6_7 = ifelse(NODS6_6 == 1, NODS6_6, NA),
+                                    NODS6_9 = ifelse(NODS6_8 == 1, NA, NODS6_9),
+                                    NODS6_12 = ifelse(NODS6_11 == 1, NODS6_12, NA),
+                                    NODS6_15 = ifelse(NODS6_14 == 1, NA, NODS6_15),
+                                    NODS6_16 = ifelse(NODS6_14 == 1 | NODS6_15 == 1, NA, NODS6_16),
+                                    add_nods1 = case_when(NODS6_4 == 1 | NODS6_5 == 1 ~ 1),
+                                    add_nods2 = case_when(NODS6_6 == 1 | NODS6_7 == 1 ~ 1),
+                                    add_nods3 = case_when(NODS6_11 == 1 | NODS6_12 == 1 ~ 1))
+
+#T??ll? on siis otettu huomioon se NODSin konditionaalirakenne. Pisteiden pit?is vaihdella 0-10 v?lill?. Skoorausohjeet l?ytyy netist?. 
+#Finding out the columns for add-nods variable
+#which(colnames(screen)=="add_nods1")
+
+#First dplyr::select NODS items that can directly be counted, then add additional nods-scores calculated above
+NODS_s <- screen %>% dplyr::select(NODS2_1:NODS2_3, NODS2_8:NODS2_10, NODS2_13:NODS2_17) %>% rowSums(na.rm=TRUE)
+NODS_s <- NODS_s + rowSums(screen[,110:112], na.rm=TRUE)
+screen <- cbind(screen, NODS_s)
+
+#which(colnames(pre)=="add_nods1")
+
+NODS_pr <- pre %>% dplyr::select(NODS2_1:NODS2_3, NODS2_8:NODS2_10, NODS2_13:NODS2_17) %>% rowSums(na.rm=TRUE)
+NODS_pr <- NODS_pr + rowSums(pre[,54:56], na.rm=TRUE)
+pre <- cbind(pre, NODS_pr)
+
+#which(colnames(post)=="add_nods3")
+#50
+
+NODS_po <- post %>% dplyr::select(NODS2_1:NODS2_3, NODS2_8:NODS2_10, NODS2_13:NODS2_17) %>% rowSums(na.rm=TRUE)
+NODS_po <- NODS_po + rowSums(post[,50:52], na.rm=TRUE)
+post <- cbind(post, NODS_po)
+
+#which(colnames(followup6)=="add_nods1")
+
+NODS_f6 <- followup6 %>% dplyr::select(NODS6_1:NODS6_3, NODS6_8:NODS6_10, NODS6_13:NODS6_17) %>% rowSums(na.rm=TRUE)
+NODS_f6 <- NODS_f6 + rowSums(followup6[,50:52], na.rm=TRUE)
+followup6 <- cbind(followup6, NODS_f6)
+
+#which(colnames(followup12)=="add_nods1")
+
+NODS_f12 <- followup12 %>% dplyr::select(NODS6_1:NODS6_3, NODS6_8:NODS6_10, NODS6_13:NODS6_17) %>% rowSums(na.rm=TRUE)
+NODS_f12 <- NODS_f12 + rowSums(followup12[,50:52], na.rm=TRUE)
+followup12 <- cbind(followup12, NODS_f12)
+
+
+#First I need to create fake variables for screen disso1-disso4
+
+screen$disso1 <- rep(1,each=nrow(screen))
+screen$disso2 <- rep(1,each=nrow(screen))
+screen$disso3 <- rep(1,each=nrow(screen))
+screen$disso4 <- rep(1,each=nrow(screen))
+
+#Select final variables
+screen <- screen %>% dplyr::select(Id:residence_b, gamblingstartage, probgames1:probgames20, whichgame1:problem_years, psych_health, phys_health, 
+                                   finance_sit:debt_likert, RCQ1:AUDIT_mean_s, NODS_s, MADRS_9, sought_help, got_help, disso1, disso2, disso3, disso4,) %>% 
+  rename(psych_health_s = psych_health, phys_health_s = phys_health, finance_sit_s = finance_sit, 
+         relation_mom_s = relation_mom, relation_dad_s = relation_dad, relation_siblings_s = relation_siblings, relation_spouse_s = relation_spouse,
+         relation_own_children_s = relation_own_children, relation_friends_s = relation_friends, debt_dich_s = debt_dich, debt_likert_s = debt_likert,
+         created_s = Created, suicid_s = MADRS_9, disso1_sc= disso1, disso2_sc=disso2, disso3_sc=disso3, disso4_sc=disso4)
+
+pre <- pre %>% dplyr::select(Id, Created, last_answer, psych_health, phys_health, finance_sit:AUDIT_mean_pr, NODS_pr, MADRS_9,disso1, disso2, disso3, disso4, help, stresshelp, freetime) %>%
+  rename(psych_health_pr = psych_health, phys_health_pr = phys_health, finance_sit_pr = finance_sit, 
+         relation_mom_pr = relation_mom, relation_dad_pr = relation_dad, relation_siblings_pr = relation_siblings, relation_spouse_pr = relation_spouse,
+         relation_own_children_pr = relation_own_children, relation_friends_pr = relation_friends, debt_dich_pr = debt_dich, debt_likert_pr = debt_likert,
+         created_pr = Created, suicid_pr = MADRS_9,disso1_pr= disso1, disso2_pr=disso2, disso3_pr=disso3, disso4_pr=disso4)
+
+post <- post %>% dplyr::select(Id, Created, psych_health, phys_health, finance_sit:AUDIT_mean_po, NODS_po, MADRS_9,disso1, disso2, disso3, disso4) %>%
+  rename(psych_health_po = psych_health, phys_health_po = phys_health, finance_sit_po = finance_sit, 
+         relation_mom_po = relation_mom, relation_dad_po = relation_dad, relation_siblings_po = relation_siblings, relation_spouse_po = relation_spouse,
+         relation_own_children_po = relation_own_children, relation_friends_po = relation_friends, debt_dich_po = debt_dich, debt_likert_po = debt_likert,
+         created_po = Created, suicid_po = MADRS_9,disso1_po= disso1, disso2_po=disso2, disso3_po=disso3, disso4_po=disso4)
+
+followup6 <- followup6 %>% dplyr::select(Id, Created, psych_health, phys_health, finance_sit:AUDIT_mean_f6, NODS_f6, MADRS_9,disso1, disso2, disso3, disso4) %>%
+  rename(psych_health_6 = psych_health, phys_health_6 = phys_health, finance_sit_6 = finance_sit, 
+         relation_mom_6 = relation_mom, relation_dad_6 = relation_dad, relation_siblings_6 = relation_siblings, relation_spouse_6 = relation_spouse,
+         relation_own_children_6 = relation_own_children, relation_friends_6 = relation_friends, debt_dich_6 = debt_dich, debt_likert_6 = debt_likert,
+         created_6 = Created, suicid_6 = MADRS_9, disso1_f6=disso1, disso2_f6=disso2, disso3_f6=disso3, disso4_f6=disso4)
+
+followup12 <- followup12 %>% dplyr::select(Id, Created, psych_health, phys_health, finance_sit:AUDIT_mean_f12, NODS_f12, MADRS_9, disso1, disso2, disso3, disso4) %>%
+  rename(psych_health_12 = psych_health, phys_health_12 = phys_health, finance_sit_12 = finance_sit, 
+         relation_mom_12 = relation_mom, relation_dad_12 = relation_dad, relation_siblings_12 = relation_siblings, relation_spouse_12 = relation_spouse,
+         relation_own_children_12 = relation_own_children, relation_friends_12 = relation_friends, debt_dich_12 = debt_dich, debt_likert_12 = debt_likert,
+         created_12 = Created, suicid_12 = MADRS_9,disso1_f12=disso1, disso2_f12=disso2, disso3_f12=disso3, disso4_f12=disso4)
+
+
+
+#Join dataframes
+pelipoikki_latest <- left_join(screen, pre, by='Id') %>%
+  left_join(., post, by='Id') %>%
+  left_join(., followup6, by='Id') %>%
+  left_join(., followup12, by='Id')
+
+#Nyt data on viel? leve?ss? muodossa. Viel? pit?isi siis saattaa pitk??n muotoon. Alla olevassa koodissa on joku ongelma. Pit?is lis?t? varmaan jotain niihin uusiin muuttujiin liittyen. 
+
+
+
+pelipoikki_latest <- pelipoikki_latest  %>%
+  rename(QA1 = MADRS_mean_s , QA2 = MADRS_mean_pr, QA3 = MADRS_mean_po, QA4 = MADRS_mean_f6, QA5 = MADRS_mean_f12, #MADRS (huom n?iss? on f6kk ja f12kk toisin kuin muissa, pieni inconsistency nime?misess?...)##Oon muuttanut nimist? suomenkieliset jutu pois t. Tuire
+         QB1 = NODS_s, QB2 = NODS_pr, QB3 = NODS_po, QB4 = NODS_f6, QB5 = NODS_f12, #NODS
+         QC1 = AUDIT_mean_s, QC2 = AUDIT_mean_pr, QC3 = AUDIT_mean_po, QC4 = AUDIT_mean_f6, QC5 = AUDIT_mean_f12, #AUDIT
+         QD1 = finance_sit_s, QD2 = finance_sit_pr, QD3 = finance_sit_po, QD4 = finance_sit_6, QD5 = finance_sit_12, #Financial situation
+         QE1 = debt_likert_s, QE2 = debt_likert_pr, QE3 = debt_likert_po, QE4 = debt_likert_6, QE5 = debt_likert_12, #debt likert
+         QQ1 = debt_dich_s, QQ2 = debt_dich_pr, QQ3 = debt_dich_po, QQ4 = debt_dich_6, QQ5 = debt_dich_12, #debt dichotomous
+         QG1 = psych_health_s, QG2 = psych_health_pr, QG3 = psych_health_po, QG4 = psych_health_6, QG5 = psych_health_12, #psychological health
+         QH1 = phys_health_s, QH2 = phys_health_pr, QH3 = phys_health_po, QH4 = phys_health_6, QH5 = phys_health_12, #physical health
+         QI1 = relation_mom_s, QI2 = relation_mom_pr, QI3 = relation_mom_po, QI4 = relation_mom_6, QI5 = relation_mom_12, #relationship with mom
+         QJ1 = relation_dad_s, QJ2 = relation_dad_pr, QJ3 = relation_dad_po, QJ4 = relation_dad_6, QJ5 = relation_dad_12, #relationship with dad
+         QK1 = relation_siblings_s, QK2 = relation_siblings_pr, QK3 = relation_siblings_po, QK4 = relation_siblings_6, QK5 = relation_siblings_12, #relationship with siblings
+         QL1 = relation_spouse_s, QL2 = relation_spouse_pr, QL3 = relation_spouse_po, QL4 = relation_spouse_6, QL5 = relation_spouse_12, #relationship with spouse
+         QM1 = relation_own_children_s, QM2 = relation_own_children_pr, QM3 = relation_own_children_po, QM4 = relation_own_children_6, QM5 = relation_own_children_12, #relationship with own children
+         QN1 = relation_friends_s, QN2 = relation_friends_pr, QN3 = relation_friends_po, QN4 = relation_friends_6, QN5 = relation_friends_12, #relationship with friends
+         QO1 = created_s, QO2 = created_pr, QO3 = created_po, QO4 = created_6, QO5 = created_12,
+         QP1 = suicid_s, QP2 = suicid_pr, QP3 = suicid_po, QP4 = suicid_6, QP5 = suicid_12, QR1=disso1_sc, QR2=disso1_pr, QR3=disso1_po, QR4=disso1_f6, 
+         QR5=disso1_f12, QS1=disso2_sc, QS2=disso2_pr, QS3=disso2_po, QS4=disso2_f6, QS5=disso2_f12, QV1=disso3_sc,QV2=disso3_pr, QV3=disso3_po, 
+         QV4=disso3_f6, QV5=disso3_f12, QU1=disso4_sc,QU2=disso4_pr, QU3=disso4_po, QU4=disso4_f6, QU5=disso4_f12) %>%
+  #date data created 
+  gather(var, value, QO1, QG1:QE1, QA1:QO2, QG2:QU2, QA2:QP5) %>% #T?SS? PIT?? KATSOA SE J?RKK? tuosta pelipoikki_latesta datasta (eli aja t?? koodi enne gatheria asti ja sit colnames(pelipoikki_latest)) JA MUUTTAA T?? P?TK? JOS ON LIS?NNYT MUUTTUJIA! ELI KAIKKI NOI Q-ALKUISET PIT?? KOODATA T?H?N JA J?TT?? POIS MUUT. 
+  separate(var, into = c("var", "dv", "seuranta"), 1:2) %>%
+  unite(var, var, seuranta, sep="") %>%
+  spread(dv, value) %>% rename(seuranta=var, madrs = A, nods = B, audit = C,
+                               finance_sit = D, debt_likert = E, debt_dich = Q, #HUOM EI VOI K?YTT?? F KOSKA SE ON "FALSE"
+                               psych_health = G, phys_health = H, rel_mom = I,
+                               rel_dad = J, rel_sib = K, rel_spouse = L,
+                               rel_child = M, rel_friends = N, created = O, suicid = P,disso1=R, disso2=S, disso3=V, disso4=U)
+
+
+
+#Remove rows if NODS-values not present (since NODS = DV)
+#pelipoikki_latest <- pelipoikki_latest %>% filter(!is.na(nods))
+
+#fix variables, numeric
+pelipoikki_latest$Id <- as.numeric(pelipoikki_latest$Id)
+pelipoikki_latest$madrs <- as.numeric(pelipoikki_latest$madrs)
+pelipoikki_latest$nods <- as.numeric(pelipoikki_latest$nods)
+pelipoikki_latest$audit <- as.numeric(pelipoikki_latest$audit)
+pelipoikki_latest$debt_likert <- as.numeric(pelipoikki_latest$debt_likert)
+pelipoikki_latest$phys_health <- as.numeric(pelipoikki_latest$phys_health)
+pelipoikki_latest$psych_health <- as.numeric(pelipoikki_latest$psych_health)
+
+#fix variables, factors
+pelipoikki_latest$gender <- as.factor(pelipoikki_latest$gender)
+pelipoikki_latest$seuranta <- as.factor(pelipoikki_latest$seuranta)
+pelipoikki_latest$finance_sit <- as.factor(pelipoikki_latest$finance_sit)
+pelipoikki_latest$debt_dich <- as.factor(pelipoikki_latest$debt_dich)
+pelipoikki_latest$rel_mom <- as.factor(pelipoikki_latest$rel_mom)
+pelipoikki_latest$rel_dad <- as.factor(pelipoikki_latest$rel_dad)
+pelipoikki_latest$rel_sib <- as.factor(pelipoikki_latest$rel_sib)
+pelipoikki_latest$rel_spouse <- as.factor(pelipoikki_latest$rel_spouse)
+pelipoikki_latest$rel_child <- as.factor(pelipoikki_latest$rel_child)
+pelipoikki_latest$rel_friends <- as.factor(pelipoikki_latest$rel_friends)
+pelipoikki_latest$Labels <- as.factor(pelipoikki_latest$Labels)
+
+
+
+pelipoikki_latest <- pelipoikki_latest %>% group_by(seuranta) %>% mutate(madrs_z = scale(madrs),
+                                                                         audit_z = scale(audit)) %>% ungroup() %>%
+  group_by(Id) %>% mutate(madrs_avg = mean(madrs)) %>% ungroup()
+
+levels(pelipoikki_latest$finance_sit) <- c("Hyva", "Huono mutta hallinnassa", "Huono eikä hallinnassa")
+
+# #Trim Registered, last_answer and Created dates (remove leading and trailing empty spaces)
+# pelipoikki_latest$created <- str_trim(pelipoikki_latest$created)
+# pelipoikki_latest$last_answer <- str_trim(pelipoikki_latest$last_answer)
+# pelipoikki_latest$last_answer <- str_squish(pelipoikki_latest$last_answer) #remove empty space between strings
+# pelipoikki_latest$Registered <- str_trim(pelipoikki_latest$Registered)
+# names(pelipoikki_latest)[2] <- "registered"
+# 
+# #Turn into date objects
+# pelipoikki_latest$created <- round_date(dmy_hms(pelipoikki_latest$created), "day")
+# pelipoikki_latest$registered <- round_date(dmy_hms(pelipoikki_latest$registered), "day")
+# pelipoikki_latest$last_answer <- round_date(mdy_hms(pelipoikki_latest$last_answer), "day") #huom months ekana
+# pelipoikki_latest$year <- year(pelipoikki_latest$created)
+# #4 failed to parse (yksi on rivinumero 75, selvit? my?hemmin mist? t?m? johtuu!)
+# 
+# #Jonotusp?ivien lukum??r? laskettuna last_answer -kolumnista:
+# pelipoikki_latest$jonotus <- as.numeric((pelipoikki_latest$last_answer - pelipoikki_latest$created) / 86400) #p?iv?ss? 86400 sekunttia
+# 
+
+disso4_variable <- pelipoikki_latest$disso4
+
+pelipoikki_latest$disso4 <- pelipoikki_latest$disso3
+
+pelipoikki_latest$disso3 <- disso4_variable
+
+#Renaming the columns
+
+pelipoikki_latest %>% 
+  rename(
+    disso3 = disso4,
+    disso4 = disso3
+  )
+
+#Sanity checking the disso variable
+
+table(pelipoikki_latest$disso1)
+table(pelipoikki_latest$disso2)
+table(pelipoikki_latest$disso3)
+table(pelipoikki_latest$disso4)
+
+#By measurement point  (seems like tehre are a credible amount of answers still)
+
+baseline <- pelipoikki_latest %>%
+  subset(seuranta=="Q2")
+
+table(baseline$disso1)
+table(baseline$disso2)
+table(baseline$disso3)
+table(baseline$disso4)
+
+#Changing it to a numeric
+
+pelipoikki_latest$disso1 <- as.numeric(pelipoikki_latest$disso1)
+pelipoikki_latest$disso2 <- as.numeric(pelipoikki_latest$disso2)
+pelipoikki_latest$disso3 <- as.numeric(pelipoikki_latest$disso3)
+pelipoikki_latest$disso4 <- as.numeric(pelipoikki_latest$disso4)
+
+#Then I need to calculate the means and the std. values for disso
+#baseline disso only
+disso_bl <- left_join(pelipoikki_latest, pre, by='Id') %>% dplyr::select(disso1_pr, disso2_pr, disso3_pr, disso4_pr)
+pelipoikki_latest <- cbind(pelipoikki_latest, disso_bl)
+
+pelipoikki_latest$disso_mean <- pelipoikki_latest %>% dplyr::select(disso1:disso4) %>% rowMeans(na.rm=TRUE)
+pelipoikki_latest$disso_bl_mean <- pelipoikki_latest %>% dplyr::select(disso1_pr:disso4_pr) %>% rowMeans(na.rm=TRUE)
+  
+
+
+#dichotomous disso given its distribution:
+pelipoikki_latest <- pelipoikki_latest %>% mutate(disso_dich = ifelse(disso_mean < 3, 0, 1),
+                                                  disso_dich = factor(disso_dich, labels=c("Dissociation is rare", "Dissociation is frequent")),
+                                                  disso_bl_dich = ifelse(disso_bl_mean < 3, 0, 1),
+                                                  disso_bl_dich = factor(disso_bl_dich, labels=c("Dissociation is rare", "Dissociation is frequent")),
+                                                  
+                                                  disso1_dich = ifelse(disso1 < 3, 0, 1),
+                                                  disso1_dich = factor(disso1_dich, labels=c("Dissociation is rare", "Dissociation is frequent")),
+                                                  
+                                                  disso2_dich = ifelse(disso2 < 3, 0, 1),
+                                                  disso2_dich = factor(disso2_dich, labels=c("Dissociation is rare", "Dissociation is frequent")),
+                                                  
+                                                  disso3_dich = ifelse(disso3 < 3, 0, 1),
+                                                  disso3_dich = factor(disso3_dich, labels=c("Dissociation is rare", "Dissociation is frequent")),
+                                                  
+                                                  disso4_dich = ifelse(disso4 < 3, 0, 1),
+                                                  disso4_dich = factor(disso4_dich, labels=c("Dissociation is rare", "Dissociation is frequent")))
+
+
+#poista NA-arvot NODSissta, koska NODS = DV
+pelipoikki_latest <- pelipoikki_latest %>% filter(!is.na(nods)) 
+
+
+#calculate age etc.
+pelipoikki_latest <- pelipoikki_latest %>% group_by(Id) %>%
+  mutate(yob = abs(as.numeric(yob)), #year of birthiss? on jostain syyst? miinusmerkkisi? arvoja pari, abs() jotta saadaan pos. #as.numeric -lis?tty 21.12.21
+         yob = ifelse((yob > 2200 | yob < 1910), NA, yob), #siivoa pois outoja yob-arfoja
+         gamblingstartage = ifelse(gamblingstartage < 0 | gamblingstartage > 85, NA, gamblingstartage),
+         problem_years = ifelse(problem_years < 0, NA, problem_years),
+         age = 2020 - yob, #TODO: get actual year
+         problem_years = as.numeric(problem_years),
+         sought_help = as.factor(sought_help)) %>%
+  ungroup()
+
+#impute age, education, and income (+ "en halua vastata") by median (do PMM later)
+pelipoikki_latest$age[which(is.na(pelipoikki_latest$age))] <- median(pelipoikki_latest$age, na.rm=T)
+pelipoikki_latest$education[which(is.na(pelipoikki_latest$education))] <- median(pelipoikki_latest$education, na.rm=T)
+pelipoikki_latest$income_own[which(is.na(pelipoikki_latest$income_own))] <- median(pelipoikki_latest$income_own, na.rm=T)
+pelipoikki_latest$income_own[which(pelipoikki_latest$income_own==11)] <- median(pelipoikki_latest$income_own, na.rm=T)
+
+
+#PMM imputation (for now commented out!)
+# temp_pp <- pelipoikki_latest %>% 
+#   dplyr::select(disso_mean, gender, income_own, education, age) %>%
+#   mice(m=3,maxit=50,meth='pmm',seed=500) %>% #impute 3 datasets
+#   complete(1) %>% #de-select demographic variables (no missing values, only used for predicting)
+#   dplyr::select(-c(gender))
+# names(temp_pp) <- c("disso_mean_imp", "gender_imp", "income_own_imp", "education_imp", "age_imp") #rename imputed variables
+# 
+# pelipoikki_latest <- cbind(pelipoikki_latest, temp_pp) #include imputed variables in full dataset
+
+
+
+#fix gender levels, remove two categories (with few observations)
+pelipoikki_latest <- pelipoikki_latest %>% mutate(gender = ifelse(gender==3 | gender==4, NA, gender))
+
+
+#calculate total number of "good social relations"
+social_score_test <- pelipoikki_latest %>% dplyr::select(rel_mom:rel_friends) %>% mutate_if(is.factor, as.numeric) %>% mutate(social_score = rowSums(. < 2))
+
+#clunkily add to data frame (todo: combine this row and the one above)
+pelipoikki_latest <- pelipoikki_latest %>% mutate(social_score = social_score_test$social_score)
+
+pelipoikki_latest <- pelipoikki_latest %>% filter(Labels!="SEURANNASSA ")
+
+
+####ANALYSES FOR PAPER
+#####
+#####
+
+pp_disso_bl_lmer <- lmer(nods ~ seuranta*disso_bl_dich + 
+                        gender + income_own + education + age + (1|Id), 
+                      data=subset(pelipoikki_latest, seuranta!="Q1" & Labels!="SEURANNASSA "))
+
+
+disso_bl_effects <- effect("seuranta:disso_bl_dich", pp_disso_bl_lmer)
+disso_bl_effects <- as.data.frame(disso_bl_effects)
+
+
+plot(pp_disso_bl_lmer)
+qqnorm(residuals(pp_disso_bl_lmer))
+qqline(residuals(pp_disso_bl_lmer))
+qqmath(ranef(pp_disso_bl_lmer, condVar = TRUE), strip = TRUE)
+
+
+#TODO: calculate AGE, social score (?), number of games played?
+
+##################################
+
+disso_bl <- pelipoikki_latest %>% filter(seuranta!="Q1", Labels!="SEURANNASSA ") %>% #POISTA: is.na disso??
+  ggplot(aes(seuranta, nods)) +
+  geom_path(aes(group=Id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.07, linetype=2) +
+  geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.10) +
+  theme_bw(base_size=18) +
+  theme(legend.position="bottom",
+        legend.title=element_blank()) +
+  scale_x_discrete(name = NULL, labels = c("Baseline", "Post\ntreatment", "6-month\nfollow-up", "12-month\nfollow-up")) +
+  scale_y_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10), labels=c("0","1","2","3","4","5","6","7","8","9","10"), name= "NODS score") +
+  geom_hline(yintercept=4, linetype=2, colour="blue", alpha=.8) +
+  scale_color_manual(values=c("blue", "red")) +
+  geom_point(data=disso_bl_effects, aes(seuranta, fit, group=disso_bl_dich, colour=disso_bl_dich), size=3, alpha=.5, position=position_dodge(.1)) +
+  geom_line(data=disso_bl_effects, aes(seuranta, fit, group=disso_bl_dich, colour=disso_bl_dich), size=1.2, alpha=.5, position=position_dodge(.1)) +
+  geom_errorbar(data=disso_bl_effects, aes(seuranta, fit, ymin=lower, ymax=upper, colour=disso_bl_dich), width=.25, alpha=.5, size=1.3, position=position_dodge(.1)) +
+  # stat_summary(fun.data=mean_cl_boot, geom="errorbar", aes(colour = disso_bl_dich, group = disso_bl_dich), width=.15, size=1.3, alpha=.5) +
+  # stat_summary(fun=mean, geom="line", aes(colour = disso_bl_dich, group = disso_bl_dich), size=1.2, alpha=.5) +
+  # stat_summary(fun=mean, geom="point", aes(color= disso_bl_dich, group = disso_bl_dich), size=3, alpha=.5) +
+  labs(title = "Dissociation measured only at baseline") +
+  theme(legend.position="bottom", plot.title = element_text(size=17))
+
+
+
+pp_disso_lmer <- lmer(nods ~ seuranta*disso_dich + 
+                            gender + income_own + education + age + (1|Id), 
+                          data=subset(pelipoikki_latest, seuranta!="Q1" & Labels!="SEURANNASSA "))
+
+
+disso_effects <- effect("seuranta:disso_dich", pp_disso_lmer)
+disso_effects <- as.data.frame(disso_effects)
+
+
+plot(pp_disso_lmer)
+qqnorm(residuals(pp_disso_lmer))
+qqline(residuals(pp_disso_lmer))
+qqmath(ranef(pp_disso_lmer, condVar = TRUE), strip = TRUE)
+  
+disso_repeated <- pelipoikki_latest %>% filter(seuranta!="Q1", Labels!="SEURANNASSA ") %>% #POISTA: is.na disso??
+  ggplot(aes(seuranta, nods)) +
+  geom_path(aes(group=Id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.07, linetype=2) +
+  geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.10) +
+  theme_bw(base_size=18) +
+  theme(legend.position="bottom",
+        legend.title=element_blank()) +
+  scale_x_discrete(name = NULL, labels = c("Baseline", "Post\ntreatment", "6-month\nfollow-up", "12-month\nfollow-up")) +
+  scale_y_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10), labels=c("0","1","2","3","4","5","6","7","8","9","10"), name= "NODS score") +
+  geom_hline(yintercept=4, linetype=2, colour="blue", alpha=.8) +
+  scale_color_manual(values=c("blue", "red")) +
+  geom_point(data=disso_effects, aes(seuranta, fit, group=disso_dich, colour=disso_dich), size=3, alpha=.5) +
+  geom_line(data=disso_effects, aes(seuranta, fit, group=disso_dich, colour=disso_dich), size=1.2, alpha=.5) +
+  geom_errorbar(data=disso_effects, aes(seuranta, fit, ymin=lower, ymax=upper, colour=disso_dich), width=.15, alpha=.5, size=1.3) +
+  # stat_summary(fun.data=mean_cl_boot, geom="errorbar", aes(colour = disso_bl_dich, group = disso_bl_dich), width=.15, size=1.3, alpha=.5) +
+  # stat_summary(fun=mean, geom="line", aes(colour = disso_bl_dich, group = disso_bl_dich), size=1.2, alpha=.5) +
+  # stat_summary(fun=mean, geom="point", aes(color= disso_bl_dich, group = disso_bl_dich), size=3, alpha=.5) +
+  theme(legend.position="bottom") + labs(title="Dissociation repeatedly measured") +
+  theme(legend.position="bottom", plot.title = element_text(size=17))
+
+
+ggarrange(disso_bl, disso_repeated, nrow=1, ncol=2, common.legend = T, legend="bottom")
+
+####cohens d
+pelipoikki_latest %>% filter(seuranta == "Q2" | seuranta=="Q5") %>% group_by(Id) %>% filter(n()>1) %>% ungroup() %>%
+  select(seuranta, nods) %>% mutate(seuranta = droplevels(seuranta)) %>% cohens_d(nods ~ seuranta, paired = T, hedges.correction=T)
+
+
+pp_disso_lmer_DV <- lmer(disso_mean ~ seuranta  +
+                        gender + income_own + education + age + (1|Id), 
+                      data=subset(pelipoikki_latest, seuranta!="Q1" & Labels!="SEURANNASSA "))
+
+plot(pp_disso_lmer_DV)
+qqnorm(residuals(pp_disso_lmer_DV))
+qqline(residuals(pp_disso_lmer_DV))
+qqmath(ranef(pp_disso_lmer_DV, condVar = TRUE), strip = TRUE)
+
+
+disso_effects_DV <- effect("seuranta", pp_disso_lmer_DV)
+disso_effects_DV <- as.data.frame(disso_effects_DV)
+
+
+disso_DV <- pelipoikki_latest %>% filter(!is.na(disso_mean), seuranta!="Q1", Labels!="SEURANNASSA ") %>%
+  ggplot(aes(seuranta, disso_mean)) +
+  #geom_violin(color="blue", alpha=.5) +
+  geom_path(aes(group=Id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.07, linetype=2) +
+  geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.08) +
+  theme_bw(base_size=18) +
+  theme(legend.position="bottom",
+        legend.title=element_blank()) +
+  scale_x_discrete(name = NULL, labels = c("Baseline", "Post\ntreatment", "6-month\nfollow-up", "12-month\nfollow-up")) +
+  scale_y_continuous(name= "Dissociation score",
+                     limits= c(1,5), oob=scales::squish) +
+  geom_point(data=disso_effects_DV, aes(seuranta, fit, group=1), size=3, alpha=.5, color="blue") +
+  geom_line(data=disso_effects_DV, aes(seuranta, fit, group=1), size=1.2, alpha=.5, color="blue") +
+  geom_errorbar(data=disso_effects_DV, aes(seuranta, fit, ymin=lower, ymax=upper, group=1), width=.15, alpha=.5, size=1.3, color="blue") +
+  theme(legend.position="bottom")
+
+
+##ALTERNATIVES
+# anova(lmer(disso_mean ~ seuranta + rel_dad + rel_mom + rel_friends + rel_spouse + rel_sib + rel_child + help + 
+#              gender + income_own + education + age + (1|Id), 
+#            data=subset(pelipoikki_latest, seuranta!="Q1" & Labels!="SEURANNASSA ")))
+# 
+# anova(lmer(nods ~ seuranta*disso_dich + rel_dad + rel_mom + rel_friends + rel_spouse + rel_sib + rel_child + help + 
+#              gender + income_own + education + age + (1|Id), 
+#            data=subset(pelipoikki_latest, seuranta!="Q1" & Labels!="SEURANNASSA ")))
+
+
+
+####WORST CASE SCENARIO-ANAYSES
+#HUOM NODS NA-values cannot be removed before running this code!s 30.10. Toimii oikein!
+pelipoikki_worstcase <- pelipoikki_latest %>% filter(seuranta=="Q2" | seuranta=="Q3", Labels!="SEURANNASSA ") %>% 
+  group_by(Id) %>% 
+  mutate(temp_test = sum(is.na(nods))) %>% ## Jos 0 = molemmat mittauspisteet löytyy, 1 = löytyy vain baseline, 2 = ei löydy kumpaakaan (eli seulonnassa pudonnut)
+  filter(temp_test < 2) %>%
+  #mutate(only_bl = ifelse(is.na(nods), 1, 0)) %>% ungroup() %>% 
+  mutate(nods = ifelse(is.na(nods), lag(nods+rnorm(n(),0,0.5)), nods)) %>% #no effect + noise
+  ungroup() #ungroup vasta täällä, muuten lag ei toimi oikein
+                        
+pelipoikki_worstcase$seuranta <- droplevels(pelipoikki_worstcase$seuranta)
+
+pelipoikki_worstcase %>% cohens_d(nods ~ seuranta, paired=T)
+
+
+
+pp_worstcase_lmer <- lmer(nods ~ seuranta*disso_bl_dich + 
+                           gender + income_own + education + age + (1|Id), 
+                         data=subset(pelipoikki_worstcase, Labels!="SEURANNASSA "))
+
+anova(pp_worstcase_lmer)
+
+
+worstcase_effects <- effect("seuranta:disso_bl_dich", pp_worstcase_lmer)
+worstcase_effects <- as.data.frame(worstcase_effects)
+
+                        
+pelipoikki_worstcase %>% filter(!is.na(disso_bl_dich), seuranta!="Q1", Labels!="SEURANNASSA ") %>% 
+  ggplot(aes(seuranta, nods)) +
+  geom_path(aes(group=Id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.07, linetype=2) +
+  geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.10) +
+  theme_bw(base_size=18) +
+  theme(legend.position="bottom",
+        legend.title=element_blank()) +
+  scale_x_discrete(name = NULL, labels = c("Baseline", "Post\ntreatment", "6-month\nfollow-up", "12-month\nfollow-up")) +
+  #scale_y_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10), labels=c("0","1","2","3","4","5","6","7","8","9","10"), name= "NODS score") +
+  geom_hline(yintercept=4, linetype=2, colour="blue", alpha=.8) +
+  scale_color_manual(values=c("red", "blue")) +
+  geom_point(data=worstcase_effects, aes(seuranta, fit, group=disso_bl_dich, colour=disso_bl_dich), size=3, alpha=.5) +
+  geom_line(data=worstcase_effects, aes(seuranta, fit, group=disso_bl_dich, colour=disso_bl_dich), size=1.2, alpha=.5) +
+  geom_errorbar(data=worstcase_effects, aes(seuranta, fit, ymin=lower, ymax=upper, colour=disso_bl_dich), width=.15, alpha=.5, size=1.3) +
+  theme(legend.position="bottom") + labs(title = "Dissociation measured only at baseline")
+
+
+
+####
+####unassorted tests
+####
+
+only_pre <- pelipoikki_latest %>% filter(!Labels=="SEURANNASSA ", seuranta=="Q2") %>%
+  mutate(nods_z = scale(nods),
+         psych_health_z = scale(psych_health))
+
+only_pre_lm <- lm(disso_bl_mean ~ nods_z*psych_health_z, data=only_pre)
+
+only_pre_ef <- as.data.frame(effect("nods_z:psych_health_z", only_pre_lm,
+                      xlevels=list(psych_health_z = c(-2, 0, 2),
+                               nods_z = c(-2, 0, 2))))
+
+only_pre %>% filter(!is.na(psych_health_z)) %>%
+  ggplot(aes(psych_health_z, disso_bl_mean)) +
+  geom_jitter(alpha=.25) +
+  geom_smooth(method="lm") +
+  geom_line(data=only_pre_ef, aes(psych_health_z, fit, color=as.factor(nods_z))) +
+  geom_ribbon(data=only_pre_ef, alpha=.25, aes(psych_health_z, fit, ymin=lower, ymax=upper, fill=as.factor(nods_z))) +
+  theme_bw()
+
+
+####
+
+# pelipoikki_latest %>% filter(seuranta=="Q2" | seuranta=="Q5", Labels!="SEURANNASSA ", !is.na(disso_dich)) %>% #POISTA: is.na disso??
+#   dplyr::group_by(Id) %>% dplyr::mutate(mean_disso = mean(disso_mean, na.rm=T),
+#                                         disso_cat = ifelse(mean_disso < 1.5, 0, 1)) %>%
+#   ungroup() %>%
+#   ggplot(aes(seuranta, nods)) +
+#   geom_path(aes(group=Id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.07, linetype=2) +
+#   geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.10) +
+#   theme_bw(base_size=18) +
+#   theme(legend.position="bottom",
+#         legend.title=element_blank()) +
+#   scale_x_discrete(name = NULL, labels = c("Baseline", "12-month\nfollow-up")) +
+#   scale_y_continuous(breaks=c(0,1,2,3,4,5,6,7,8,9,10), labels=c("0","1","2","3","4","5","6","7","8","9","10"), name= "NODS score") +
+#   geom_hline(yintercept=4, linetype=2, colour="blue", alpha=.8) +
+#   scale_color_manual(values=c("red", "blue")) +
+#   #geom_point(data=disso_effects, aes(seuranta, fit, group=disso_dich, colour=disso_dich), size=3, alpha=.5) +
+#   #geom_line(data=disso_effects, aes(seuranta, fit, group=disso_dich, colour=disso_dich), size=1.2, alpha=.5) +
+#   #geom_errorbar(data=disso_effects, aes(seuranta, fit, ymin=lower, ymax=upper, colour=disso_dich), width=.15, alpha=.5, size=1.3) +
+#   # stat_summary(fun.data=mean_cl_boot, geom="errorbar", aes(colour = disso_bl_dich, group = disso_bl_dich), width=.15, size=1.3, alpha=.5) +
+#   # stat_summary(fun=mean, geom="line", aes(colour = disso_bl_dich, group = disso_bl_dich), size=1.2, alpha=.5) +
+#   # stat_summary(fun=mean, geom="point", aes(color= disso_bl_dich, group = disso_bl_dich), size=3, alpha=.5) +
+#   theme(legend.position="bottom") + labs(title="Dissociation repeatedly measured") +
+#   theme(legend.position="bottom", plot.title = element_text(size=17)) +
+#   facet_wrap("disso_cat")

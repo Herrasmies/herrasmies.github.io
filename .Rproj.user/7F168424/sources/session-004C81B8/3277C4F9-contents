@@ -1,0 +1,216 @@
+############
+### LECTURE 5, additional:
+### Plotting from models
+
+library(hrbrthemes)
+library(plotly)
+library(tidyverse)
+library(ggpubr)
+
+#Create data
+set.seed(1)
+x <- rnorm(100, 10, 5)
+set.seed(2)
+y_first = 5*x[1:50] + rnorm(50, 5, 16)
+y_second = 5*x[51:100] + rnorm(50, 40, 16)
+
+#Create dataframe
+lecture3_data <- data.frame(
+  gender = c("Male", "Female"), #note that the condition is automatically repeated within dataframe to cover all rows!
+  treatment = rep(c("Control", "Treatment"), each=50),
+  x = x,
+  y = c(y_first, y_second))
+
+my_plot <- ggplot(data=lecture3_data, mapping=aes(x=x, y=y)) + geom_point()
+
+my_plot + geom_smooth(method="lm")
+
+#Draw horizontal line at y = 100
+my_plot + geom_line(aes(y=100))
+
+#Draw line at predicted values of lm(y~x)
+my_plot + geom_line(aes(y=predict(lm(y~x))))
+
+#Plot geom_smooth on top of prediction line (notice that it's identical)
+my_plot + geom_line(aes(y=predict(lm(y~x)))) + geom_smooth(method="lm", se=FALSE)
+
+#predict() also allows for obtaining SEs
+names(predict(lm(y~x, data=lecture3_data), se=TRUE))
+
+predict(lm(y~x, data=lecture3_data), se=TRUE)[1] #need to unlist
+predict(lm(y~x, data=lecture3_data), se=TRUE)[2] #need to unlist
+
+#Assign predictions, SEs and critical t_value as objects
+predictions <- unlist(predict(lm(y~x, data=lecture3_data), se=TRUE)[1])
+confidence <- unlist(predict(lm(y~x, data=lecture3_data), se=TRUE)[2])
+t_value <- qt(.975, nrow(lecture3_data)-1)
+
+my_plot + geom_line(aes(y=predictions)) + 
+  geom_ribbon(aes(ymin=predictions+t_value*confidence,
+                  ymax=predictions-t_value*confidence),
+              alpha=.5)
+
+my_plot + geom_line(aes(y=predictions), color="blue", size=1) + 
+  geom_ribbon(aes(ymin=predictions+t_value*confidence,
+                  ymax=predictions-t_value*confidence),
+              alpha=.25) + theme_ipsum()
+
+#####
+#SECOND PART
+#####
+
+#Partial regression plots
+set.seed(1)
+x <- runif(100, 0, 100)
+set.seed(2)
+x1 <- x + rnorm(100, sd=10) 
+set.seed(3)
+x2 <- 1 * x + rnorm(100, sd=10) # x2 is positively correlated with x1, with noise
+#cor.test(x1, x2)
+correlation <- cor(x1, x2)
+
+p1 <- 1 # positive effect of x1
+p2 <- -1 # neg. effect of x2
+set.seed(1)
+y <- p1*x1 + p2*x2 + rnorm(100, sd=10) # independent effects of x1 and x2, plus noise)
+#cor(cbind(x,x1,x2,y))
+
+# y, given x2
+mod1 <- lm(y ~ x2)
+resid.1 <- resid(mod1)
+
+# x1, given x2
+mod2 <- lm(x1 ~ x2)
+resid.2 <- resid(mod2)
+
+#####
+testdata <- data.frame(y=y, x1=x1, x2=x2, resid.1 = resid.1, resid.2 = resid.2)
+head(testdata)
+testmodel <- lm(y~x1+x2, data=testdata)
+summary(testmodel)
+
+x1_coef <- testmodel$coefficients[2] #coefficient of X1
+intercept <- testmodel$coefficients[1] #intercept
+
+#Both variables
+testdata %>% gather(IV, value, x1, x2) %>%
+  ggplot(aes(x=value, y=y)) + geom_point() + geom_smooth(method="lm") + facet_wrap("IV") + theme_bw()
+
+
+#Focus on x1
+plot1 <- ggplot(testdata, aes(x=x1, y=y)) + geom_smooth(method="lm", fullrange=TRUE) + theme_bw()
+
+plot1 + geom_point() +
+  scale_x_continuous(limits=c(-35,125)) +
+  scale_y_continuous(limits=c(-50,100))
+
+#Also plot model prediction abline for x1, increase visible data range
+plot1 + geom_abline(intercept = intercept, slope = x1_coef, colour="red", size=1) + 
+  geom_point() +
+  scale_x_continuous(limits=c(-35,125)) +
+  scale_y_continuous(limits=c(-50,100))
+
+#Plot points for resid(lm(y ~ x2)) and resid(lm(x1 ~ x2))
+plot1 + geom_abline(intercept = intercept, slope = x1_coef, colour="red", size=1) +
+  geom_point(alpha=.05) +
+  scale_x_continuous(limits=c(-35,125)) +
+  scale_y_continuous(limits=c(-50,100)) +
+  geom_abline(intercept = intercept, slope = x1_coef) +
+  geom_point(aes(x=resid.2, y=resid.1), color="salmon")
+
+
+#Fit OLS regression on the residuals (notice it's identical to the regression slope for x1 controlling for x2)
+plot1 + geom_abline(intercept = intercept, slope = x1_coef, colour="red", size=1) +
+  geom_point(alpha=.05) +
+  scale_x_continuous(limits=c(-35,125)) +
+  scale_y_continuous(limits=c(-50,100)) +
+  geom_point(aes(x=resid.2, y=resid.1), color="salmon") +
+  geom_smooth(aes(x=resid.2, y=resid.1), method="lm")
+
+
+
+
+####
+#Visualizer
+####
+
+library(MASS)
+
+lecture_visualizer <- function(slope_x1, slope_x2, correlation, output="2d") {
+  
+  data = mvrnorm(n=100, mu=c(0,0), Sigma =  matrix(c(1, correlation, correlation, 1), nrow=2), empirical=TRUE)
+  x1 = data[, 1]
+  x2 = data[, 2]
+  correlation <- cor(x1, x2)
+  
+  # x <- runif(100, 0, 100)
+  # x1 <- x + rnorm(100, sd=10)
+  # x2 <- correlation * x + rnorm(100, sd=10) # x2 is postively correlated with x1, with noise
+  # correlation <- cor(x1, x2)
+
+  p1 <- slope_x1 # effect of x1
+  p2 <- slope_x2 # effect of x2
+  set.seed(1)
+  y <- p1*x1 + p2*x2 + rnorm(100, sd=1) # independent effects of x1 and x2, plus noise)
+  cor(cbind(x,x1,x2,y))
+  
+  # y, given x2
+  mod1 <- lm(y ~ x2)
+  resid.1 <- resid(mod1)
+  
+  # x1, given x2
+  mod2 <- lm(x1 ~ x2)
+  resid.2 <- resid(mod2)
+  
+  testdata <- data.frame(y=y, x1=x1, x2=x2, resid.1 = resid.1, resid.2 = resid.2)
+  testmodel <- lm(y~x1+x2, data=testdata)
+  
+  ggobject <- ggplot(testdata, aes(x=x1, y=y)) + geom_smooth(method="lm", fullrange=TRUE, aes(color="Not controlling for x2"), fill="blue", alpha=.15) + 
+    theme_bw() +
+    geom_point(alpha=.05, aes(color="Not controlling for x2")) +
+    geom_point(aes(x=resid.2, y=resid.1, color="Controlling for x2"), alpha=.5) +
+    geom_smooth(aes(x=resid.2, y=resid.1, color="Controlling for x2"), fill="red", alpha=.15, method="lm") + 
+    labs(title=paste(" Correlation between x1 and x2 =", round(correlation,2), "\n", "Regression: y =", slope_x1, "*x1", "+", slope_x2, "*x2"),
+         color=NULL) + theme(legend.position="bottom") + 
+    scale_color_manual(values=c("salmon", "blue")) +
+    guides(color=guide_legend(override.aes=list(fill=NA)))
+  
+  plotly_object <- plot_ly(x=x1, y=y, z=x2, type="scatter3d", mode="markers")
+  #fig1 <- ggplotly(ggobject)
+  #fig2 <- ggplotly(plotly_object)
+  #subplot(fig1, fig2, nrows=2)
+  
+  if (output == "2d") {
+    return(ggobject)
+  } else {
+    return(plotly_object)
+  }
+  
+}
+
+
+#If x1 and x2 have shared variance and opposing associations with y,
+#controlling for x2 strengthens the link between x1 and y:
+lecture_visualizer(2,-2,0.8)
+
+# #If x1 and x2 have shared variance and similar association with y, 
+# #controlling for x2 weakens the link between x1 and y:
+# lecture_visualizer(1,1,1)
+# 
+# #If x1 and x2 have no shared variance, controlling for x2 doesn't change much: 
+# lecture_visualizer(1,1,0)
+# lecture_visualizer(1,-1,0)
+# lecture_visualizer(0,0,0)
+# 
+# #Or, if x1 and x2 have shared variance but no association with y:
+# lecture_visualizer(0,0,1)
+# 
+# #3d scatterplot for good measure
+# lecture_visualizer(1,-1,1, "3d")
+# 
+# 
+# ggarrange(lecture_visualizer(1,-1,1), 
+#           lecture_visualizer(1,1,1), 
+#           lecture_visualizer(1,1,0), nrow=1, ncol=3,
+#           common.legend=TRUE, legend="bottom")
+

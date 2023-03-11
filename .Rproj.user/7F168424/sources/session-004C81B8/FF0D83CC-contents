@@ -1,0 +1,147 @@
+##############
+#Data visualisation in R, Lecture 3, (c) Jussi Palomäki
+##############
+#BUILDING REGRESSION PLOTS
+#Load libraries
+library(tidyverse)
+library(hrbrthemes)
+library(effects)
+library(here)
+
+#Create data
+set.seed(1)
+x <- rnorm(100, 10, 5)
+set.seed(2)
+y_first = 5*x[1:50] + rnorm(50, 5, 16)
+y_second = 5*x[51:100] + rnorm(50, 40, 16)
+
+#Create dataframe
+lecture3_data <- data.frame(
+  gender = c("Male", "Female"), #note that the condition is automatically repeated within dataframe to cover all rows!
+  treatment = rep(c("Control", "Treatment"), each=50),
+  x = x,
+  y = c(y_first, y_second))
+
+#Scatterplot
+my_plot <- ggplot(data=lecture3_data, mapping=aes(x=x, y=y)) + geom_point()
+
+#Regression line
+my_plot <- ggplot(lecture3_data, aes(x, y)) + geom_point() + geom_smooth(method="lm", se=FALSE)
+my_plot <- ggplot(lecture3_data, aes(x, y)) + geom_point() + geom_smooth(method="loess", se=FALSE)
+my_plot <- ggplot(lecture3_data, aes(x, y)) + geom_point() + geom_smooth(method="lm", formula=y ~ x + I(x^2) + I(x^3), se=FALSE) # I() = insulate, otherwise R interprets x^2 as x*x
+my_plot <- ggplot(lecture3_data, aes(x, y)) + geom_point() + geom_smooth(method="lm", formula=y ~ poly(x, 3), se=FALSE) #same as above
+
+#Regression line with 95% confidence band
+my_plot <- ggplot(lecture3_data, aes(x, y)) + geom_point() + geom_smooth(method="lm")
+
+#Regression lines separately by gender
+my_plot <- ggplot(lecture3_data, aes(x, y, color=gender)) + geom_point() + geom_smooth(method="lm")
+
+#Regression lines separately by treatment
+my_plot <- ggplot(lecture3_data, aes(x, y, color=treatment)) + geom_point() + geom_smooth(method="lm")
+
+#Regression plot separately by treatment and gender (two options)
+my_plot <- ggplot(lecture3_data, aes(x, y, color=treatment)) + geom_point() + geom_smooth(method="lm") + facet_wrap("gender") # option 1
+my_plot <- ggplot(lecture3_data, aes(x, y, color=gender)) + geom_point() + geom_smooth(method="lm") + facet_wrap("treatment") # option 2
+
+#Finalize visualisation
+my_plot <- ggplot(lecture3_data, aes(x, y, color=treatment, fill=treatment)) + geom_point(alpha=.25, size=1.5) + 
+  geom_smooth(method="lm", alpha=.15) + facet_wrap("gender") + scale_color_manual(name=NULL, values=c("red3", "blue3")) +
+  xlab("This is the X (independent) variable") + ylab("This is the Y (dependent) variable") +
+  scale_fill_manual(name=NULL, values=c("red3", "blue3")) + 
+  theme_ipsum() + theme(legend.position="bottom")
+
+
+#######
+#BUILDING BARGRAPHS
+
+#Create dataframe
+set.seed(2)
+lecture3_data <- data.frame(group=c(rep("Group 1", 20), rep("Group 2", 20), rep("Group 3", 20)),
+                            y=c(rnorm(20,2,1), rnorm(20, 5, 1), rnorm(20, 8, 1)),
+                            gender=c("Female", "Male"))
+
+#Basic way, using geom_bar()
+#Simplest form
+my_plot <- ggplot(lecture3_data, aes(group, y)) + geom_bar(stat="summary", fun="mean")
+
+#Both factors (group and gender) with error bars
+my_plot <- ggplot(lecture3_data, aes(group, y, fill=gender)) + geom_bar(stat="summary", fun="mean", position=position_dodge(.9)) +
+  stat_summary(fun.data=mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.9))
+
+#Alternative way #1: First summarise data, then plot the summarized variables
+lecture3_data_summary <- lecture3_data %>% group_by(group, gender) %>% 
+  dplyr::summarize(mean_y = mean(y), 
+                   se_y = sd(y)/sqrt(n()),
+                   lower = mean_y - qt(.975, n()-1)*se_y,
+                   upper = mean_y + qt(.975, n()-1)*se_y) #note that you might as well use 1.96, which is an approximation from normal distribution
+
+my_plot <- ggplot(lecture3_data_summary, aes(group, mean_y, fill=gender)) + geom_bar(stat="identity", position=position_dodge(.9)) +
+  geom_errorbar(aes(ymin=lower, ymax=upper), width=.1, position=position_dodge(.9))
+
+
+#Alternative way #2: Grab effects from linear model, build dataframe, plot
+#This is usually the best way of plotting bar graphs, as it's fully applicable to ANCOVA models as well (i.e. plotting estimated marginal means)
+y_effects <- effect("group:gender", lm(y~group*gender, data=lecture3_data))
+y_effects <- as.data.frame(y_effects)
+
+my_plot <- ggplot(y_effects, aes(group, fit, fill=gender)) + geom_bar(stat="identity", position=position_dodge(.9)) +
+  geom_errorbar(aes(ymin=lower, ymax=upper), position=position_dodge(.9), width=.2)
+
+
+##QUESTION TO THE STUDENTS: Why are the error bars different between Alternative ways #1 and #2?
+###ANSWER: Grabbing effects from the lm (ie ANOVA) model will make the assumption of equal variance across groups, thus the standard errors between groups will be equal if the group sizes are equal
+y_effects #print to see se-values
+
+#Finalize
+my_plot <- ggplot(y_effects, aes(group, fit, fill=gender)) + geom_bar(stat="identity", position=position_dodge(.9)) +
+  geom_errorbar(aes(ymin=lower, ymax=upper), position=position_dodge(.9), width=.2) + 
+  #geom_text(aes(label=round(fit,2), vjust=3.5), position=position_dodge(.9)) + #optionally add value labels
+  scale_fill_manual(name=NULL, values=c("salmon", "lightblue")) +
+  xlab(NULL) + ylab("This is the Y (dependent) variable") + labs(title="My first bar plot!") + theme_ipsum(base_size=14)
+
+#In terms of plotting "theory", bar graphs may not be the best option since they "hide" a bit of data variability.
+#Alternative visualization 1
+my_plot <- ggplot(lecture3_data, aes(group, y, shape=gender)) + 
+  geom_violin() +
+  #geom_jitter(alpha=.4, position=position_jitterdodge(.2)) +
+  geom_point(alpha=0.15, position = position_dodge(.9)) +
+  geom_point(data=y_effects, aes(group, fit, shape=gender), position=position_dodge(.9), size=2.3) +
+  stat_summary(fun.data=mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.9)) + 
+  geom_vline(xintercept=c(1.5), alpha=0.4, linetype=2) +
+  geom_vline(xintercept=c(2.5), alpha=0.4, linetype=2) +
+  scale_shape_discrete(name=NULL) +
+  xlab(NULL) + ylab("This is the Y (dependent) variable") + labs(title="My first violin plot!") + theme_ipsum()
+
+#Alternative visualization 2
+my_plot <- ggplot(lecture3_data, aes(group, y, color=gender)) + geom_boxplot() +
+  geom_vline(xintercept=c(1.5), alpha=0.4, linetype=2) +
+  geom_vline(xintercept=c(2.5), alpha=0.4, linetype=2) +
+  scale_shape_discrete(name=NULL) +
+  xlab(NULL) + ylab("This is the Y (dependent) variable") + labs(title="My first boxplot plot!") + theme_ipsum()
+
+#Alternative visualization 3
+y_effects.2 <- effect("group", lm(y~group*gender, data=lecture3_data)) #grab effects for only "group" to plot grand means
+y_effects.2 <- as.data.frame(y_effects.2)
+
+my_plot <- ggplot(lecture3_data, aes(group, y, shape=gender)) + 
+  geom_point(position=position_dodge(.9), alpha=.15) +
+  #geom_violin() +
+  geom_point(data=y_effects, aes(group, fit, shape=gender), position=position_dodge(.9), size=2.3) +
+  geom_point(data=y_effects.2, aes(group, fit, color="Group mean"), inherit.aes=FALSE, size=2, alpha=.5) +
+  geom_errorbar(data=y_effects.2, aes(x=as.numeric(as.factor(group)), ymin=lower, ymax=upper), 
+                width=.05, inherit.aes=FALSE, color="red3", linetype=1, position=position_dodge(.9)) +
+  stat_summary(fun.data=mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.9)) + #try also mean_cl_boot
+  geom_vline(xintercept=c(1.5), alpha=0.4, linetype=2) +
+  geom_vline(xintercept=c(2.5), alpha=0.4, linetype=2) +
+  scale_shape_discrete(name=NULL) + scale_colour_discrete(name=NULL) +
+  xlab(NULL) + ylab("This is the Y (dependent) variable") + labs(title="My first custom plot!") + theme_ipsum()
+
+#Save plot
+ggsave(here("my_plot.png"), width=4, height=3)
+
+
+###
+#Useful link:
+#https://thomasleeper.com/Rcourse/Tutorials/vectorindexing.html
+

@@ -1,0 +1,387 @@
+---
+title: "Alustavia KOTT-aineiston analyysejä"
+author: "(c) Jussi Palomäki"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 2
+    code_folding: hide
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+## Load libraries
+```{r, message=FALSE}
+library(haven)
+library(survey)
+library(ggpubr)
+library(surveyCV)
+library(lavaan)
+library(tidyverse)
+library(poLCA)
+library(forcats)
+library(ggmosaic)
+library(emmeans)
+library(scales)
+library(fmsb)
+library(RColorBrewer)
+library(CDM)
+library(lavaan.survey)
+library(lavaanPlot)
+library(naniar)
+library(mice)
+```
+
+## Set contrasts
+```{r}
+# We'll use the "treatment", i.e. dummy-coding scheme
+
+#options(contrasts=c("contr.sum", "contr.poly"))
+options(contrasts=c("contr.treatment", "contr.poly"))
+```
+
+## Import data
+```{r}
+kott <- read_sas("\\\\helfs01.thl.fi\\groups4\\KOTT_V2022_013\\kott_v2022_013_2022_09_30.sas7bdat")
+#kott <- kott_f
+```
+
+## Wrangle and explore data
+### Missing values (psychometric scales)
+```{r}
+# Explore and visualize missing values in psychometric scales (GHQ, CIUS5, AUDIT_C)
+# GHQ
+
+kott %>% dplyr::select(kott_concentration_to_work, kott_staying_up, kott_presence,
+                       kott_making_decision, kott_stressed, kott_surmounting, kott_enjoying_life,
+                       kott_ability_face_difficulties, kott_depressed, kott_happy,
+                       kott_worthless, kott_losing_self_confidence) %>% 
+  vis_miss()
+
+
+# AUDIT_C
+
+kott %>% dplyr::select(kott_alcohol_freq, kott_alcohol_amount, kott_alcohol_more) %>% 
+  vis_miss()
+
+
+# CIUS5
+
+kott %>% dplyr::select(kott_net_addictions_x_1, kott_net_addictions_x_2, kott_net_addictions_x_3,
+                       kott_net_addictions_x_4, kott_net_addictions_x_5) %>% 
+  vis_miss()
+```
+
+### Scale formation
+```{r}
+# Most respondents have either all or no values missing. Thus, calculating scale means using "na.rm=T", which is essentially the same as mean-imputation for individual scale-items, should be OK.
+# Calculate psychometric scale means (GHQ, MHI5, AUDIT_C, CIUS5)
+# For GHQ, reverse code all items for better interpretation of results
+
+kott <- kott %>% 
+  group_by(id) %>% 
+  dplyr::mutate(GHQ_mean = mean(c(5-kott_concentration_to_work,
+                                  5-kott_staying_up,
+                                  5-kott_presence,
+                                  5-kott_making_decision,
+                                  5-kott_stressed,
+                                  5-kott_surmounting,
+                                  5-kott_enjoying_life,
+                                  5-kott_ability_face_difficulties,
+                                  5-kott_depressed,
+                                  5-kott_worthless,
+                                  5-kott_happy,
+                                  5-kott_losing_self_confidence), na.rm=T),
+                MHI5_mean = mean(c(kott_mentalht_mhi5_time_1,
+                                   kott_mentalht_mhi5_time_2,
+                                   7-kott_mentalht_mhi5_time_3,
+                                   kott_mentalht_mhi5_time_4,
+                                   7-kott_mentalht_mhi5_time_5), na.rm=T),
+                AUDIT_C = mean(c(kott_alcohol_freq,
+                                 kott_alcohol_amount, 
+                                 kott_alcohol_more), na.rm=T),
+                CIUS5_mean = mean(c(kott_net_addictions_x_1,
+                                    kott_net_addictions_x_2,
+                                    kott_net_addictions_x_3,
+                                    kott_net_addictions_x_4,
+                                    kott_net_addictions_x_5), na.rm=T)) %>% 
+  ungroup()
+
+```
+
+### Replace missing values using Predictive Mean Matching imputation
+```{r, results = FALSE}
+# 1. Create temporary dataframe for predicting missing values
+# 2. Impute 3 datasets using PMM
+# 3. Select the first of the 3 datasets to replace NA-values in the original dataset
+
+tempkott <- kott %>% 
+  dplyr::select(ko_gambling_problem, ko_gambling_weekly, GHQ_mean, MHI5_mean, AUDIT_C, CIUS5_mean, kott_instant_loan, kott_study_involvement, kott_relationship, kott_mentalht_loneliness, kott_income, sukupuoli, ika, sektori, agegroup) %>%
+  mice(m=3,maxit=50,meth='pmm',seed=500) %>% #impute 3 datasets
+  complete(1) %>% #replace missing values by first iterated dataset
+  dplyr::select(-c(sukupuoli, ika, sektori, agegroup)) #de-select demographic variables (no missing values, only used for predicting)
+
+names(tempkott) <- c("ko_gambling_problem_imp", "ko_gambling_weekly_imp", "GHQ_mean_imp", "MHI5_mean_imp", "AUDIT_C_imp", "CIUS5_mean_imp",
+                     "kott_instant_loan_imp", "kott_study_involvement_imp", "kott_relationship_imp", "kott_mentalht_loneliness_imp",
+                     "kott_income_imp") #rename imputed variables
+
+kott <- cbind(kott, tempkott) #include imputed variables in full dataset
+
+```
+
+
+## Fit statistical models
+```{r}
+# Assign survey-weights
+
+svy_data <- svydesign(id = ~1,
+                      fpc = ~rg_n,
+                      weights = ~w_analysis,
+                      strata = ~rg_stratum,
+                      data = kott)
+
+
+# Fit models (still TODO: Model assumptions, linearity to logits, etc.)
+# Variables: 
+# kott_net_cius5_set_1-5 = Tuntuuko sinusta, että jokin seuraavista on sinulle ongelma? Voit valita useita vaihtoehtoja. 1: Sosiaalinen media (Facebook, Instagram, Twitter tai vastaava), 2: Digipelaaminen (esim. Counter-Strike, PUBG, Candy Crush Saga), 3: Nettiporno, 4: Nettishoppailu
+# kott_instant_loan = Oletko ottanut pikavippejä tai kulutusluottoja? 
+# kott_study_involvement = Koetko kuuluvasi johonkin, mihin tahansa, opiskeluun liittyvään ryhmään? 
+# kott_relationship = Onko sinulla parisuhde?
+# kott_mentalht_loneliness = Tunnetko olosi yksinäiseksi?
+# kott_income = Miten käytettävissäsi olevat rahat riittivät 12 viime kuukauden aikana? 
+# NOTE: "..._imp" after a variable refers to a variable with imputed missing values! (using predictive mean matching -imputation)
+# DV: Has reported that gambling may have been a problem in the past 12 months
+
+malli1 <- svyglm(ko_gambling_problem_imp ~
+                   factor(sukupuoli)+
+                   factor(kott_net_cius5_set_1)+
+                   factor(kott_net_cius5_set_2)+
+                   factor(kott_net_cius5_set_3)+
+                   factor(kott_net_cius5_set_4)+
+                   factor(sektori)+
+                   as.numeric(as.factor(agegroup))+ #tulkitaan järjestysasteikollisena
+                   AUDIT_C_imp+
+                   GHQ_mean_imp+
+                   CIUS5_mean_imp+
+                   factor(kott_instant_loan_imp)+
+                   factor(kott_study_involvement_imp)+
+                   factor(kott_relationship_imp)+
+                   kott_mentalht_loneliness_imp+
+                   kott_income_imp, #korkeat pisteet = sitä vaikeampi tulla taloudellisesti toimeen
+                 design=svy_data,
+                 family = quasibinomial())
+
+summary(malli1)
+
+
+#DV: Has reported having gambled on a weekly basis for the past 12 months
+
+malli2 <- svyglm(ko_gambling_weekly_imp ~
+                   factor(sukupuoli)+
+                   factor(kott_net_cius5_set_1)+
+                   factor(kott_net_cius5_set_2)+
+                   factor(kott_net_cius5_set_3)+
+                   factor(kott_net_cius5_set_4)+ 
+                   factor(sektori)+
+                   as.numeric(as.factor(agegroup))+ #tulkitaan järjestysasteikollisena
+                   AUDIT_C_imp+
+                   GHQ_mean_imp+
+                   CIUS5_mean_imp+
+                   factor(kott_instant_loan_imp)+
+                   factor(kott_study_involvement_imp)+
+                   factor(kott_relationship_imp)+
+                   kott_mentalht_loneliness_imp +
+                   kott_income_imp ,
+                 design=svy_data,
+                 family = quasibinomial())
+
+summary(malli2)
+
+
+# OLS regression with GHQ as the DV
+
+malli3 <- svyglm(GHQ_mean_imp ~
+                   ko_gambling_problem_imp +
+                   ko_gambling_weekly_imp +
+                   factor(sukupuoli)+
+                   factor(kott_net_cius5_set_1)+
+                   factor(kott_net_cius5_set_2)+
+                   factor(kott_net_cius5_set_3)+
+                   factor(kott_net_cius5_set_4)+
+                   factor(sektori)+
+                   as.numeric(as.factor(agegroup))+ #tulkitaan järjestysasteikollisena
+                   AUDIT_C_imp+
+                   CIUS5_mean_imp+
+                   factor(kott_instant_loan_imp)+
+                   factor(kott_study_involvement_imp)+
+                   factor(kott_relationship_imp)+
+                   kott_mentalht_loneliness_imp+
+                   kott_income_imp,
+                 design = svy_data)
+
+summary(malli3)
+
+
+# Does CIUS mediate the effect of gambling problems on general health? Evaluate using a simple path-model
+
+model <- '
+  # direct effect
+    GHQ_mean_imp ~ c*ko_gambling_problem_imp
+    
+  # mediator
+    CIUS5_mean_imp ~ a*ko_gambling_problem_imp
+    GHQ_mean_imp ~ b*CIUS5_mean_imp
+    
+  # indirect effect (a*b)
+    ab := a*b
+    
+  # total effect
+    total := c + (a*b)
+'
+fit <- sem(model, data = kott)
+#summary(fit, standardized=T, fit.measures=T, modindices=F)
+
+
+#Include survey weights: Fit the model using weighted data (by passing the survey-design object we generated above)
+
+survey.fit <- lavaan.survey(fit, 
+                            svy_data, 
+                            estimator="ML") 
+
+summary(survey.fit,
+        fit.measures=TRUE, 
+        standardized=TRUE,
+        rsquare=TRUE,
+        modindices=F)
+
+# Interpretation: CIUS mediates the effect of problem gambling on well-being.
+
+```
+
+### K-fold cross-validation (for log. regressions)
+```{r}
+# Cross-validated model performance evaluation with 5 folds
+
+# Model 1
+
+#cv.svyglm(malli1, nfolds = 5) # Mean binary cross-entropy / log-loss
+1 / exp(cv.svyglm(malli1, nfolds = 5)) # Transformed into probability
+
+
+# Model 2
+
+#cv.svyglm(malli2, nfolds = 5) # Mean binary cross-entropy / log-loss
+1 / exp(cv.svyglm(malli2, nfolds = 5)) # Transformed into probability
+
+# Interpretation: Model mean probability (and SE) of correctly classifying a participant
+
+```
+
+## Plot figures
+### DV: Rahapeliongelma
+```{r, fig.dim = c(10, 5.5)}
+# DV: Gambling problems
+
+fig1 <- kott %>% 
+  dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+                sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+  ggplot(aes(AUDIT_C_imp, ko_gambling_problem_imp, color=sukupuoli, fill=sukupuoli)) +
+  geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+  theme_bw(base_size=14) +
+  theme(legend.position = "bottom",
+        axis.title.y=element_text(size=10)) +
+  xlab("test") + ylab("test") +
+  scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+  scale_color_manual(values=c("blue", "red", "orange")) +
+  scale_fill_manual(values=c("blue", "red", "orange")) +
+  labs(x = "AUDIT-pisteet", y = "Todennakoisyys rahapeliongelmien kokemiselle 12kk aikana", color = NULL, fill=NULL) +
+  #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+  facet_wrap("sektori")
+
+fig2 <- kott %>% 
+  dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+                sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+  ggplot(aes(CIUS5_mean_imp, ko_gambling_problem_imp, color=sukupuoli, fill=sukupuoli)) +
+  geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+  theme_bw(base_size=14) +
+  theme(legend.position = "bottom",
+        axis.title.y=element_text(size=10)) +
+  xlab("test") + ylab("test") +
+  scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+  scale_color_manual(values=c("blue", "red", "orange")) +
+  scale_fill_manual(values=c("blue", "red", "orange")) +
+  labs(x = "CIUS5-pisteet", y = "Todennakoisyys rahapeliongelmien kokemiselle 12kk aikana", color = NULL, fill=NULL) +
+  #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+  facet_wrap("sektori")
+
+ggarrange(fig1, fig2, ncol=2, nrow=1, common.legend = T, legend="top")
+
+
+kott %>% 
+  dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+                sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+  ggplot(aes(kott_income_imp, ko_gambling_problem_imp, color=sukupuoli, fill=sukupuoli)) +
+  geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+  theme_bw(base_size=14) +
+  theme(legend.position = "bottom",
+        axis.title.y=element_text(size=10)) +
+  xlab("test") + ylab("test") +
+  scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+  scale_x_continuous(breaks=1:4, labels=c("Erittain hyvin", "Tulin hyvin toimeen", "Tulin hyvin toimeen, kun elin saastavaisesti", "Toimeentuloni oli erittain niukka ja epavarma")) +
+  scale_color_manual(values=c("blue", "red", "orange")) +
+  scale_fill_manual(values=c("blue", "red", "orange")) +
+  labs(x = "Rahojen riittaminen 12kk aikana", y = "Todennakoisyys rahapeliongelmien kokemiselle 12kk aikana", color = NULL, fill=NULL) +
+  #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+  facet_wrap("sektori") +
+  coord_flip()
+```
+
+### DV: Rahapelaamisen tiheys
+```{r, fig.dim = c(10, 5.5)}
+
+#DV: Gambling at least weekly
+
+fig3 <- kott %>% 
+  dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+                sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+  ggplot(aes(AUDIT_C_imp, ko_gambling_weekly_imp, color=sukupuoli, fill=sukupuoli)) +
+  geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+  theme_bw(base_size=14) +
+  theme(legend.position = "bottom",
+        axis.title.y=element_text(size=10)) +
+  xlab("test") + ylab("test") +
+  scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+  scale_color_manual(values=c("blue", "red", "orange")) +
+  scale_fill_manual(values=c("blue", "red", "orange")) +
+  labs(x = "AUDIT-pisteet", y = "Todennakoisyys viikoittaiseen rahapelaamiseen 12kk aikana", color = NULL, fill=NULL) +
+  #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+  facet_wrap("sektori")
+
+fig4 <- kott %>% 
+  dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+                sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+  ggplot(aes(as.numeric(as.factor(agegroup)), ko_gambling_weekly_imp, color=sukupuoli, fill=sukupuoli)) +
+  geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+  theme_bw(base_size=14) +
+  theme(legend.position = "bottom",
+        axis.title.y=element_text(size=10),
+        axis.text.x = element_text(angle = -45, vjust=-0.15)) +
+  xlab("test") + ylab("test") +
+  scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+  scale_x_continuous(breaks = 1:4, labels=c("18-22", "23-26", "27-30", "31-24"))+
+  scale_color_manual(values=c("blue", "red", "orange")) +
+  scale_fill_manual(values=c("blue", "red", "orange")) +
+  labs(x = "Ikaryhma", y = "Todennakoisyys viikoittaiseen rahapelaamiseen 12kk aikana", color = NULL, fill=NULL) +
+  #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+  facet_wrap("sektori")
+
+ggarrange(fig3, fig4, ncol=2, nrow=1, common.legend = T, legend="top")
+
+```
+

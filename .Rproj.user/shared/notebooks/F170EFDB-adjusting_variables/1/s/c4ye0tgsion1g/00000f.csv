@@ -1,0 +1,2 @@
+"0","data <- data.frame(y=y, x=x, z=z, resid.1 = resid.1, resid.2 = resid.2)"
+"0","head(data)"

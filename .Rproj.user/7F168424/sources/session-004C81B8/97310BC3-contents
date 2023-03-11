@@ -1,0 +1,159 @@
+---
+title: "Pelaajabarometri 2022, alustavia analyysejä"
+author: "(c) Jussi Palomäki"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 2
+    code_folding: hide
+  pdf_document:
+    toc: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+## Data wrangle
+
+```{r, message=FALSE}
+# Load libraries 
+
+library(tidyverse)
+library(lme4)
+library(blme)
+library(lmerTest)
+library(survey)
+library(ggpubr)
+library(jtools)
+library(ggcorrplot)
+
+barometri <- read.csv("C:\\Users\\jpgk\\Desktop\\pelaajabarometri\\pelaajabarometri_2022.csv", sep=",")
+
+barometri$sukup <- factor(barometri$sukup, labels = c("mies", "nainen"))
+
+
+#Muuta "en osaa sanoa" vastaukset NA:ksi
+ei_digipelit <- c("eidigi_1", "eidigi_2", "eidigi_3", "eidigi_4", "eidigi_5",
+               "eidigi_6", "eidigi_7", "eidigi_8", "eidigi_9", "eidigi_10",
+               "eidigi_11", "eidigi_12", "eidigi_13", "eidigi_14", "eidigi_15", "eidigi_16")
+
+digipelit <- c("digigenre_1", "digigenre_2", "digigenre_3", "digigenre_4", "digigenre_5",
+               "digigenre_6", "digigenre_7", "digigenre_8", "digigenre_9", "digigenre_10",
+               "digigenre_11", "digigenre_12", "digigenre_13", "digigenre_14", "digigenre_15",
+               "digigenre_16", "digigenre_17", "digigenre_18")
+
+barometri[ei_digipelit] <- sapply(barometri[ei_digipelit],
+                               function(x) replace(x, x==0, NA)) #if value == 0, replace with NA
+                               
+barometri[digipelit] <- sapply(barometri[digipelit],
+                                  function(x) replace(x, x==0, NA)) #if value == 0, replace with NA
+
+
+#Replace NA with median
+barometri <- barometri %>% mutate(across(c(ei_digipelit, digipelit), ~replace_na(., median(., na.rm=TRUE))))
+
+
+#Survey design and weights
+svy_barometri <- svydesign(id = ~1, weights = ~painokerroin22, data = barometri)
+
+#####
+#Yksinkertaiset analyysit (huom: lmerissä ei pysty painottamaan analyysiä)
+#####
+
+#Huom! tässä rowwise() parempi kuin group_by(), joka ei toimi (jostain syystä)
+barometri <- barometri %>% 
+  rowwise() %>%
+  dplyr::mutate(ei_digipelit = mean(c(eidigi_1:eidigi_6, eidigi_10:eidigi_16), na.rm=T),
+                digipelit = mean(c(digigenre_1:digigenre_13, digigenre_16), na.rm=T),
+                rahapelit = mean(c(eidigi_7:eidigi_9, digigenre_14, digigenre_15, digigenre_17), na.rm=T),
+                liikapelaaminen = ifelse(!is.na(liikapelaaminen_1) & !is.na(liikapelaaminen_2) & 
+                                           !is.na(liikapelaaminen_3) & !is.na(liikapelaaminen_4),
+                                         mean(liikapelaaminen_1:liikapelaaminen_4, na.rm=T), NA),
+                liikapelaaminen_dich = ifelse(liikapelaaminen == 0, "Ei pelaa liikaa", "Pelaa liikaa")) %>%
+  ungroup()
+
+#Rahapelit: eidigi_6 (arvonta, vedonlyönti), eidigi_7 (hevos), eidigi_8 (raha-automaatti, kasino), eidigi_9 (bingo), 
+#digigenre_14, digigenre_15, digigenre_17
+
+
+barometri.long <- barometri %>%
+  gather(key, value, digipelit, ei_digipelit, rahapelit)
+  
+
+```
+
+## Monitasomallinnus ja kuvitus
+
+```{r}
+barometri_lmer <- lmer(value ~ key + tulot + sukup + ika + koulutustaso + liikapelaaminen_dich + 
+                         key:sukup + key:liikapelaaminen_dich + (1|ID), data=barometri.long)
+
+#summary(barometri_lmer)
+anova(barometri_lmer)
+
+
+barometri %>% 
+  gather(key, value, digipelit, ei_digipelit, rahapelit) %>%
+  dplyr::mutate(key = factor(key, labels=c("Digipelit", "Ei-digipelit", "Rahapelit")),
+                sukup = factor(sukup, labels=c("Mies", "Nainen"))) %>%
+  dplyr::filter(!is.na(liikapelaaminen_dich)) %>%
+  ggplot(aes(key, value)) +
+  geom_jitter(alpha=.05, height=0.1, width=.2) +
+  labs(color=NULL, fill=NULL, y = "Pelaamisen useus (keskiarvo)", x = NULL) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.25, position=position_dodge(.9), color="blue", size=0.8) + 
+  stat_summary(fun.data=mean_cl_boot, geom="point", position=position_dodge(.9), color="blue", size=3, alpha=.5) + 
+  stat_summary(fun.data=mean_cl_boot, colour="blue", geom="line", aes(group = 1), size=0.8, alpha=.5) +
+  facet_grid(sukup~liikapelaaminen_dich) + 
+  theme_bw(base_size=14) +
+  theme(legend.position = "top")
+
+
+# Explore correlations
+
+baro_cors_eidigi <- svycor(~eidigi_1+eidigi_2+eidigi_3+eidigi_4+eidigi_5+eidigi_6+eidigi_7+eidigi_8+eidigi_9+eidigi_10+
+                      eidigi_11+eidigi_12+eidigi_13+eidigi_14+eidigi_15+eidigi_16, design = svy_barometri, na.rm=T)
+
+baro_cors_digi <- svycor(~digigenre_1+digigenre_2+digigenre_3+digigenre_4+digigenre_5+digigenre_6+digigenre_7+digigenre_8+
+                      digigenre_9+digigenre_10+digigenre_11+digigenre_12+digigenre_13+digigenre_14+digigenre_15+digigenre_16+
+                      digigenre_17+digigenre_18, design = svy_barometri, na.rm=T)
+
+baro_cors_eidigi <- round(baro_cors_eidigi$cors, 2)
+
+baro_cors_digi <- round(baro_cors_digi$cors, 2)
+
+rownames(baro_cors_eidigi) <- c("Lauta- ja seurapelit", "Pulmapelit", "Korttipelit", "Pubipelit", "Huvipuistopelit", 
+                         "Veikkaus arvonta", "Veikkaus hevos", "Veikkaus raha-aut.", "Bingo", "Urheilupelit", "Ulko- ja piha.", 
+                         "Keräilykortti", "Roolipelit", "Liveroolipelit", "Miniatyyritaistelu", "eidigi_16??")
+
+colnames(baro_cors_eidigi) <- c("Lauta- ja seurapelit", "Pulmapelit", "Korttipelit", "Pubipelit", "Huvipuistopelit", 
+                    "Veikkaus arvonta", "Veikkaus hevos", "Veikkaus raha-aut.", "Bingo", "Urheilupelit", "Ulko- ja piha.", 
+                    "Keräilykortti", "Roolipelit", "Liveroolipelit", "Miniatyyritaistelu", "eidigi_16??")
+
+
+rownames(baro_cors_digi) <- c("Pulma- ja kortti", "Toimintapelit", "Ammuskelupelit", "Seikkailupelit", "Simulaatiopelit",
+                         "Urheilupelit", "Ajopelit", "Strategiapelit", "Roolipelit", "Nettiroolipelit",
+                         "Muut monen pelaajan", "Musiikki- ja seura", "Oppimispelit", "Onnen rahapelit", "Taitoelementti rahapeli",
+                         "Leikkiraha nettikasino", "Skin betting", "digigenre_18???")
+
+colnames(baro_cors_digi) <- c("Pulma- ja kortti", "Toimintapelit", "Ammuskelupelit", "Seikkailupelit", "Simulaatiopelit",
+                         "Urheilupelit", "Ajopelit", "Strategiapelit", "Roolipelit", "Nettiroolipelit",
+                         "Muut monen pelaajan", "Musiikki- ja seura", "Oppimispelit", "Onnen rahapelit", "Taitoelementti rahapeli",
+                         "Leikkiraha nettikasino", "Skin betting", "digigenre_18???")
+
+p.mat_eidigi <- ggcorrplot::cor_pmat(baro_cors_eidigi)
+p.mat_digi <- ggcorrplot::cor_pmat(baro_cors_digi)
+```
+
+## Korrelaatiot ei-digipelit (sis. rahapelit)
+
+```{r}
+ggcorrplot(baro_cors_eidigi, hc.order = TRUE, type = "upper", method="circle", lab_size=3)
+```
+
+## Korrelaatiot digipelit (sis. rahapelit)
+
+```{r}
+ggcorrplot(baro_cors_digi, hc.order = TRUE, type = "upper", method="circle", lab_size=3)
+```

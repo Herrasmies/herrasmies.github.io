@@ -1,0 +1,277 @@
+#KOTT Marian kokonaisuus
+#Load libraries
+
+#HUOM! kott_analyses.Rmd ei vastaa tätä dokumenttia 1:1 visualisointien osalta
+#write.csv(kott_f,"Path to export the DataFrame\\File Name.csv", row.names = FALSE)
+
+library(haven)
+library(survey)
+library(ggpubr)
+library(surveyCV)
+library(lavaan)
+library(tidyverse)
+library(poLCA)
+library(forcats)
+library(ggmosaic)
+library(emmeans)
+library(scales)
+library(fmsb)
+library(RColorBrewer)
+library(CDM)
+library(lavaan.survey)
+library(lavaanPlot)
+library(naniar)
+library(mice)
+library(svyVGAM)
+
+#load data
+#kott <- read_sas("\\\\helfs01.thl.fi\\groups4\\KOTT_V2022_013\\kott_v2022_013_2022_09_30.sas7bdat")
+kott <- read_sas("C:\\Users\\jpgk\\Desktop\\KOTT\\kott_v2022_013_2022_09_30.sas7bdat")
+  
+  
+
+#Variable-list
+
+#Explore missing values
+
+#Demographics
+kott %>% dplyr::select(sukupuoli, ika, sektori) %>% vis_miss()
+
+
+#Health
+kott %>% dplyr::select(kott_current_health,
+                       ko_longterm_illness, ko_capab_limit_gali, ko_illness_depression, 
+                       ko_illness_anxiety, ko_eating_disorder_scoff, kott_learning_diffic_set_3) %>% vis_miss()
+
+
+#Smoking
+kott %>% dplyr::select(ko_snuff, ko_tobacco) %>% vis_miss()
+
+
+##Alkoholi 
+
+#AUDIT_C
+kott %>% dplyr::select(kott_alcohol_freq, kott_alcohol_amount, kott_alcohol_more) %>% vis_miss()
+
+
+#Drugs
+kott %>% dplyr::select(ko_cannabis, ko_other_drugs) %>% vis_miss()
+
+
+##Rahapelaaminen 
+#löytyy alla
+
+##Netin käyttö 
+#Sosiaalisen median käytöstä ongelmia 
+#Ongelmallisen internetin käytöstä ongelmia (CIUS-5) 
+#Löytyy alla
+
+#CIUS5
+kott %>% dplyr::select(kott_net_addictions_x_1, kott_net_addictions_x_2, kott_net_addictions_x_3,
+                       kott_net_addictions_x_4, kott_net_addictions_x_5) %>% vis_miss()
+
+#Gambling
+kott %>% dplyr::select(ko_gambling_problem, ko_gambling_weekly) %>% vis_miss()
+
+
+
+##Riippuvat muuttujat: 
+
+
+#Minkä tahon tarjoamia terveyspalveluja olet pääsääntöisesti käyttänyt 12 viime kuukauden aikana? 
+#kott_healtservice
+
+                          
+#Oletko mielestäsi saanut riittävästi YTHS:n / kunnan opiskeluterveydenhuollon seuraavia terveyspalveluita 12 viime kuukauden aikana? 
+# kott_service_htsocial_enough_n_6
+# kott_service_htsocial_enoug_n_7
+# kott_service_htsocial_enoug_n_8
+
+
+#Tarvitsetko opiskelukykyä tukevia Kelan kuntoutuspalveluja? 
+#kott_kela_rehabilitation_need
+
+
+#services
+kott %>% dplyr::select(kott_healtservice, kott_service_htsocial_enough_n_6, kott_service_htsocial_enoug_n_7,
+                       kott_service_htsocial_enoug_n_8,
+                       kott_kela_rehabilitation_need) %>% vis_miss()
+
+
+kott <- kott %>% group_by(id) %>% dplyr::mutate(AUDIT_C = mean(c(kott_alcohol_freq, 
+                                                                 kott_alcohol_amount, 
+                                                                 kott_alcohol_more), na.rm=T),
+                                                CIUS5_mean = mean(c(kott_net_addictions_x_1,
+                                                                    kott_net_addictions_x_2,
+                                                                    kott_net_addictions_x_3,
+                                                                    kott_net_addictions_x_4,
+                                                                    kott_net_addictions_x_5), na.rm=T)) %>%
+  ungroup()
+
+
+# #Predictive mean matching imputation TODO : LATER!
+# 
+# #Create temporary dataframe for predicting missing values
+# tempkott <- kott %>% 
+#   dplyr::select(ko_gambling_problem, ko_gambling_weekly, AUDIT_C, CIUS5_mean, 
+#                 kott_instant_loan, kott_study_involvement, kott_relationship, kott_mentalht_loneliness, kott_income, 
+#                 sukupuoli, ika, sektori, agegroup) %>%
+#   mice(m=3,maxit=50,meth='pmm',seed=500) %>% #impute 3 datasets
+#   complete(1) %>% #replace missing values by first iterated dataset
+#   dplyr::select(-c(sukupuoli, ika, sektori, agegroup)) #de-select demographic variables (no missing values, only used for predicting)
+# 
+# names(tempkott) <- c("ko_gambling_problem_imp", "ko_gambling_weekly_imp", "GHQ_mean_imp", "MHI5_mean_imp", "AUDIT_C_imp", "CIUS5_mean_imp",
+#                      "kott_instant_loan_imp", "kott_study_involvement_imp", "kott_relationship_imp", "kott_mentalht_loneliness_imp",
+#                      "kott_income_imp") #rename imputed variables
+# 
+# kott <- cbind(kott, tempkott) #include imputed variables in full dataset
+
+
+
+svy_data <- svydesign(id = ~1,
+                      fpc = ~rg_n,
+                      weights = ~w_analysis,
+                      strata = ~rg_stratum,
+                      data = kott)
+
+
+#NOTE: For imputed variables, add "...__imp" to the variable, e.g. AUDIT_C_imp
+malli1_maria <- svy_vglm(factor(kott_healtservice, labels=c("YTHS", "Kunta", "Tyoterveys", "Yksityinen", "Erikois")) ~ sukupuoli+ika+sektori+kott_current_health+ko_longterm_illness+ko_capab_limit_gali+
+                     ko_illness_depression+ko_illness_anxiety+ko_eating_disorder_scoff+kott_learning_diffic_set_3+
+                     ko_snuff+ko_tobacco+AUDIT_C+ko_cannabis+ko_other_drugs+CIUS5_mean+ko_gambling_problem+ko_gambling_weekly, 
+                   family=multinomial(refLevel=1), design=svy_data) 
+
+summary(malli1_maria) #mallissa log-regressiot ovat numeroitu siten että jos ref = 2, niin YTHS = 1, Tyoterveys = 2 jne. 
+
+
+
+malli2_maria <- svy_vglm(factor(kott_service_htsocial_enough_n_6) ~ sukupuoli+ika+sektori+kott_current_health+ko_longterm_illness+ko_capab_limit_gali+
+                           ko_illness_depression+ko_illness_anxiety+ko_eating_disorder_scoff+kott_learning_diffic_set_3+
+                           ko_snuff+ko_tobacco+AUDIT_C+ko_cannabis+ko_other_drugs+CIUS5_mean+ko_gambling_problem+ko_gambling_weekly, 
+                         family=multinomial(refLevel=1), design=svy_data) 
+
+summary(malli2_maria) #mallissa log-regressiot ovat numeroitu siten että jos ref = 2, niin YTHS = 1, Tyoterveys = 2 jne. 
+
+
+
+malli3_maria <- svy_vglm(factor(kott_service_htsocial_enoug_n_7) ~ sukupuoli+ika+sektori+kott_current_health+ko_longterm_illness+ko_capab_limit_gali+
+                           ko_illness_depression+ko_illness_anxiety+ko_eating_disorder_scoff+kott_learning_diffic_set_3+
+                           ko_snuff+ko_tobacco+AUDIT_C+ko_cannabis+ko_other_drugs+CIUS5_mean+ko_gambling_problem+ko_gambling_weekly, 
+                         family=multinomial(refLevel=1), design=svy_data) 
+
+summary(malli3_maria) #mallissa log-regressiot ovat numeroitu siten että jos ref = 2, niin YTHS = 1, Tyoterveys = 2 jne. 
+
+
+
+malli4_maria <- svy_vglm(factor(kott_service_htsocial_enoug_n_8) ~ sukupuoli+ika+sektori+kott_current_health+ko_longterm_illness+ko_capab_limit_gali+
+                           ko_illness_depression+ko_illness_anxiety+ko_eating_disorder_scoff+kott_learning_diffic_set_3+
+                           ko_snuff+ko_tobacco+AUDIT_C+ko_cannabis+ko_other_drugs+CIUS5_mean+ko_gambling_problem+ko_gambling_weekly, 
+                         family=multinomial(refLevel=1), design=svy_data) 
+
+summary(malli4_maria) #mallissa log-regressiot ovat numeroitu siten että jos ref = 2, niin YTHS = 1, Tyoterveys = 2 jne.
+
+
+
+
+malli5_maria <- svy_vglm(factor(kott_kela_rehabilitation_need) ~ sukupuoli+ika+sektori+kott_current_health+ko_longterm_illness+ko_capab_limit_gali+
+                           ko_illness_depression+ko_illness_anxiety+ko_eating_disorder_scoff+kott_learning_diffic_set_3+
+                           ko_snuff+ko_tobacco+AUDIT_C+ko_cannabis+ko_other_drugs+CIUS5_mean+ko_gambling_problem+ko_gambling_weekly, 
+                         family=multinomial(refLevel=1), design=svy_data) 
+
+summary(malli5_maria) #mallissa log-regressiot ovat numeroitu siten että jos ref = 2, niin YTHS = 1, Tyoterveys = 2 jne
+
+
+
+# #Linearity to logits
+# kott %>% dplyr::filter(!is.na(sukupuoli), !is.na(sektori), 
+#                        !is.na(agegroup), 
+#                        !is.na(AUDIT_C), 
+#                        !is.na(GHQ_mean),
+#                        !is.na(ko_gambling_problem)) %>% 
+#   ggplot(aes(GHQ_mean, predict(malli1, type = "link"))) + 
+#   geom_point() + 
+#   geom_smooth(method="loess", aes(color="loess")) + 
+#   geom_smooth(method="lm", aes(color="linear")) +
+#   labs(x="predictor", y="logit") + 
+#   theme_bw(base_size=19)
+
+
+malli2 <- 
+  
+summary(malli2)
+
+cv.svyglm(malli2, nfolds = 5)
+1 / exp(cv.svyglm(malli2, nfolds = 5)) #Tulkinta: keskimääräinen todennäköisyys arvata yksi keissi oikein on 77%
+
+
+# 
+# ##FIGURES
+# kott_kuva1 <- kott %>% 
+#   dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+#                 sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+#   ggplot(aes(CIUS5_mean, ko_gambling_problem, color=sukupuoli, fill=sukupuoli)) +
+#   geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+#   theme_bw(base_size=13) +
+#   theme(legend.position = "bottom",
+#         axis.title.y=element_text(size=10)) +
+#   xlab("test") + ylab("test") +
+#   scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+#   scale_color_manual(values=c("blue", "red", "orange")) +
+#   scale_fill_manual(values=c("blue", "red", "orange")) +
+#   labs(x = "CIUS5 score (higher=more compulsive)", y = "Probability of gambling being problematic in past year", color = NULL, fill=NULL) +
+#   #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+#   facet_wrap("sektori")
+# 
+# 
+# kott_kuva2 <- kott %>% 
+#   dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+#                 sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+#   ggplot(aes(CIUS5_mean, ko_gambling_weekly, color=sukupuoli, fill=sukupuoli)) +
+#   geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+#   theme_bw(base_size=13) +
+#   theme(legend.position = "bottom",
+#         axis.title.y = element_text(size=10)) +
+#   xlab("test") + ylab("test") +
+#   scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+#   scale_color_manual(values=c("blue", "red", "orange")) +
+#   scale_fill_manual(values=c("blue", "red", "orange")) +
+#   labs(x = "CIUS5 score (higher=more compulsive)", y = "Probability of gambling weekly for past year", color = NULL, fill=NULL) +
+#   #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+#   facet_wrap("sektori")
+# 
+# 
+# kott_kuva3 <- kott %>% 
+#   dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+#                 sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+#   ggplot(aes(AUDIT_C, ko_gambling_problem, color=sukupuoli, fill=sukupuoli)) +
+#   geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+#   theme_bw(base_size=13) +
+#   theme(legend.position = "bottom") +
+#   xlab("test") + ylab("test") +
+#   scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+#   scale_color_manual(values=c("blue", "red", "orange")) +
+#   scale_fill_manual(values=c("blue", "red", "orange")) +
+#   labs(x = "AUDIT_C score (higher=more alcohol use)", y = "", color = NULL, fill=NULL) +
+#   #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+#   facet_wrap("sektori")
+# 
+# 
+# kott_kuva4 <- kott %>% 
+#   dplyr::mutate(sektori = factor(sektori, labels = c("Ammattikorkeakoulu", "Yliopisto")),
+#                 sukupuoli = factor(sukupuoli, labels = c("Mies", "Nainen"))) %>%
+#   ggplot(aes(AUDIT_C, ko_gambling_weekly, color=sukupuoli, fill=sukupuoli)) +
+#   geom_smooth(aes(weight=w_analysis), method = "glm", method.args = list(family = "quasibinomial"), alpha=.07) +
+#   theme_bw(base_size=13) +
+#   theme(legend.position = "bottom") +
+#   xlab("test") + ylab("test") +
+#   scale_y_continuous(labels = scales::percent_format(accuracy=1)) +
+#   scale_color_manual(values=c("blue", "red", "orange")) +
+#   scale_fill_manual(values=c("blue", "red", "orange")) +
+#   labs(x = "AUDIT_C score (higher=more alcohol use)", y = "", color = NULL, fill=NULL) +
+#   #guides(colour = guide_legend(title.position="top", title.hjust = 0.5)) +
+#   facet_wrap("sektori")
+# 
+# 
+# ggarrange(kott_kuva1, kott_kuva3, kott_kuva2, kott_kuva4, 
+#           ncol=2, nrow=2, common.legend = T, legend="top")
+

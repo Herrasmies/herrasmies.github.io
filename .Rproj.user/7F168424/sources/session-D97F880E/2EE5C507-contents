@@ -1,0 +1,29 @@
+library(tidyverse)
+
+
+winners <- tibble(mean = c(23.52, 2.03, 0.02, 0, 0, 0,
+                           23.74, 7.11, 1.46, 0.307, 0.06, 0,
+                           16.76, 6.33, 16.37, 11.68, 7.38, 5.16),
+                  sd = c(4.14, 1.39, 0.14, 0, 0, 0,
+                         4.15, 2.56, 1.25, 0.544, 0.24, 0,
+                         3.71, 2.45, 4.06, 3.414, 2.31, 2.06),
+                  sims = rep(c(500, 500, 100, 75, 50, 50), 3),
+                    volatility = rep(c("Low\nvolatility", "Medium\nvolatility", "High\nvolatility"), each = 6),
+                  length = rep(c(1, 10, 30, 50, 75, 100), 3)) %>%
+  group_by(sims) %>%
+  dplyr::mutate(se = sd / sqrt(sims),
+                lower = mean - qt(.975, n())*se,
+                upper = mean + qt(.975, n())*se,
+                volatility = factor(volatility, levels=c("Low\nvolatility", "Medium\nvolatility", "High\nvolatility")))
+
+winners %>% ggplot(aes(length, mean, color = volatility)) +
+  geom_line(position = position_dodge(.9), size=.8, alpha=.5) +
+  geom_point(position = position_dodge(.9), size=2, alpha =.5) +
+  geom_errorbar(aes(ymax = upper, ymin = pmax(lower, 0)),
+                position=position_dodge(.9), width=5) +
+  theme_bw() +
+  theme(legend.position="top") + 
+  #geom_text(aes(length, mean, label=round(mean, 2)), show.legend = F, inherit.aes=F) +
+  scale_color_manual(values = c("blue", "darkgreen", "Red")) +
+  scale_x_continuous(breaks = c(1, 10, 30, 50, 75,100)) +
+  labs(x = "Hours of play", y = "% of players in profit", color = NULL)

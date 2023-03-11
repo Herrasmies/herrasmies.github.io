@@ -1,0 +1,184 @@
+#Esimerkkivisualisointi KOTT-aineistoa hyödyntäen, (c) Jussi Palomäki
+
+
+library(haven)
+library(survey)
+library(ggpubr)
+library(surveyCV)
+library(lavaan)
+library(tidyverse)
+library(poLCA)
+library(forcats)
+library(ggmosaic)
+library(emmeans)
+library(scales)
+library(fmsb)
+library(RColorBrewer)
+library(CDM)
+library(lavaan.survey)
+library(lavaanPlot)
+library(naniar)
+library(mice)
+library(interactions)
+library(jtools)
+library(effects)
+
+#load data
+kott_esimerkki <- read_sas("C:\\Users\\jpgk\\Desktop\\KOTT\\kott_v2022_013_2022_09_30.sas7bdat")
+
+
+kott_esimerkki <- kott_esimerkki %>% 
+  group_by(id) %>% 
+  dplyr::mutate(AUDIT_C = mean(c(kott_alcohol_freq, 
+                                 kott_alcohol_amount,
+                                 kott_alcohol_more), na.rm=T),
+                CIUS5_mean = mean(c(kott_net_addictions_x_1,
+                                    kott_net_addictions_x_2,
+                                    kott_net_addictions_x_3,
+                                    kott_net_addictions_x_4,
+                                    kott_net_addictions_x_5), na.rm=T),
+                SBI9_mean = mean(c(kott_study_stress_x_1,
+                                   kott_study_stress_x_2,
+                                   kott_study_stress_x_3,
+                                   kott_study_stress_x_4,
+                                   kott_study_stress_x_5,
+                                   kott_study_stress_x_6,
+                                   kott_study_stress_x_7,
+                                   kott_study_stress_x_8,
+                                   kott_study_stress_x_9), na.rm=T)) %>%
+  ungroup()
+
+
+#Create learning difficulties variable, was not present in the data
+kott_esimerkki <- kott_esimerkki %>% 
+  dplyr::mutate(kott_learning_difficulties = ifelse(kott_learning_diffic_set_2 == "t" | 
+                                                      kott_learning_diffic_set_4 == "t" | 
+                                                      kott_learning_diffic_set_5 == "t" | 
+                                                      kott_learning_diffic_set_6 == "t" | 
+                                                      kott_learning_diffic_set_7 == "t", 1, 0),
+                kott_learning_difficulties = factor(kott_learning_difficulties, labels = c("No", "Yes")),
+                ko_income_insuffient = factor(ko_income_insuffient, labels = c("No", "Yes")),
+                ika_z = scale(ika),
+                sukupuoli = factor(sukupuoli, labels=c("Mies", "Nainen")),
+                credit5 = as.factor(credit5),
+                sektori = as.factor(sektori),
+                kott_net_cius5_set_1 = factor(kott_net_cius5_set_1, labels=c(0, 1)),
+                kott_net_cius5_set_2 = factor(kott_net_cius5_set_2, labels=c(0, 1)),
+                kott_net_cius5_set_3 = factor(kott_net_cius5_set_3, labels=c(0, 1)),
+                kott_net_cius5_set_4 = factor(kott_net_cius5_set_4, labels=c(0, 1)))
+
+
+kott_esimerkki_svy <- svydesign(id = ~1,
+                      fpc = ~rg_n,
+                      weights = ~w_analysis,
+                      strata = ~rg_stratum,
+                      data = kott_esimerkki)
+
+
+##Opiskelu-uupumusanalyysit
+m1_uupumus <- svyglm(SBI9_mean ~ 
+                       ika_z*sukupuoli +
+                       credit5 +
+                       kott_learning_difficulties +
+                       ko_income_insuffient +
+                       ko_smoke +
+                       ko_snuff +
+                       AUDIT_C +
+                       ko_drug +
+                       ko_gambling_problem +
+                       ko_gambling_weekly +
+                       CIUS5_mean +
+                       kott_net_cius5_set_1 +
+                       kott_net_cius5_set_2 +
+                       kott_net_cius5_set_3 +
+                       kott_net_cius5_set_4 +
+                       sektori +
+                       kott_mentalht_loneliness +
+                       kott_current_health +
+                       kott_income,
+                     design = kott_esimerkki_svy)
+
+summary(m1_uupumus)
+summ(m1_uupumus, vifs=T)
+
+
+# Raw data
+f1 <- kott_esimerkki %>% 
+  dplyr::mutate(sukupuoli = factor(sukupuoli, levels=c("Nainen", "Mies"))) %>%
+  ggplot(aes(ika, SBI9_mean)) + 
+  theme_classic(base_size=14) + 
+  geom_smooth(aes(color=sukupuoli, fill=sukupuoli, linetype=sukupuoli, weight=w_analysis), method="lm", alpha=.08) +
+  geom_jitter(aes(size=w_analysis), alpha=.07, height=.4) + #why does this default to height=0 ??
+  labs(title="Painotettu raakadata") +
+  theme(legend.position="none") +
+  scale_color_manual(values=c("Salmon", "Blue")) +
+  scale_fill_manual(values=c("Salmon", "Blue")) +
+  scale_size(range=c(0,3), guide="none") +
+  labs(color=NULL, fill=NULL, linetype=NULL, size=NULL, x="Ikä", y="SBI9")
+
+#Calculate estimated marginal means for z-standardized age-variable given gender
+effects_kott <- as_tibble(effect(c("ika_z:sukupuoli"), 
+                                 m1_uupumus,
+                                 xlevels=list(ika_z=seq(-2,2,by=0.25))))
+
+f2 <- effects_kott %>%
+  dplyr::mutate(sukupuoli = factor(sukupuoli, levels=c("Nainen", "Mies"))) %>%
+  ggplot(aes(ika_z, fit, color=sukupuoli, fill=sukupuoli, linetype=sukupuoli)) +
+  geom_smooth(method = "lm") +
+  geom_ribbon(aes(ymin=lower, ymax=upper, color=NULL), alpha=.08) +
+  scale_color_manual(values=c("Salmon", "Blue")) +
+  scale_fill_manual(values=c("Salmon", "Blue")) +
+  labs(color=NULL, fill=NULL, linetype=NULL, x="Ikä (standardoitu)", y="SBI9", title="Mallin ennuste") +
+  theme_classic(base_size=14) +
+  theme(legend.position=c(0.75,0.8)) +
+  geom_text(x=-1.1, y=3.245, label="B = 0.03, t = 1.36, p = .17", color="Black", angle=10) +
+  geom_text(x=-1, y=3.55, label="B = -0.09, t = -4.9, p < .0001", color="Black", angle=-29.5) +
+  # geom_text(x=0, y=3.35, label = "t = -6.56", size=2, vjust=-0.6, colour="black") + 
+  # geom_text(x=-2, y=3.4, label = "t = -5.72", size=2, vjust=-0.6, colour="black") + 
+  guides(colour = guide_legend(override.aes = list(alpha = .08)))
+  # geom_segment(aes(x=-2,y=3.3,yend=3.55,xend=-2), inherit.aes=FALSE, color="black", 
+  #              alpha=.8, arrow = arrow(length = unit(0.1, "cm"), ends = "both")) +
+  # geom_segment(aes(x=0,y=3.3,yend=3.4,xend=0), inherit.aes=FALSE, color="black", 
+  #              alpha=.8, arrow = arrow(length = unit(0.1, "cm"), ends = "both"))
+
+  
+
+
+#ggarrange(f1, f2, legend = "bottom", common.legend=T)
+ggarrange(f1, f2)
+
+ggsave("f1f2.pdf", height=5, width=10)
+
+#Interaktion simple slopes!
+sim_slopes(m1_uupumus, pred = ika_z, modx = sukupuoli, johnson_neyman = FALSE)
+test(emtrends(m1_uupumus, "sukupuoli", var = "ika_z", rg.limit=50000))
+
+
+# f1 <- interact_plot(malli_opintouupumus, pred = ika_z, modx = sukupuoli, johnson_neyman = FALSE, interval=TRUE) +
+#   labs(title="Mallin ennuste")
+
+
+# Interaction the other way round
+
+#Calculate estimated marginal means for z-standardized age-variable given gender
+effects_kott2 <- as_tibble(effect(c("ika_z:sukupuoli"), 
+                                 m1_uupumus,
+                                 xlevels=list(ika_z = c(-2, 0, 2))))
+
+contrast(emmeans(m1_uupumus, ~ sukupuoli | ika_z, at=list(ika_z = c(-2, 0, 2)), rg.limit=200000), "pairwise")
+
+
+effects_kott2 %>% 
+  ggplot(aes(factor(ika_z), fit, fill=sukupuoli)) + 
+  theme_classic(base_size=14) + 
+  geom_col(position=position_dodge(.9)) +
+  geom_errorbar(aes(ymin=lower, ymax=upper), width=.2, position=position_dodge(.9)) +
+  # scale_fill_manual(values=c("Salmon", "Blue", "Grey")) +
+  labs(x="Ikä (keskihajonta)", y="SBI9") +
+  scale_fill_manual(values=c("Lightblue", "Salmon")) +
+  coord_cartesian(ylim=c(2,4)) +
+  theme(legend.position=c(0.75,0.88)) +
+  labs(fill=NULL)
+
+
+####

@@ -1,0 +1,320 @@
+---
+title: "Alustavia KOTT-aineiston analyysejä, huumausaineet"
+author: "(c) Jussi Palomäki"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 3
+    code_folding: hide
+  pdf_document:
+    toc: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+```{r, message=FALSE, echo=FALSE}
+#Load libraries (not everything is used)
+library(haven)
+library(survey)
+library(ggpubr)
+library(surveyCV)
+library(lavaan)
+library(lavaan.survey)
+library(tidyverse)
+library(poLCA)
+library(forcats)
+library(ggmosaic)
+library(emmeans)
+library(scales)
+library(fmsb)
+library(RColorBrewer)
+library(CDM)
+library(lavaan.survey)
+library(lavaanPlot)
+library(naniar)
+library(mice)
+library(effects)
+library(jtools)
+library(MLmetrics)
+library(svyVGAM)
+library(boot)
+library(DT) #needs to be installed!
+```
+
+```{r}
+#load data
+#kott_drugs <- read_sas("\\\\helfs01.thl.fi\\groups4\\KOTT_V2022_013\\kott_v2022_013_2022_09_30.sas7bdat")
+kott_drugs <- read_sas("C:\\Users\\jpgk\\Desktop\\KOTT\\kott_v2022_013_2022_09_30.sas7bdat")
+
+
+#Select variables of interest
+kott_drugs <- kott_drugs %>% dplyr::select(id, ika, sukupuoli, kott_alcohol_freq, kott_alcohol_amount, kott_alcohol_more,
+                                           ko_smoke, ko_snuff, ko_tobacco, ko_alco, ko_alco_drunk, kott_alcohol_ever,
+                                           ko_alco_drunk, ko_cannabis, kott_drugs_use_12m_amount_1, ko_drug, ko_other_drugs, kott_drugs,
+                                           ohjauksenalakoodi, sektori, opintojen_aloitusvuosi, credit5, kott_corona_studies,
+                                           kott_corona_effect_eday_chg_11, ko_income_insuffient,
+                                           kott_tobacco_branch_x_1,
+                                           kott_tobacco_branch_x_2,
+                                           kott_learning_diffic_set_2,
+                                           kott_learning_diffic_set_4,
+                                           kott_learning_diffic_set_5,
+                                           kott_learning_diffic_set_6,
+                                           kott_learning_diffic_set_7,
+                                           rg_n, w_analysis, rg_stratum) #huom muuttujan kirjoitusvirhe datassa ("insuffient")
+
+
+#Learning difficulty -variable (opintovaikeudet) calculation manually (it was not in the data)
+kott_drugs <- kott_drugs %>% 
+  dplyr::mutate(kott_learning_difficulties = ifelse(kott_learning_diffic_set_2 == "t" | kott_learning_diffic_set_4 == "t" | kott_learning_diffic_set_5 == "t" | 
+                                                      kott_learning_diffic_set_6 == "t" | kott_learning_diffic_set_7 == "t", 1, 0),
+                kott_learning_difficulties = factor(kott_learning_difficulties, labels = c("No", "Yes")),
+                ko_income_insuffient = factor(ko_income_insuffient, labels = c("No", "Yes")))
+
+
+
+#Calculate AUDIT_C mean, NA-values removed (=listwise deletion)
+kott_drugs <- kott_drugs %>% 
+  group_by(id) %>% 
+  dplyr::mutate(AUDIT_C = mean(c(kott_alcohol_freq, kott_alcohol_amount, kott_alcohol_more), na.rm=T)) %>%
+  ungroup()
+
+
+#Replace "-1" by NA for a singular value in "ohjauksenalakoodi"
+#kott_drugs[which(kott_drugs$ohjauksenalakoodi == -1),]$ohjauksenalakoodi <- NA #also works
+kott_drugs$ohjauksenalakoodi[which(kott_drugs$ohjauksenalakoodi==-1)] <- NA
+
+#Add factor labels for ohjauksenalakoodi
+kott_drugs$ohjauksenalakoodi <- factor(kott_drugs$ohjauksenalakoodi, labels=c("Kasvatusalat",
+                                                                              "Taiteet ja kulttuurialat",
+                                                                              "Humanistiset alat",
+                                                                              "Yhteiskunnalliset alat",
+                                                                              "Kauppa, hallinto ja oikeustieteet",
+                                                                              "Luonnontieteet",
+                                                                              "Tietojenkäsittely ja tietoliikenne",
+                                                                              "Tekniikan alat",
+                                                                              "Maa- ja metsätalousalat",
+                                                                              "Lääketieteet",
+                                                                              "Terveys- ja hyvinvointialat",
+                                                                              "Palvelualat"))
+
+#Change Year studies started into Year of study (i.e. first year, second year, etc...)
+kott_drugs$opintojen_aloitusvuosi <- 2022-kott_drugs$opintojen_aloitusvuosi
+
+#Categorical variable, collapse levels with few observations
+kott_drugs <- kott_drugs %>% dplyr::mutate(opintojen_aloitusvuosi_cat = as.factor(opintojen_aloitusvuosi),
+                                           opintojen_aloitusvuosi_cat = fct_collapse(opintojen_aloitusvuosi_cat,
+                                                                                     rest = c("8", "9", "10", "11", "12", "13", "14", "15")))
+
+#Add variable: freshman vs. not
+kott_drugs <- kott_drugs %>% dplyr::mutate(fuksi = ifelse(opintojen_aloitusvuosi == 1 | opintojen_aloitusvuosi == 2, 1, 0),
+                                           fuksi = factor(fuksi, labels = c("Not freshman", "Freshman")))
+
+#Add categorical cannabis-use variable
+#16.1. lisätty smoking_cat ja snus_cat, cannabis_cat- kategoriat muokattu uudestaan! Tarkista vielä että tässä menee oikein
+#17.2. lisätty Karoliinan ehdottama kategorisointi cannabis_cat2 ja cannabis_cat3 -muuttujille
+kott_drugs <- kott_drugs %>% dplyr::mutate(cannabis_cat2 = case_when(ko_cannabis == 0 ~ 0,
+                                                                     is.na(ko_cannabis) & kott_drugs == 2 ~ 0,
+                                                                     ko_cannabis == 1 ~ 1),
+                                           cannabis_cat3 = case_when(ko_cannabis == 0 ~ 0,
+                                                                     is.na(ko_cannabis) & kott_drugs == 2 ~ 0,
+                                                                     ko_cannabis == 1 & kott_drugs_use_12m_amount_1 > 0 & kott_drugs_use_12m_amount_1 < 3 ~ 1,
+                                                                     ko_cannabis == 1 & kott_drugs_use_12m_amount_1 >= 3 ~ 2),
+                                           smoking_cat_day = as.factor(ifelse(kott_tobacco_branch_x_1 == 5, "Yes", "No")),
+                                           smoking_cat_week = as.factor(ifelse(kott_tobacco_branch_x_1 == 4, "Yes", "No")),
+                                           smoking_cat_dayweek = as.factor(case_when(kott_tobacco_branch_x_1 > 0 & kott_tobacco_branch_x_1 < 4 ~ "No",
+                                                                   kott_tobacco_branch_x_1 >= 4 ~ "Yes")),#vähintään viikoittain
+                                           snus_cat_day = as.factor(ifelse(kott_tobacco_branch_x_2 == 5, "Yes", "No")),
+                                           snus_cat_week = as.factor(ifelse(kott_tobacco_branch_x_2 == 4, "Yes", "No")),
+                                           snus_cat_dayweek = as.factor(case_when(kott_tobacco_branch_x_2 > 0 & kott_tobacco_branch_x_2 < 4 ~ "No",
+                                                                kott_tobacco_branch_x_2 >= 4 ~ "Yes")))
+
+#Fix ko_alco and XXX questions
+#if kott_alcohol_ever = 1 (reported having not used) AND ko_alco is NA, replace NA with 0 (==not a problem user)
+kott_drugs <- kott_drugs %>% dplyr::mutate(ko_alco = ifelse(kott_alcohol_ever == 1 & is.na(ko_alco), 0, ko_alco))
+
+#Fix credit5
+kott_drugs$credit5 <- factor(kott_drugs$credit5)
+
+# #if kott_drugs = 1 (reported having not used) AND ko_drug is NA, replace NA with 0 (==not a user)
+#THIS HAS NO EFFECT SO COMMENTED OUT FOR NOW (25.1.)
+#kott_drugs <- kott_drugs %>% dplyr::mutate(ko_cannabis = ifelse(kott_drugs == 1 & is.na(ko_cannabis), 0, ko_cannabis))
+
+
+crosstabs <- kott_drugs %>% 
+  dplyr::select(smoking_cat_day, smoking_cat_week, smoking_cat_dayweek, snus_cat_day, snus_cat_week, snus_cat_dayweek, cannabis_cat3, cannabis_cat2, AUDIT_C, ko_alco, sektori, sukupuoli, ika, opintojen_aloitusvuosi, credit5, ko_income_insuffient, kott_learning_difficulties, rg_n, w_analysis, rg_stratum) %>%
+  dplyr::mutate(ko_alco = factor(ko_alco, labels=c("No", "Yes")),
+                cannabis_cat3 = factor(cannabis_cat3, labels=c("Cannabis: has not used", 
+                                                             "Cannabis: 1-2 times", 
+                                                             "Cannabis: 3 times or more")),
+                cannabis_cat2 = factor(cannabis_cat2, labels = c("Has not used", "Has used")),
+                ko_income_insuffient = factor(ko_income_insuffient, labels=c("Tulotaso: Riittää", "Tulotaso: Riittämätön")),
+                kott_learning_difficulties = factor(kott_learning_difficulties, labels=c("Ei opiskeluvaikeuksia", "Opiskeluvaikeuksia")))
+
+#Survey design and weights
+svy_data_drugs <- svydesign(id = ~1,
+                      fpc = ~rg_n,
+                      weights = ~w_analysis,
+                      strata = ~rg_stratum,
+                      data = crosstabs)
+
+
+```
+
+## Statistical models
+
+### Smoking (daily)
+
+```{r}
+
+m_smoking_m1 <- svyglm(smoking_cat_day ~ ika + sukupuoli + sektori,
+                         design = svy_data_drugs,
+                         family = quasibinomial())
+
+#Summary
+summ(m_smoking_m1, exp=T, confint=T)
+
+#Cross-validated (5-fold) log-loss
+cv.svyglm(m_smoking_m1, nfolds = 5)
+
+
+m_smoking_m2 <- svyglm(smoking_cat_day ~ ika + sukupuoli + sektori + 
+                        ko_alco + snus_cat_dayweek + cannabis_cat2,
+                      design = svy_data_drugs,
+                      family = quasibinomial())
+
+#Summary
+summ(m_smoking_m2, exp=T, confint=T)
+
+#Cross-validated (5-fold) log-loss
+cv.svyglm(m_smoking_m2, nfolds = 5)
+
+
+m_smoking_m3 <- svyglm(smoking_cat_day ~ ika + sukupuoli + sektori + 
+                        ko_alco + snus_cat_dayweek + cannabis_cat2 +
+                         kott_learning_difficulties + ko_income_insuffient,
+                      design = svy_data_drugs,
+                      family = quasibinomial())
+
+#Summary
+summ(m_smoking_m3, exp=T, confint=T)
+
+#Cross-validated (5-fold) log-loss
+cv.svyglm(m_smoking_m3, nfolds = 5)
+
+```
+
+### Snus (daily)
+
+```{r}
+
+m_snus_m1 <- svyglm(snus_cat_day ~ ika + sukupuoli + sektori,
+                         design = svy_data_drugs,
+                         family = quasibinomial())
+
+#Summary
+summ(m_snus_m1, exp=T, confint=T)
+
+#Cross-validated (5-fold) log-loss
+cv.svyglm(m_snus_m1, nfolds = 5)
+
+
+m_snus_m2 <- svyglm(snus_cat_day ~ ika + sukupuoli + sektori + 
+                        ko_alco + smoking_cat_dayweek + cannabis_cat2,
+                      design = svy_data_drugs,
+                      family = quasibinomial())
+
+#Summary
+summ(m_snus_m2, exp=T, confint=T)
+
+#Cross-validated (5-fold) log-loss
+cv.svyglm(m_snus_m2, nfolds = 5)
+
+
+m_snus_m3 <- svyglm(snus_cat_day ~ ika + sukupuoli + sektori + 
+                        ko_alco + smoking_cat_dayweek + cannabis_cat2 +
+                      kott_learning_difficulties + ko_income_insuffient,
+                      design = svy_data_drugs,
+                      family = quasibinomial())
+
+#Summary
+summ(m_snus_m3, exp=T, confint=T)
+
+#Cross-validated (5-fold) log-loss
+cv.svyglm(m_snus_m3, nfolds = 5)
+
+```
+
+### Smoking (weekly, only snus + demographics as controls)
+
+```{r}
+
+m_smoking_m2 <- svyglm(smoking_cat_dayweek ~ ika + sukupuoli + sektori +
+                         snus_cat_dayweek,
+                      design = svy_data_drugs,
+                      family = quasibinomial())
+
+#Summary
+summ(m_smoking_m2, exp=T, confint=T)
+
+#Cross-validated (5-fold) log-loss
+cv.svyglm(m_smoking_m2, nfolds = 5)
+```
+
+### Snus (weekly, only smoking + demographics as controls)
+
+```{r}
+
+m_snus_m2 <- svyglm(snus_cat_dayweek ~ ika + sukupuoli + sektori + 
+                      smoking_cat_dayweek,
+                      design = svy_data_drugs,
+                      family = quasibinomial())
+
+#Summary
+summ(m_snus_m2, exp=T, confint=T)
+
+#Cross-validated (5-fold) log-loss
+cv.svyglm(m_snus_m2, nfolds = 5)
+```
+
+## Mediaatiomallinnus
+
+```{r}
+
+lavaandata <- crosstabs %>% dplyr::select(ika, sukupuoli, sektori, smoking_cat_dayweek, snus_cat_dayweek, ko_alco, rg_n, w_analysis, rg_stratum) %>%
+  dplyr::mutate(smoking_cat_dayweek = as.numeric(smoking_cat_dayweek)-1,
+                snus_cat_dayweek = as.numeric(snus_cat_dayweek)-1,
+                ko_alco = as.numeric(ko_alco)-1,
+                sektori = as.numeric(factor(sektori))-1,
+                sukupuoli = as.numeric(factor(sukupuoli))-1)
+
+svy_lavaan <- svydesign(id = ~1,
+                      fpc = ~rg_n,
+                      weights = ~w_analysis,
+                      strata = ~rg_stratum,
+                      data = lavaandata)
+
+# Note that "Any controls on the "b" or "c" path (really its c' in this model) are in the same regression equation. Both b and c' are estimated in the same equation (they both have Y as the outcome variable) so you only need to list the covariates once." <-- Tästä syystä kontrollit lisätty vain direct effect alle
+
+model <- ' # direct effect
+             smoking_cat_dayweek ~ c*snus_cat_dayweek + cv1*sukupuoli + cv2*sektori + cv3*ika
+           # mediator
+             ko_alco ~ a*snus_cat_dayweek + cv4*sukupuoli + cv5*sektori + cv6*ika
+             smoking_cat_dayweek ~ b*ko_alco
+           # indirect effect (a*b)
+             ab := a*b
+           # total effect
+             total := c + (a*b)
+         '
+
+lavaan.fit <- sem(model, data = lavaandata)
+
+#summary(lavaan.fit, fit.measures=TRUE, standardized=TRUE)
+
+survey.fit <- lavaan.survey(lavaan.fit, svy_lavaan)
+
+summary(survey.fit, standardized=T)
+
+```

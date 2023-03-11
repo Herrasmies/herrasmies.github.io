@@ -1,0 +1,3 @@
+"0","p1 <- 2 # positive effect of x"
+"0","p2 <- -2 # negative effect of z"
+"0","y <- p1*x + p2*z + rnorm(100, sd=1) # independent effects of x and z, plus noise"

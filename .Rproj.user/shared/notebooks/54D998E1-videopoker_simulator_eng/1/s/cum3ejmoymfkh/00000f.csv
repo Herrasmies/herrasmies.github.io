@@ -1,0 +1,2 @@
+"0","set.seed(1)"
+"0","casino_simulator(3000, 100, F, ""med"")"

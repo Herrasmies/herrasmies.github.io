@@ -365,6 +365,9 @@ div.tocify {
     <li>
       <a href="videopoker_simulator.html">Videopokerisimulaattori (in Finnish)</a>
     </li>
+    <li>
+      <a href="videopoker_simulator_eng.html">Video poker simulator (updated English version)</a>
+    </li>
     <li class="divider"></li>
     <li class="dropdown-header">Content to be added</li>
     <li class="dropdown-header">TBA</li>
@@ -411,17 +414,17 @@ rahapeliongelman riski. Videopokerisimulaation taustaoletukset:</p>
 <ul>
 <li>Jokaisessa panostuskierroksessa on 1 euron panos</li>
 <li>Pelataan 5 panostuskierrosta minuutissa</li>
-<li>Käsien voittosumma euroissa korkean / matalan volatiliteetin pelissä
-(sulkeissa todennäköisyys optimistrategialla)
+<li>Käsien voittosumma euroissa korkean / keskitason / matalan
+volatiliteetin pelissä (sulkeissa todennäköisyys optimistrategialla)
 <ul>
-<li>Kuningasvärisuora: 500e / 100e (0.002%)</li>
-<li>Värisuora: 55e / 50e (0.011%)</li>
-<li>Neljä samaa: 45e / 30e (0.236%)</li>
-<li>Täyskäsi: 13e / 15e (1.151%)</li>
-<li>Väri: 7e / 8e (1.101%)</li>
-<li>Suora: 6e / 7e (1.123%)</li>
-<li>Kolme samaa: 3e / 3e (7.445%)</li>
-<li>Kaksi paria: 2e / 2e (12.928%)</li>
+<li>Kuningasvärisuora: 2000e / 500e / 100e (0.002%)</li>
+<li>Värisuora: 50e / 55e / 50e (0.011%)</li>
+<li>Neljä samaa: 33e / 45e / 30e (0.236%)</li>
+<li>Täyskäsi: 14e / 13e / 15e (1.151%)</li>
+<li>Väri: 7e / 7e / 8e (1.101%)</li>
+<li>Suora: 5e / 6e / 7e (1.123%)</li>
+<li>Kolme samaa: 3e / 3e / 3e (7.445%)</li>
+<li>Kaksi paria: 2e / 2e / 2e (12.928%)</li>
 </ul></li>
 <li>Palautusprosentit optimistrategialla: 89.955% (korkea
 volatiliteetti) ja 89.934% (matala volatiliteetti)</li>
@@ -454,10 +457,16 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
     ev &lt;- sum(payout*probability) #ev = -0.10045
   }
   
-  else {
+  else if (volatility==&quot;med&quot;) {
     payout &lt;- c(500, 65, 45, 13, 7, 6, 3, 2, 0) - 1
     probability &lt;- c(0.002, 0.011, 0.236, 1.151, 1.101, 1.123, 7.445, 12.928, 76.003)/100
     ev &lt;- sum(payout*probability) #ev = -0.10066
+  }
+  
+  else { 
+    payout &lt;- c(2000, 50, 33, 14, 7, 5, 3, 2, 0) - 1
+    probability &lt;- c(0.002, 0.011, 0.236, 1.151, 1.101, 1.123, 7.445, 12.928, 76.003)/100
+    ev &lt;- sum(payout*probability) #ev = -0.10035
   }
 
   for (i in 1:players) {
@@ -465,30 +474,60 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
     test &lt;- sample(payout, rounds, replace=TRUE, prob=probability)
     test &lt;- data.frame(run = test)
     names(test)[1] &lt;- i
+  
     simulations &lt;- cbind(simulations, cumsum(test))
     simulations$nrow &lt;- NULL
+    
+
   }
   
   max_value &lt;- which(tail(simulations, 1) == max(tail(simulations, 1))) # Among the last row, which column has the highest value
   min_value &lt;- which(tail(simulations, 1) == min(tail(simulations, 1))) # Among the last row, which column has the lowest value
   
+  #How many are winning at the end
+  winners &lt;- length(which(tail(simulations, 1) &gt; 0))
+  
   simulations$ID &lt;- seq.int(nrow(simulations))
+
   
   simulations.long &lt;- simulations %&gt;% 
     gather(key, value, -ID) %&gt;%
-    dplyr::mutate(profit = factor(ifelse(value &gt; 0, 1, 0))) # Is the player winning or not
+    group_by(key) %&gt;%
+    dplyr::mutate(profit = factor(ifelse(value &gt; 0, 1, 0)), # Is the player winning or not
+                  profitriskcumsum = cumsum(as.numeric(profit)-1), # cumulative number of rounds in profit
+                  randomrisk = which(sample(c(0,1), n(), prob=c(.9999603, 1-.9999603), replace=T) == 1)[1], #among n(), produce a moment when problem gambling starts. Probability: 84 (one full week) hours of playing one has 50% chance of becoming &quot;problem gambler&quot; (or &quot;high risk gambler&quot;). 84 * 60 minutes * 5 rounds = 25200 (1- 1/25200 =  .9999603)
+                  randomrisk = ifelse(is.na(randomrisk), n(), randomrisk), #if prob gambling doesn&#39;t start, replace NA with total length of sample
+                  randomrisk = c(rep(0, randomrisk[1]), rep(1, n() - randomrisk[1])), #vector with 0s until problem gambling starts (1s); have to index at 1 since rep-counts argument is a vector of identical values
+                  problem = factor(case_when(profitriskcumsum &gt; 900 | randomrisk == 1 ~ sample(c(&quot;Not at risk&quot;, &quot;At risk&quot;), 1, prob=c(.5, .5)), # when winning too much, 50% chance of becoming probl. gambl. OR random risk of becoming problem gambler
+                                             TRUE ~ &quot;Not at risk&quot;))) %&gt;%
+    ungroup()
+
+  #profitrisk = ifelse(profitriskcumsum &gt; 900, sample(c(0, 1), 1, prob = c(.9, .1)), 0),
+  #TODO (24.2.: randomly have some players become problem gamblers should they play long enough!!!)
+  # which(sample(c(0,1), n(), prob=c(.999, .001), replace=T) == 1)[1] &lt;-- kuinka monennes yksilö oli eka &quot;1&quot;
+  # rep(0, which(sample(c(0,1), 3000, prob=c(.999, .001), replace=T) == 1)[1]) #toista &quot;0&quot; niin monta kertaa kuin tuli eka 1
+  # rep(1, 3000 - which(sample(c(0,1), 3000, prob=c(.999, .001), replace=T) == 1)[1]) #toista &quot;1&quot; loput kerrat 3000sta
+  # yhdistä:
+  # sample &lt;- which(sample(c(0,1), 3000, prob=c(.999, .001), replace=T) == 1)[1]
+  # c(rep(0, sample), rep(1, 3000 - sample))
   
-  # Plot all players
+  # Plot all players (EDIT 24.2., plot based on problem gambling [ALPHA VERSION])
+  
   plot &lt;- simulations.long %&gt;%
+    dplyr::mutate(problem = fct_relevel(problem, &quot;Not at risk&quot;)) %&gt;% #force factor level order (simulations mess this up every now and then...)
     ggplot(aes(ID, value, group=key)) + # group=key here required for complex animation
-    geom_line(aes(colour = key)) +
+    geom_line(aes(colour = problem, size = problem)) +
     geom_abline(intercept = 0, slope = ev, linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
     xlab(&quot;Pelatut tunnit&quot;) + ylab(&quot;Raha (euroja)&quot;) +
     theme_minimal(base_size=14) +
     scale_x_continuous(breaks = seq(0, rounds, by = 600), #by = 600 on by 2 hours (i.e. 600 rounds / 5 / 60)
                        labels=function(x)round(x/5/60, 1)) +
-    guides(color=&quot;none&quot;)
+    theme(legend.title = element_blank(),
+          legend.position = &quot;top&quot;) +
+    scale_color_manual(values=c(&quot;lightblue&quot;, &quot;red&quot;)) +
+    scale_size_manual(values = c(.3, 1))
+    # guides(color=&quot;none&quot;)
 
   # Plot only the top and bottom &quot;players&quot;
   plot2 &lt;- simulations.long %&gt;%
@@ -506,6 +545,7 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
     guides(color=&quot;none&quot;)
   
   # Combined plot
+  # (code may fail if there are 3 or more identical values (shared bottom or top))
   plot3 &lt;- simulations.long %&gt;%
     dplyr::mutate(maxmin = case_when(key == max_value ~ &quot;Onnekkain\npelaaja&quot;,
                                      key == min_value ~ &quot;Epäonnekkain\npelaaja&quot;,
@@ -530,7 +570,7 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
     return(plot3) 
     }
   else {
-    return(plot2)
+    return(plot2) #plot for problem plot, plot2 for top and bottom, winners for number of winners at end. Visualizations work with &quot;plot2&quot;
     }
 }</code></pre>
 <div id="matala-volatiliteetti" class="section level2">
@@ -570,7 +610,7 @@ casino_simulator(3000, 100, F, &quot;low&quot;)</code></pre>
 volatiliteetin videopokeria, teistä lopulta onnekkain ja epäonnekkain
 pelaaja menestyy näin:</p>
 <pre class="r"><code>set.seed(1)
-animation &lt;- casino_simulator(3000, 100, T, &quot;high&quot;) + 
+animation &lt;- casino_simulator(3000, 100, T, &quot;med&quot;) + 
   geom_segment(aes(xend = 3000, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
   geom_text(aes(x = 3000, label = key, color=profit), hjust = 0) +
@@ -587,7 +627,7 @@ src="videopoker_simulator_files/figure-html/unnamed-chunk-4-1.gif" /><!-- --></p
 <div id="kaikki-havainnot-1" class="section level3">
 <h3>Kaikki havainnot</h3>
 <pre class="r"><code>set.seed(1)
-casino_simulator(3000, 100, F, &quot;high&quot;)</code></pre>
+casino_simulator(3000, 100, F, &quot;med&quot;)</code></pre>
 <p><img src="videopoker_simulator_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
 </div>
 </div>
@@ -600,7 +640,7 @@ class="section level2">
 volatiliteetin videopokeria, teistä lopulta onnekkain ja epäonnekkain
 pelaaja menestyy näin:</p>
 <pre class="r"><code>set.seed(1)
-animation &lt;- casino_simulator(9000, 100, T, &quot;high&quot;) + 
+animation &lt;- casino_simulator(9000, 100, T, &quot;med&quot;) + 
   geom_segment(aes(xend = 9000, yend = value), linetype = 2, colour = &#39;grey&#39;) + 
   geom_point(size=2) +
   geom_text(aes(x = 9000, label = key, color=profit), hjust = 0) +
@@ -617,7 +657,7 @@ src="videopoker_simulator_files/figure-html/unnamed-chunk-6-1.gif" /><!-- --></p
 <div id="kaikki-havainnot-2" class="section level3">
 <h3>Kaikki havainnot</h3>
 <pre class="r"><code>set.seed(1)
-casino_simulator(9000, 100, F, &quot;high&quot;)</code></pre>
+casino_simulator(9000, 100, F, &quot;med&quot;)</code></pre>
 <p><img src="videopoker_simulator_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
 </div>
 </div>

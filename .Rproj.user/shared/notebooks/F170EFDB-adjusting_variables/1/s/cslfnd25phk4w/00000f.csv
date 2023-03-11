@@ -1,0 +1,5 @@
+"0","mod1 <- lm(y ~ z)"
+"0","resid.1 <- resid(mod1)"
+"0",""
+"0","mod2 <- lm(x ~ z)"
+"0","resid.2 <- resid(mod2)"

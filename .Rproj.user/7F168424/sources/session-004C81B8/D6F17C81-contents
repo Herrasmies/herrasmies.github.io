@@ -1,0 +1,267 @@
+---
+title: "Tuki- ja hoitopalvelut -tutkimus"
+author: "Tuire Korvuo & Jussi Palomäki"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries
+
+```{r include=FALSE}
+library(tidyverse)
+library(poLCA)
+library(forcats)
+library(ggmosaic)
+library(emmeans)
+library(corrplot)
+library(effects)
+
+```
+
+## Set contrasts
+```{r}
+#options(contrasts=c("contr.sum", "contr.poly"))
+options(contrasts=c("contr.treatment", "contr.poly"))
+```
+
+## Import data
+```{r}
+setwd("C:\\Users\\jpgk\\Desktop\\tuki- ja hoitopalvelut data\\")
+
+tukihoito <- read.csv("C:\\Users\\jpgk\\Desktop\\tuki- ja hoitopalvelut data\\Kysely tuki ja hoito 2022_Perusraportti.csv", sep=";")
+
+```
+
+
+## Wrangle data
+```{r}
+#poista testirivit
+tukihoito <- tukihoito %>% dplyr::mutate(id = seq(1:n())) %>% dplyr::filter(id > 3) %>% dplyr::select(-id)
+
+
+names(tukihoito) <- c("helppo_ryhtyä", "helppo_ryhtyä_avo", "löytyi_helposti", 
+                      "ensihakija", "helppo_hakeutua", "helppo_hakeutua_avo",
+                      "millä_perusteella_avo", "mikä_sai_avo", "mihin_palveluun_avo",
+                      "sain_apua_nopeasti", "odotus_elämäntilanne", "odotus_rahapeliongelma", "odotus_hyvinvointi", "odotus_talous",
+                      "sain_asiantuntevaa_apua", "paikkakunta_palvelu_avo",
+                      "rahapelaaja", "puoliso", "ex-puoliso", "lapsi", "vanhempi", "isovanhempi", "sisarus", "muu_perheenjäsen",
+                      "ystävä", "työkaveri", "muu", "ikä", "sukupuoli", "koulutus", "tulotaso")
+
+
+tukihoito <- tukihoito %>% dplyr::mutate(sukupuoli = ifelse(sukupuoli == 4, NA, sukupuoli))
+tukihoito$ikä <- as.numeric(tukihoito$ikä)
+tukihoito$ensihakija <- factor(tukihoito$ensihakija, labels=c("Ensihakija", "Hakenut aiemmin"))
+tukihoito$sukupuoli <- factor(tukihoito$sukupuoli, labels=c("Mies", "Nainen"))
+
+                  
+#####Demografioita ja muita
+tukihoito %>% dplyr::summarize(koulutus_med = median(koulutus, na.rm=T),
+                               tulotaso_med = median(tulotaso, na.rm=T),
+                               ikä_ka = mean(ikä, na.rm=T),
+                               miehet = sum(sukupuoli=="Mies", na.rm=T) / sum(sukupuoli=="Mies" | sukupuoli=="Nainen", na.rm=T),
+                               ensihakija = sum(ensihakija=="Ensihakija", na.rm=T) / sum(ensihakija=="Ensihakija" | ensihakija=="Hakenut aiemmin", na.rm=T))
+
+table(tukihoito$ensihakija, tukihoito$sukupuoli)
+
+
+#Odotusajan vaikutus
+tukihoito %>% dplyr::summarize(elamantilanne = mean(odotus_elämäntilanne, na.rm=T),
+                               rahapeliongelma = mean(odotus_rahapeliongelma, na.rm=T),
+                               hyvinvointi = mean(odotus_hyvinvointi, na.rm=T),
+                               talous = mean(odotus_talous, na.rm=T))
+
+#poistetaan ne, joilla ei pitkä odotusaika
+tukihoito %>% dplyr::filter(sain_apua_nopeasti <4) %>%
+  dplyr::summarize(elamantilanne = mean(odotus_elämäntilanne, na.rm=T),
+                               rahapeliongelma = mean(odotus_rahapeliongelma, na.rm=T),
+                               hyvinvointi = mean(odotus_hyvinvointi, na.rm=T),
+                               talous = mean(odotus_talous, na.rm=T))
+
+
+```
+
+
+## Fit statistical models
+```{r}
+
+#Tilastomalleja
+
+malli1 <- lm(helppo_ryhtyä ~ sukupuoli*ensihakija+ikä+koulutus+tulotaso, data=tukihoito)
+summary(malli1)
+malli1_effects <- as_tibble(effect("sukupuoli:ensihakija", malli1)) %>% 
+  dplyr::mutate(key=rep("Helppo ryhtyä hakemaan apua", n()))
+
+malli2 <- lm(löytyi_helposti ~ sukupuoli*ensihakija+ikä+koulutus+tulotaso, data=tukihoito)
+summary(malli2)
+malli2_effects <- as_tibble(effect("sukupuoli:ensihakija", malli2)) %>% 
+  dplyr::mutate(key=rep("Palvelu löytyi helposti", n()))
+
+malli3 <- lm(helppo_hakeutua ~ sukupuoli*ensihakija+ikä+koulutus+tulotaso, data=tukihoito)
+summary(malli3)
+malli3_effects <- as_tibble(effect("sukupuoli:ensihakija", malli3)) %>% 
+  dplyr::mutate(key=rep("Palveluun helppo hakeutua", n()))
+
+malli4 <- lm(sain_apua_nopeasti ~ sukupuoli*ensihakija+ikä+koulutus+tulotaso, data=tukihoito)
+summary(malli4)
+malli4_effects <- as_tibble(effect("sukupuoli:ensihakija", malli4)) %>% 
+  dplyr::mutate(key=rep("Sain apua nopeasti", n()))
+
+malli5 <- lm(sain_asiantuntevaa_apua ~ sukupuoli*ensihakija+ikä+koulutus+tulotaso, data=tukihoito)
+summary(malli5)
+malli5_effects <- as_tibble(effect("sukupuoli:ensihakija", malli5)) %>% 
+  dplyr::mutate(key=rep("Sain asiantuntevaa apua", n()))
+
+
+ennusteet <- rbind(malli1_effects, malli2_effects, malli3_effects, malli4_effects, malli5_effects)
+
+
+```
+
+## Plot figures
+```{r}
+ennusteet %>% ggplot(aes(ensihakija, fit, fill=sukupuoli)) +
+  geom_bar(stat="identity", position=position_dodge(.9)) +
+  geom_errorbar(aes(ensihakija, fit, ymin = lower, ymax = upper),
+                position=position_dodge(.9), width=.2) +
+  theme_bw(base_size=14) +
+  theme(legend.position = c(0.85, 0.25),
+        legend.direction='horizontal') +
+  labs(fill=NULL, x = NULL, y = NULL) +
+  coord_cartesian(ylim = c(1,5)) +
+  scale_y_continuous(breaks = c(1,2,3,4,5),
+                     labels=c("1 - Vahvasti\neri mieltä", "2", "3", "4", "5 - Vahvasti\nsamaa mieltä")) +
+  scale_x_discrete(labels=c("Ensihakija", "Hakenut\naiemmin")) +
+  scale_fill_manual(values=c("lightblue", "salmon")) +
+  facet_wrap("key")
+
+
+
+tukihoito %>% gather(key, value, helppo_ryhtyä, löytyi_helposti, helppo_hakeutua, 
+                     sain_apua_nopeasti, sain_asiantuntevaa_apua) %>%
+  dplyr::mutate(key = factor(key, labels=c("Helppo ryhtyä hakemaan apua",
+                                           "Palvelu löytyi helposti",
+                                           "Palveluun helppo hakeutua",
+                                           "Sain apua nopeasti",
+                                           "Sain asiantuntevaa apua"))) %>%
+  dplyr::filter(!is.na(ensihakija), !is.na(sukupuoli)) %>%
+  ggplot(aes(ensihakija, value, shape=sukupuoli, color=sukupuoli)) +
+  #geom_jitter(width=.15, alpha=.1) + 
+  #geom_boxplot(position=position_dodge(.7), outlier.shape=NA, width=.3) +
+  geom_point(position=position_jitterdodge(.2, .35, .7), alpha=.07) +
+  geom_point(data=ennusteet, aes(ensihakija, fit, color=sukupuoli), alpha=.55,
+             size=3, position = position_dodge(.7)) +
+  geom_errorbar(data=ennusteet, aes(ensihakija, fit, ymin=lower, ymax=upper), size=0.8, width=.12, alpha=.55,
+                position = position_dodge(.7)) +
+  geom_text(data=ennusteet, aes(ensihakija, fit, label=round(fit, 1)), size=3, vjust=-2,
+            position=position_dodge(.7), color="black") +
+  # stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.1, size=1, alpha=.5,
+  #              position=position_dodge(.7)) +
+  # stat_summary(fun=mean, geom="point", size=3, alpha=.45,
+  #              position=position_dodge(.7)) +
+  # stat_summary(aes(label=round(..y.., 1)), fun=mean, geom="text", size=3, vjust=-2.2,
+  #              position=position_dodge(.7), color="black") +
+  scale_color_manual(values=c("blue", "red")) +
+  facet_wrap("key") +
+  theme_bw(base_size=14) +
+  theme(legend.position = c(0.85, 0.25),
+        legend.direction='horizontal') +
+  labs(x = NULL, y = NULL, color=NULL, shape=NULL) +
+  scale_y_continuous(breaks = c(1,2,3,4,5),
+                     labels=c("1 - Vahvasti\neri mieltä", "2", "3", "4", "5 - Vahvasti\nsamaa mieltä")) +
+  scale_x_discrete(labels=c("Ensihakija", "Hakenut\naiemmin"))
+
+
+
+
+
+tukihoito %>% gather(key, value, helppo_ryhtyä, löytyi_helposti, helppo_hakeutua, sain_apua_nopeasti, sain_asiantuntevaa_apua) %>%
+  group_by(key) %>% dplyr::mutate(mean_value = mean(value, na.rm=T),
+                                  median_value = median(value, na.rm=T))%>%
+  ungroup() %>%
+  dplyr::mutate(key = factor(key, labels=c("Helppo ryhtyä hakemaan apua",
+                                           "Palvelu löytyi helposti",
+                                           "Palveluun helppo hakeutua",
+                                           "Sain apua nopeasti",
+                                           "Sain asiantuntevaa apua"))) %>%
+  ggplot(aes(value)) + 
+  geom_histogram(bins=5, fill="lightblue", color="black", alpha=.55) + 
+  geom_vline(aes(xintercept=mean_value, color="Keskiarvo"), size=1.5) +
+  geom_vline(aes(xintercept=median_value, color="Mediaani"), size=1.5) +
+  scale_color_manual(values=c("red", "blue")) +
+  theme_bw(base_size=14) +
+  theme(legend.title=element_blank(),
+        legend.position = c(0.85, 0.25),
+        legend.direction='horizontal') +
+  labs(y = "Vastaajien lukumäärä", x = NULL) +
+  scale_x_continuous(breaks = c(1,2,3,4,5),
+                     labels=c("Vahvasti\neri mieltä", "2", "3", "4", "Vahvasti\nsamaa mieltä")) +
+  facet_wrap("key")
+
+
+
+```
+
+## Additional correlation plot
+
+```{r}
+#custom functions etc to calculate significances etc for visualizations
+#ohjeita https://cran.r-project.org/web/packages/corrplot/vignettes/corrplot-intro.html
+col <- colorRampPalette(c("#4477AA", "#77AADD", "#FFFFFF", "#EE9988", "#BB4444"))
+
+cor.mtest <- function(mat, ...) {
+  mat <- as.matrix(mat)
+  n <- ncol(mat)
+  p.mat<- matrix(NA, n, n)
+  diag(p.mat) <- 0
+  for (i in 1:(n - 1)) {
+    for (j in (i + 1):n) {
+      tmp <- cor.test(mat[, i], mat[, j], ...)
+      p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    }
+  }
+  colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
+  p.mat
+}
+
+
+cor_data <- tukihoito %>% dplyr::select(helppo_ryhtyä, löytyi_helposti, helppo_hakeutua,
+                                 sain_apua_nopeasti, sain_asiantuntevaa_apua, ikä, koulutus, tulotaso, sukupuoli, ensihakija) %>% 
+  dplyr::mutate(sukupuoli = as.numeric(sukupuoli)-1,
+         ensihakija = as.numeric(ensihakija)-1) %>% 
+  na.omit() %>% 
+  cor()
+
+rownames(cor_data) <- c("Helppo ryhtyä", "Löytyi helposti", "Helppo hakeutua", "Sain apua nopeasti", "Asiantunteva apu", "Ikä", "Koulutus", "Tulotaso", "Sukupuoli", "Ensihakija")
+colnames(cor_data) <- c("Helppo ryhtyä", "Löytyi helposti", "Helppo hakeutua", "Sain apua nopeasti", "Asiantunteva apu", "Ikä", "Koulutus", "Tulotaso", "Sukupuoli", "Ensihakija")
+
+p.mat <- tukihoito %>% dplyr::select(helppo_ryhtyä, löytyi_helposti, helppo_hakeutua,
+                                     sain_apua_nopeasti, sain_asiantuntevaa_apua, ikä, koulutus, tulotaso, sukupuoli, ensihakija) %>% 
+  dplyr::mutate(sukupuoli = as.numeric(sukupuoli)-1,
+                ensihakija = as.numeric(ensihakija)-1) %>% 
+  na.omit() %>% 
+  cor.mtest()
+
+rownames(p.mat) <- c("Helppo ryhtyä", "Löytyi helposti", "Helppo hakeutua", "Sain apua nopeasti", "Asiantunteva apu", "Ikä", "Koulutus", "Tulotaso", "Sukupuoli", "Ensihakija")
+colnames(p.mat) <- c("Helppo ryhtyä", "Löytyi helposti", "Helppo hakeutua", "Sain apua nopeasti", "Asiantunteva apu", "Ikä", "Koulutus", "Tulotaso", "Sukupuoli", "Ensihakija")
+
+corrplot(cor_data, method="color", col=col(200),
+         type="upper", 
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         # Combine with significance
+         p.mat = p.mat, sig.level = 0.05, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag=FALSE)$corrPos -> p1
+
+text(p1$x, p1$y, round(p1$corr, 2))
+
+```
+
