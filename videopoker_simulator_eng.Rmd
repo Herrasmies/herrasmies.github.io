@@ -167,7 +167,7 @@ animation <- casino_simulator(3000, 100, T, "low") +
   geom_point(size=2) +
   geom_text(aes(x = 3000, label = key, color=profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
-  scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
+  scale_color_manual(values=c("red", "darkgreen", "lightblue", "salmon")) +
   transition_reveal(ID) +
   coord_cartesian(clip = 'off') +
   theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
@@ -193,7 +193,7 @@ animation <- casino_simulator(3000, 100, T, "med") +
   geom_point(size=2) +
   geom_text(aes(x = 3000, label = key, color=profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
-  scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
+  scale_color_manual(values=c("red", "darkgreen", "lightblue", "salmon")) +
   transition_reveal(ID) +
   coord_cartesian(clip = 'off') +
   theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
@@ -219,7 +219,7 @@ animation <- casino_simulator(9000, 100, T, "med") +
   geom_point(size=2) +
   geom_text(aes(x = 9000, label = key, color=profit), hjust = 0) +
   geom_text(aes(x = ID, label = round(value, -1), color = profit), vjust=2) +
-  scale_color_manual(values=c("red", "darkgreen", "salmon", "lightblue")) +
+  scale_color_manual(values=c("red", "darkgreen", "lightblue", "salmon")) +
   transition_reveal(ID) +
   coord_cartesian(clip = 'off') +
   theme(plot.margin = margin(5.5, 50, 5.5, 5.5))
