@@ -16,7 +16,6 @@ See my research profiles at <a href="https://thl.fi/fi/thl/organisaatio/osastot-
 
 Updates:
 
-- 21.8.23 Added new papers (in press)
 - 11.3.23 Updated the video poker simulator in "Other", and added an English version
 - 20.2.23 Added a video poker simulator in "Other" (only in Finnish, sorry :/)
 - 14.2.23 Added a poker variance simulator in "Other"
