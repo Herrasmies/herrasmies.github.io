@@ -488,6 +488,7 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
   #How many are winning at the end
   winners &lt;- length(which(tail(simulations, 1) &gt; 0))
   
+  
   simulations$ID &lt;- seq.int(nrow(simulations))
 
   simulations.long &lt;- simulations %&gt;% 
@@ -502,24 +503,94 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
                                              TRUE ~ &quot;Not at risk&quot;))) %&gt;%
     ungroup()
   
-  #THIS IS AN ALPHA VERSION: Illustrations of &quot;at risk&quot; players based on time as a winner and length of play
-  plot &lt;- simulations.long %&gt;%
-    dplyr::mutate(problem = fct_relevel(problem, &quot;Not at risk&quot;)) %&gt;% #force factor level order (simulations mess this up every now and then...)
-    ggplot(aes(ID, value, group=key)) + # group=key here required for complex animation
-    geom_line(aes(colour = problem, size = problem)) +
-    geom_abline(intercept = 0, slope = ev, linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
-    geom_hline(yintercept = 0, size=0.5, alpha=.5) +
-    xlab(&quot;Hours played&quot;) + ylab(&quot;Money (euros)&quot;) +
+  
+  #Upswing calculations using custom sliding-window regression (width-300 i.e. 1 hour)
+  simulations.long &lt;- simulations.long %&gt;% group_by(key) %&gt;% dplyr::mutate(id = seq(1:n()))
+  
+  upswing_detector &lt;- function(window_width = 300, fidelity=1) { #window_width = 300 = 1 hour as a definition of upswing range
+  estimates_slope &lt;- list()
+  counter = 0
+  for (x in 1:length(unique(simulations.long$key))) { #iterate through all players
+    for (i in seq(1, length(unique(simulations.long$id))+1-window_width, by = fidelity)) { #how many sliding windows fit within the sample, fidelity to speed calculation
+      temp &lt;- subset(simulations.long, key==x &amp; id &gt;= i &amp; id &lt; i+window_width) #subset based on selected window width
+      
+      temp_model &lt;- lm(value ~ id, data=temp)
+      counter = counter + 1
+      estimates_slope[[counter]] &lt;- coef(summary(temp_model))[2,1]
+    }
+  }
+  
+  estimates_slope &lt;- as.data.frame(unlist(estimates_slope)) 
+  estimates_slope &lt;- estimates_slope %&gt;% 
+    dplyr::mutate(ID=rep(1:players, each=(length(unique(simulations.long$id))-window_width) / fidelity + 1)) # +1 before -window_width removed since otherwise doesn&#39;t work with fidelity=1 for some reason
+  names(estimates_slope)[1] &lt;- &quot;slope&quot;
+
+  
+  # Calculate proportion of upswings (vs. downswings) for all players, then obtain mean and sd across players, as well as maximum streak length with sd
+  output1 &lt;- estimates_slope %&gt;%
+    group_by(ID) %&gt;%
+    dplyr::mutate(positive = ifelse(slope &gt; 0, 1, 0),
+                  run_length = rep(rle(positive)$lengths, rle(positive)$lengths)) %&gt;%
+    dplyr::summarize(pos_prop = mean(positive),
+                     max_run = max(run_length)) %&gt;%
+    ungroup() %&gt;%
+    dplyr::summarize(mean_grand_prop = mean(pos_prop),
+                     sd_grand_prop = sd(pos_prop),
+                     mean_run = mean(max_run),
+                     sd_run = sd(max_run))
+  
+  output2 &lt;- estimates_slope %&gt;%
+    group_by(ID) %&gt;%
+    dplyr::mutate(numb = 1:n(), upswing = factor(ifelse(slope &gt; 0, &quot;Upswing&quot;, &quot;Downswing&quot;))) %&gt;%
+    ggplot(aes(numb, slope, color=upswing)) + 
+    geom_line(aes(group=1)) + 
+    #facet_wrap(&quot;ID&quot;, scales=&quot;free&quot;) + 
+    labs(color=NULL, x = &quot;Hours played&quot;, y = &quot;Slope&quot;) +
+    scale_color_manual(values=c(&quot;red&quot;, &quot;blue&quot;)) +
+    scale_x_continuous(breaks = seq(0, (rounds-window_width)/10, by = 60),
+                       labels=function(x)round(x/5/6 +1, 1)) + #+1 jotta saadaan tasattua normiplotin kanssa
     theme_minimal(base_size=14) +
-    scale_x_continuous(breaks = seq(0, rounds, by = 600), #by = 600 on by 2 hours (i.e. 600 rounds / 5 / 60)
-                       labels=function(x)round(x/5/60, 1)) +
-    theme(legend.title = element_blank(),
-          legend.position = &quot;top&quot;) +
-    scale_color_manual(values=c(&quot;lightblue&quot;, &quot;red&quot;)) +
-    scale_size_manual(values = c(.3, 1))
-    # guides(color=&quot;none&quot;)
+    theme(legend.position=&quot;bottom&quot;)
+  
+  output3 &lt;- estimates_slope %&gt;%
+    rename(key = ID) %&gt;%
+    group_by(key) %&gt;%
+    dplyr::mutate(key = as.character(key), ID = 1:n(), upswing = factor(ifelse(lag(slope, window_width/2) &gt; 0, &quot;Upswing&quot;, &quot;Downswing&quot;)),
+                  slope_corrected = lag(slope, window_width/2),
+                  upswing_prop = mean(as.numeric(upswing)-1, na.rm=T)) #difficult to visualize upswings!! (this is not optimal, using lag() since the last 300 (window length) observations are missing by design)
+  
+  
+  #return(ggarrange(output2, plot3))
+  return(output3) #for colored visulaization of upswing
+  #return(output1) #for upswing proportion calculations
+}
+  
+  # !!!!!uncomment below to be able to use plot4!!!!!
+  
+  #simulations.long &lt;- simulations.long %&gt;% left_join(upswing_detector())
+  
+  #This was for testing whether the upswing detector works (un-comment below, and add &quot;labs(title = output)&quot; to plot3)
+#output &lt;- upswing_detector()
+  
+  #THIS IS AN ALPHA VERSION: Illustrations of &quot;at risk&quot; players based on time as a winner and length of play
+  # plot &lt;- simulations.long %&gt;%
+  #   dplyr::mutate(problem = fct_relevel(problem, &quot;Not at risk&quot;)) %&gt;% #force factor level order (simulations mess this up every now and then...)
+  #   ggplot(aes(ID, value, group=key)) + # group=key here required for complex animation
+  #   geom_line(aes(colour = problem, size = problem)) +
+  #   geom_abline(intercept = 0, slope = ev, linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
+  #   geom_hline(yintercept = 0, size=0.5, alpha=.5) +
+  #   xlab(&quot;Hours played&quot;) + ylab(&quot;Money (euros)&quot;) +
+  #   theme_minimal(base_size=14) +
+  #   scale_x_continuous(breaks = seq(0, rounds, by = 600), #by = 600 on by 2 hours (i.e. 600 rounds / 5 / 60)
+  #                      labels=function(x)round(x/5/60, 1)) +
+  #   theme(legend.title = element_blank(),
+  #         legend.position = &quot;top&quot;) +
+  #   scale_color_manual(values=c(&quot;lightblue&quot;, &quot;red&quot;)) +
+  #   scale_size_manual(values = c(.3, 1))
+  #   # guides(color=&quot;none&quot;)
 
   # Plot only the top and bottom &quot;players&quot;
+  # Note, for animations, the coloring is sensitive to alphabetical order of the key-factor labels!
   plot2 &lt;- simulations.long %&gt;%
     dplyr::filter(key == max_value | key == min_value) %&gt;%
     dplyr::mutate(key = factor(key, levels = c(max_value, min_value),
@@ -554,15 +625,47 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
                        labels=function(x)round(x/5/60, 1)) +
     scale_alpha_manual(values = c(1, 1, .3)) +
     scale_size_manual(values = c(1, 1, .5))
+    #labs(title = paste(&quot;Upswing proportion (SD): &quot;, round(output[1], 3), &quot;(&quot;, round(output[2], 3), &quot;)&quot;))
+  
+  #Upswing visualization (not optimal!)
+  plot4 &lt;- simulations.long %&gt;%
+    # dplyr::mutate(slope_corrected = ifelse(is.na(slope_corrected), 0, slope_corrected)) %&gt;% ## I&#39;m switching back to numeric for testing purposes, fix later
+    na.omit() %&gt;%
+    ggplot(aes(ID, value, group=key)) +
+    geom_line(aes(colour = slope_corrected), size=0.9) +
+    geom_abline(intercept = 0, slope = ev, linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
+    geom_hline(yintercept = 0, size=0.5, alpha=.5) +
+    xlab(&quot;Hours played&quot;) + ylab(&quot;Money (euros)&quot;) +
+    labs(color = &quot;Streak strength&quot;) +
+    theme_minimal(base_size=14) +
+    theme(legend.position = &quot;top&quot;) +
+    scale_alpha_manual(values = c(1, 1, .3)) +
+    scale_size_manual(values = c(1, 1, .5)) +
+    scale_color_gradient2(low=&quot;red&quot;, mid = &quot;lightblue&quot;, high=&quot;blue&quot;) +
+    scale_x_continuous(breaks = seq(0, rounds, by = 600),
+                       labels=function(x)round(x/5/60, 1))
+  
+  #Add the below only if upswing_detector is used!
+  
+    # annotate(&quot;text&quot;, x = 550, y = 60, 
+    #          label = paste(&quot;Winning streaks:&quot;, round(simulations.long$upswing_prop[1], 3)*100, &quot;%&quot;))
+    # # annotate(&quot;text&quot;, x = 550, y = 60, 
+    # #          label = paste(&quot;Winning streaks:&quot;, round(simulations.long$upswing_prop[1], 3)*100, &quot;%&quot;, 
+    # #                        round(simulations.long$upswing_prop[rounds+1], 3)*100, &quot;%&quot;)) #This is an ugly fix, not for long-term use
+
   
   
   if (topbottom == F) {
-    return(plot3) 
+    return(plot3) #winners for number of winners
     }
   else {
-    return(plot2) #plot for problem gambling risk plot (ALPHA VERSION!), plot2 for top and bottom, winners for number of winners at end. Visualizations work with &quot;plot2&quot;. Note that the code may break (update to fix this is pending) if two players have idential wins or losses at the top or bottom (this is quite rare but may happen).
+    return(plot2) #or upswing_detector()
+    
+    #plot for problem gambling risk plot (ALPHA VERSION!), plot2 for top and bottom, winners for number of winners at end. Visualizations work with &quot;plot2&quot;. Note that the code may break (update to fix this is pending) if two players have idential wins or losses at the top or bottom (this is quite rare but may happen). upswing_detector() for mean length and sd of average upswings (defined as upwards trending streak of 2 hours)
     }
-}</code></pre>
+}
+
+#for basic calculations e.g. mean(replicate(5, casino_simulator(300, 100, F, &quot;low&quot;))); FOR THIS USE &quot;winners&quot; as the return output!</code></pre>
 <div id="low-volatility-10-hours" class="section level2">
 <h2>Low volatility (10 hours)</h2>
 <div id="animation" class="section level3">
