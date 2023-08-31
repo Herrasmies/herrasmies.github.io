@@ -10,7 +10,7 @@ output:
 
 <font size=5>Peer-reviewed publications</font>
 
-I've (co)authored 55 scientific papers, 46 of which have been peer-reviewed (18 as first author, 8 as second author, and 9 as last author). My papers focus on 1) gambling, games, and behavioral addictions, 2) social psychology and moral psychology of robotics, 3) emotions, decision-making, and psychophysiological correlates of cognition, and 4) psychology of deception.
+I've (co)authored 58 scientific papers, 49 of which have been peer-reviewed (19 as first author, 10 as second author, and 9 as last author). My papers focus on 1) gambling, games, and behavioral addictions, 2) social psychology and moral psychology of robotics, 3) emotions, decision-making, and psychophysiological correlates of cognition, and 4) psychology of deception.
 
 My papers are listed below topic-wise, though some papers fit multiple topics. If you want a paper you can't access, I'll be happy to <a href="contact.html">email</a href> you a copy.
 
@@ -19,6 +19,8 @@ My papers are listed below topic-wise, though some papers fit multiple topics. I
 
 #### Gambling, games, and behavioral addictions
 
+
+- <b>Palomäki, J.</b>, Turner, N., Macey, J., & Castrén, S. (in press). Increased volatility in video poker results in more winning players but shorter winning streaks – evidence from simulations. <i> Journal of Behavioral Addictions </i>.
 
 - Arstila, V., Uusitalo, S., & <b> Palomäki, J. </b> (in press). Miksi pelaamme rahapelejä? In S. Uusitalo & V. Arstila (Eds.), <i>Pieni kriittinen rahapelikirja.</i> Turku: Eetos.
 
@@ -64,6 +66,8 @@ My papers are listed below topic-wise, though some papers fit multiple topics. I
 <br>
 
 #### Social psychology and moral psychology of robotics
+
+- Drosinou, M., <b>Palomäki, J.</b>, Kunnari, A., Koverola, M., Jokela, M. & Laakasuo, M. (in press). Modelling levels of eco-conscious awareness. <i>Journal Applied Social Psychology</i>.
 
 - Sundvall, J., Drosinou, M., Hannikainen, I., Elovaara, K., Halonen, J., Herzon, V., Kopecký, R., Jirout Košová, M., Koverola, M., Kunnari, A., Perander, S., Saikkonen, T., <b>Palomäki, J.</b>, & Laakasuo, M. (in press). Innocence over utilitarianism - Heightened Moral Standards for Robots in Rescue Dilemmas. <i>European Journal of Social Psychology.</i>
 
