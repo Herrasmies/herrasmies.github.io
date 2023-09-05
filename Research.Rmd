@@ -20,7 +20,7 @@ My papers are listed below topic-wise, though some papers fit multiple topics. I
 #### Gambling, games, and behavioral addictions
 
 
-- Korvuo, T., <b>Palomäki, J.</b>, & Castrén, S. (in press). Dissociative experiences reduce online problem gambling treatment effectiveness. <i>Comprehensive Psychiatry</i>.
+- <a href="https://doi.org/10.1016/j.comppsych.2023.152414"> Korvuo, T., <b>Palomäki, J.</b>, & Castrén, S. (in press). Dissociative experiences reduce online problem gambling treatment effectiveness. <i>Comprehensive Psychiatry</i>. </a href>
 
 - <b>Palomäki, J.</b>, Turner, N., Macey, J., & Castrén, S. (in press). Increased volatility in video poker results in more winning players but shorter winning streaks – evidence from simulations. <i> Journal of Behavioral Addictions </i>.
 
@@ -28,7 +28,7 @@ My papers are listed below topic-wise, though some papers fit multiple topics. I
 
 - <b>Palomäki, J.</b>, Salmela, M., & Laakasuo, M. (in press). Emootiot ja niiden säätely rahapelaamisessa. In S. Uusitalo & V. Arstila (Eds.), <i>Pieni kriittinen rahapelikirja.</i> Turku: Eetos.
 
-- <a href="https://www.researchgate.net/profile/Jussi-Palomaeki/publication/362620086_Predicting_online_problem_gambling_treatment_discontinuation_New_evidence_from_cross-validated_models/links/62f4b35bc6f6732999c1cc4c/Predicting-Online-Problem-Gambling-Treatment-Discontinuation-New-Evidence-From-Cross-Validated-Models.pdf"><b>Palomäki, J.</b>, Lind, K., Heiskanen, M., & Castrén, S. (2022). Predicting online problem gambling treatment discontinuation: New evidence from cross-validated models. <i>Psychology of Addictive Behaviors.</i> Online first publication.</a href>
+- <a href="https://www.researchgate.net/profile/Jussi-Palomaeki/publication/362620086_Predicting_online_problem_gambling_treatment_discontinuation_New_evidence_from_cross-validated_models/links/62f4b35bc6f6732999c1cc4c/Predicting-Online-Problem-Gambling-Treatment-Discontinuation-New-Evidence-From-Cross-Validated-Models.pdf"><b>Palomäki, J.</b>, Lind, K., Heiskanen, M., & Castrén, S. (2022). Predicting online problem gambling treatment discontinuation: New evidence from cross-validated models. <i>Psychology of Addictive Behaviors, 37</i>(3), 519-532.</a href>
 
 - <a href="https://www.nature.com/articles/s41598-022-24715-3">Laakasuo, M., <b>Palomäki, J.</b>, Abuhamdeh, S., Lappi, O., & Cowley, B. U. (2022). Psychometric analysis of the flow short scale translated to Finnish. <i>Scientific Reports, 12</i>(1), 1-11.</a href>
 
