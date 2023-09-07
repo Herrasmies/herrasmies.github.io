@@ -3,7 +3,7 @@
     "path": "C:/Users/jpgk/Desktop/Henk.koht.nettisivu/herrasmies.github.io/academic_activity.Rmd",
     "project_path": "academic_activity.Rmd",
     "type": "r_markdown",
-    "hash": "2707584726",
+    "hash": "0",
     "contents": "",
     "dirty": false,
     "created": 1673463061600.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "11,54",
+        "cursorPosition": "20,18",
         "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1694117458,
+    "lastKnownWriteTime": 1694117530,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1694117458494,
+    "last_content_update": 1694117530685,
     "read_only": false,
     "read_only_alternatives": []
 }
