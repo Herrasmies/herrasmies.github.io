@@ -1,0 +1,759 @@
+library(readxl)
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(ggpubr)
+
+restart_hakemus <- read_excel("C:\\Users\\jpgk\\Desktop\\Tuleva tilastoraportti 2023\\restart_aineisto_old.xlsx", sheet = 1) #Hakemus
+restart_alkukysely <- read_excel("C:\\Users\\jpgk\\Desktop\\Tuleva tilastoraportti 2023\\restart_aineisto_old.xlsx", sheet = 2) #Alkukysely
+restart_loppukysely <- read_excel("C:\\Users\\jpgk\\Desktop\\Tuleva tilastoraportti 2023\\restart_aineisto_old.xlsx", sheet = 3) #Loppukysely
+restart_seuranta3kk <- read_excel("C:\\Users\\jpgk\\Desktop\\Tuleva tilastoraportti 2023\\restart_aineisto_old.xlsx", sheet = 4) #Seuranta 3kk
+restart_seuranta6kk <- read_excel("C:\\Users\\jpgk\\Desktop\\Tuleva tilastoraportti 2023\\restart_aineisto_old.xlsx", sheet = 5) #Seuranta 6kk
+restart_seuranta12kk <- read_excel("C:\\Users\\jpgk\\Desktop\\Tuleva tilastoraportti 2023\\restart_aineisto_old.xlsx", sheet = 6) #Seuranta 12kk
+
+###
+#HAKEMUS
+###
+
+restart_hakemus <- restart_hakemus %>% dplyr::select("User ID", "6", "7", "8", "9", "1094", "11",
+                                                     "1097", "13", "14", "17":"22", "1100",
+                                                     "23":"25", "29", "30", "36":"41", "74":"77", "1083",
+                                                     "1084", "84", "85", "92", "94", "110", "111", "114", "117", "121", "122",
+                                                     "135", "137", "141", "145", "149", "151", "155", "157", "159":"161", "163", "167", "175", "179":"181",
+                                                     "183":"185", "187", "188",
+                                                     "289", "290",
+                                                     "292":"298", "306", "310", "312", "313", "318", "320", "394":"417", "420")
+
+names(restart_hakemus) <- c("id", "asuinymparisto", "sukupuoli", "syntymavuosi", "seurustelu", "asumistilanne", "koulutus",
+                            "tyotilanne", "vuositulot", "pelatut_paivat_h", "laite1", "laite2", "laite3", "laite4", "laite5", "laite6", "laite_muu",
+                            "yksin1", "yksin2", "yksin3", "pelityyppi1", "pelityyppi2", "pelityyppi3", "pelityyppi4", "pelityyppi5", "pelityyppi6", "pelityyppi7",
+                            "pelityyppi8", "pelityyppi9", "pelityyppi10", "pelityyppi11", "pelityyppi12", "raha_pelaamisesta", "elinkeino", "ostoraha_h", "ostetut_pelit_h",
+                            "lootbox_raha_h", "kuukausimaksut_h", "stream_katso", "stream_itse", "yhteiso", "vedonlyonti", "eurheilu_katso", "eurheilu_itse", 
+                            "POGQ1", "POGQ2", "POGQ3", "POGQ4", "POGQ5", "POGQ6", "POGQ7", "POGQ8", "POGQ9", "POGQ10", "POGQ11", "POGQ12", "POGQ13", "POGQ14", "POGQ15", "POGQ16", "POGQ17",
+                            "CIUS1", "CIUS2", "CIUS3", "CIUS4", "CIUS5", "psyyk_terv_h", "fyys_terv_h", 
+                            "COREOM1", "COREOM2", "COREOM3", "COREOM4", "COREOM5", "COREOM6", "COREOM7", "COREOM8", "COREOM9", "COREOM10",
+                            "COREOM11", "COREOM12", "COREOM13", "COREOM14", "COREOM15", "COREOM16", "COREOM17", "COREOM18", "COREOM19", "COREOM20",
+                            "COREOM21", "COREOM22", "COREOM23", "COREOM24", "COREOM25", "COREOM26", "COREOM27", "COREOM28", "COREOM29", "COREOM30",
+                            "COREOM31", "COREOM32", "COREOM33", "COREOM34",
+                            "AUDIT1", "AUDIT2", "AUDIT3", "hakenut_apua")
+
+
+#muuta muuttujia numeerisiksi (liian ep?sensitiivinen, korjaile)
+restart_hakemus <- data.frame(lapply(restart_hakemus, function(x) as.numeric(as.character(x))))
+
+#fix one variable
+restart_hakemus <- restart_hakemus %>% dplyr::mutate(pelityyppi7 = ifelse(is.na(pelityyppi7), 0, pelityyppi7))
+
+#99s into NAs
+restart_hakemus <- data.frame(lapply(restart_hakemus, function(x) ifelse(x==99, NA, x)))
+
+
+#CORE-OM scores
+coreom_wellbeingdefs_h <- restart_hakemus %>% dplyr::select(COREOM4, COREOM14, COREOM17, COREOM31) %>% rowMeans(na.rm=TRUE)
+coreom_problems_h <- restart_hakemus %>% dplyr::select(COREOM2, COREOM5, COREOM8, COREOM11, COREOM13, COREOM15, COREOM18, COREOM20, COREOM23, COREOM27, COREOM28, COREOM30) %>% rowMeans(na.rm=TRUE)
+coreom_functdiff_h <- restart_hakemus %>% dplyr::select(COREOM1, COREOM3, COREOM7, COREOM12, COREOM10, COREOM19, COREOM21, COREOM25, COREOM26, COREOM29, COREOM32, COREOM33) %>% rowMeans(na.rm=TRUE)
+coreom_riskharm_h <- restart_hakemus %>% dplyr::select(COREOM9, COREOM6, COREOM16, COREOM22, COREOM24, COREOM34) %>% rowMeans(na.rm=TRUE)
+coreom_total_h <- restart_hakemus %>% dplyr::select(COREOM1:COREOM34) %>% rowMeans(na.rm=TRUE)
+
+#POGQ scores
+pogq_total_h <- restart_hakemus %>% dplyr::select(POGQ1:POGQ17) %>% rowMeans(na.rm=TRUE)
+
+#CIUS scores
+cius_total_h <- restart_hakemus %>% dplyr::select(CIUS1:CIUS5) %>% rowMeans(na.rm=TRUE)
+
+#AUDIT scores ei k?ytet? for now
+#audit_total <- restart_hakemus %>% dplyr::select(AUDIT1:AUDIT3) %>% rowMeans(na.rm=TRUE)
+
+
+#Combine
+restart_hakemus <- cbind(restart_hakemus, coreom_wellbeingdefs_h, coreom_problems_h, coreom_functdiff_h, coreom_riskharm_h, coreom_total_h, pogq_total_h, cius_total_h)
+
+
+restart_hakemus <- restart_hakemus %>% dplyr::select(-c(laite6, laite_muu, yksin1, yksin2, yksin3, raha_pelaamisesta, 
+                                                        POGQ1:POGQ17, CIUS1:CIUS5, COREOM1:COREOM34, AUDIT1:AUDIT3))
+#Visualizations
+# restart_hakemus %>% filter(!is.na(sukupuoli)) %>% ggplot(aes(pogq_total_h, coreom_total_h)) + geom_point() + 
+#   geom_smooth(method="lm") + 
+#   facet_wrap("sukupuoli") + 
+#   theme_bw()
+
+# restart_hakemus %>% filter(!is.na(yhteiso)) %>% ggplot(aes(pogq_total_h, ostoraha, color=factor(yhteiso))) + 
+#   geom_point() + 
+#   geom_smooth(method="lm") + 
+#   theme_bw()
+
+###
+#ALKUKYSELY
+###
+
+#[427] Kuinka monena p?iv?n? viikossa olet pelannut viimeisen 2 kuukauden aikana?	91
+#[460] Pelien ostamiseen k?ytetty raha (viimeiset 2 kk)	103
+#[461] Ostettujen pelien m??r? (viimeiset 2 kk)	103
+#[465] Lootboxien ja muun lis?sis?ll?n hankkimiseen k?ytetty raha (viimeiset 2 kk)	105
+#[466] Peleihin liittyvien palveluiden kuukausimaksuihin k?ytetty raha (viimeiset 2 kk)	105
+#IGDT: 473-482
+#CIUS: 484-488
+#COREOM: 493-497, 522, 524, 525-551
+#psyykkinen terv. 490, fyysinen terv. 491
+
+restart_alkukysely <- restart_alkukysely %>% dplyr::select("User ID", "427", "460", "461", "465", "466",
+                                                           "473":"482", "484":"488", "493":"497", "522", "524", "525":"551",
+                                                           "490", "491")
+
+names(restart_alkukysely) <- c("id", "pelatut_paivat_a", "ostoraha_a", "ostetut_pelit_a", "lootbox_raha_a", "kuukausimaksut_a",
+                            "IGDT1", "IGDT2", "IGDT3", "IGDT4", "IGDT5", "IGDT6", "IGDT7", "IGDT8", "IGDT9", "IGDT10",
+                            "CIUS1", "CIUS2", "CIUS3", "CIUS4", "CIUS5",
+                            "COREOM1", "COREOM2", "COREOM3", "COREOM4", "COREOM5", "COREOM6", "COREOM7", "COREOM8", "COREOM9", "COREOM10",
+                            "COREOM11", "COREOM12", "COREOM13", "COREOM14", "COREOM15", "COREOM16", "COREOM17", "COREOM18", "COREOM19", "COREOM20",
+                            "COREOM21", "COREOM22", "COREOM23", "COREOM24", "COREOM25", "COREOM26", "COREOM27", "COREOM28", "COREOM29", "COREOM30",
+                            "COREOM31", "COREOM32", "COREOM33", "COREOM34",
+                            "psyyk_terv_a", "fyys_terv_a")
+
+
+#muuta muuttujia numeerisiksi (liian ep?sensitiivinen, korjaile)
+restart_alkukysely <- data.frame(lapply(restart_alkukysely, function(x) as.numeric(as.character(x))))
+
+#99s into NAs
+restart_alkukysely <- data.frame(lapply(restart_alkukysely, function(x) ifelse(x==99, NA, x)))
+
+
+#CORE-OM scores
+coreom_wellbeingdefs_a <- restart_alkukysely %>% dplyr::select(COREOM4, COREOM14, COREOM17, COREOM31) %>% rowMeans(na.rm=TRUE)
+coreom_problems_a <- restart_alkukysely %>% dplyr::select(COREOM2, COREOM5, COREOM8, COREOM11, COREOM13, COREOM15, COREOM18, COREOM20, COREOM23, COREOM27, COREOM28, COREOM30) %>% rowMeans(na.rm=TRUE)
+coreom_functdiff_a <- restart_alkukysely %>% dplyr::select(COREOM1, COREOM3, COREOM7, COREOM12, COREOM10, COREOM19, COREOM21, COREOM25, COREOM26, COREOM29, COREOM32, COREOM33) %>% rowMeans(na.rm=TRUE)
+coreom_riskharm_a <- restart_alkukysely %>% dplyr::select(COREOM9, COREOM6, COREOM16, COREOM22, COREOM24, COREOM34) %>% rowMeans(na.rm=TRUE)
+coreom_total_a <- restart_alkukysely %>% dplyr::select(COREOM1:COREOM34) %>% rowMeans(na.rm=TRUE)
+
+#CIUS scores
+cius_total_a <- restart_alkukysely %>% dplyr::select(CIUS1:CIUS5) %>% rowMeans(na.rm=TRUE)
+
+
+#IGDT score
+#igdt_total_a <- restart_alkukysely %>% dplyr::select(IGDT1:IGDT10) %>% rowMeans(na.rm=TRUE) #t?h?n on omat skoorausohjeet
+igdt_total_a <- restart_alkukysely %>% dplyr::select(IGDT1:IGDT10) %>% 
+  dplyr::mutate(IGDT1 = ifelse(IGDT1 == 1 | IGDT1 == 2, 0, 1),
+                IGDT2 = ifelse(IGDT2 == 1 | IGDT2 == 2, 0, 1),
+                IGDT3 = ifelse(IGDT3 == 1 | IGDT3 == 2, 0, 1),
+                IGDT4 = ifelse(IGDT4 == 1 | IGDT4 == 2, 0, 1),
+                IGDT5 = ifelse(IGDT5 == 1 | IGDT5 == 2, 0, 1),
+                IGDT6 = ifelse(IGDT6 == 1 | IGDT6 == 2, 0, 1),
+                IGDT7 = ifelse(IGDT7 == 1 | IGDT7 == 2, 0, 1),
+                IGDT8 = ifelse(IGDT8 == 1 | IGDT8 == 2, 0, 1),
+                IGDT9 = ifelse(IGDT9 == 1 | IGDT9 == 2, 0, 1),
+                IGDT10 = ifelse(IGDT10 == 1 | IGDT10 == 2, 0, 1),
+                IGDTextra = ifelse(IGDT9 == 0 & IGDT10 == 0, 0, 1)) %>%
+  dplyr::select(-c(IGDT9, IGDT10)) %>% rowSums(na.rm=TRUE)
+
+
+
+
+
+#Combine
+restart_alkukysely <- cbind(restart_alkukysely, coreom_wellbeingdefs_a, coreom_problems_a, coreom_functdiff_a, coreom_riskharm_a, 
+                            coreom_total_a, cius_total_a, igdt_total_a)
+
+restart_alkukysely <- restart_alkukysely %>% dplyr::select(-c(COREOM1:COREOM34, CIUS1:CIUS5, IGDT1:IGDT10))
+
+
+#Since hakemus (the first Questionnaire) does not have IGDT, use the scores from alkukysely; and vice versa for POGQ
+igdt_from_alkukysely <- restart_alkukysely %>% dplyr::select(id, igdt_total_a)
+restart_hakemus <- left_join(restart_hakemus, igdt_from_alkukysely, by="id") %>% rename(igdt_total_h = igdt_total_a)
+
+pogq_from_hakemus <- restart_hakemus %>% dplyr::select(id, pogq_total_h)
+restart_alkukysely <- left_join(restart_alkukysely, pogq_from_hakemus, by="id") %>% rename(pogq_total_a = pogq_total_h)
+  
+  
+
+###
+#LOPPUKYSELY
+###
+
+#[555] Kuinka monena p?iv?n? viikossa olet pelannut viimeisen 2 kuukauden aikana?	127
+#[593] Pelien ostamiseen k?ytetty raha (viimeiset 2 kk)	140
+#[594] Ostettujen pelien m??r? (viimeiset 2 kk)	140
+#[598] Lootboxien ja muun lis?sis?ll?n hankkimiseen k?ytetty raha (viimeiset 2 kk)	142
+#[601] Peleihin liittyvien palveluiden kuukausimaksuihin k?ytetty raha (viim 2 kk)	142
+#IGDT: 621-630
+#POGQ: 634-651
+#CIUS: 654-658
+#COREOM: 663-667, 669-686, 688-698
+#psyyk terv. 660 , fyys. terv. 661
+
+#[739] T?yttik? Restart-ohjelma odotukset?	173
+#[1114] Kuinka tyytyv?inen olet ohjelmaan	175
+#[1115] Miten hy?dyllist? osallistuminen Restart-ohjelmaan oli?	175
+#[1116] Onko tapasi pelata muuttunut parempaan suuntaan ohjelman aikana?	176
+#[1118] Kuinka tyytyv?inen olet teht?v?kirjaan?	176
+#[1119] Mik? teht?v?kirjan osioista oli hy?dyllisin	177
+#[1127] Kuinka tyytyv?inen olit puheluihin	179
+#[1128] Olivatko puhelut hy?dyllisi?	180
+#[1129] Ymm?rsik? terapeutti sinua?	180
+
+
+restart_loppukysely <- restart_loppukysely %>% dplyr::select("User ID", "555", "593", "594", "598", "601",
+                                                           "621":"630", "634":"651", "654":"658", "663":"667", "669":"686", "688":"698",
+                                                           "660", "661",
+                                                           "739", "1114":"1116", "1118", "1119", "1127":"1129")
+
+names(restart_loppukysely) <- c("id", "pelatut_paivat_l", "ostoraha_l", "ostetut_pelit_l", "lootbox_raha_l", "kuukausimaksut_l",
+                               "IGDT1", "IGDT2", "IGDT3", "IGDT4", "IGDT5", "IGDT6", "IGDT7", "IGDT8", "IGDT9", "IGDT10",
+                               "POGQ1", "POGQ2", "POGQ3", "POGQ4", "POGQ5", "POGQ6", "POGQ7", "POGQ8", "POGQ9", "POGQ10", 
+                               "POGQ11", "POGQ12", "POGQ13", "POGQ14", "POGQ15", "POGQ16", "POGQ17", "POGQ18",
+                               "CIUS1", "CIUS2", "CIUS3", "CIUS4", "CIUS5",
+                               "COREOM1", "COREOM2", "COREOM3", "COREOM4", "COREOM5", "COREOM6", "COREOM7", "COREOM8", "COREOM9", "COREOM10",
+                               "COREOM11", "COREOM12", "COREOM13", "COREOM14", "COREOM15", "COREOM16", "COREOM17", "COREOM18", "COREOM19", "COREOM20",
+                               "COREOM21", "COREOM22", "COREOM23", "COREOM24", "COREOM25", "COREOM26", "COREOM27", "COREOM28", "COREOM29", "COREOM30",
+                               "COREOM31", "COREOM32", "COREOM33", "COREOM34",
+                               "psyyk_terv_l", "fyys_terv_l",
+                               "odotukset", "tyyt_ojelma", "hyod_ohjelma", "muutos_parempaan", "tyyt_tehtavakirja", "hyod_os_tehtavakirja", "tyyt_puhelut", "hyod_puhelut", "ymmar_terap")
+
+
+#muuta muuttujia numeerisiksi (liian ep?sensitiivinen, korjaile)
+restart_loppukysely <- data.frame(lapply(restart_loppukysely, function(x) as.numeric(as.character(x))))
+
+#99s into NAs
+restart_loppukysely <- data.frame(lapply(restart_loppukysely, function(x) ifelse(x==99, NA, x)))
+
+
+#CORE-OM scores
+coreom_wellbeingdefs_l <- restart_loppukysely %>% dplyr::select(COREOM4, COREOM14, COREOM17, COREOM31) %>% rowMeans(na.rm=TRUE)
+coreom_problems_l <- restart_loppukysely %>% dplyr::select(COREOM2, COREOM5, COREOM8, COREOM11, COREOM13, COREOM15, COREOM18, COREOM20, COREOM23, COREOM27, COREOM28, COREOM30) %>% rowMeans(na.rm=TRUE)
+coreom_functdiff_l <- restart_loppukysely %>% dplyr::select(COREOM1, COREOM3, COREOM7, COREOM12, COREOM10, COREOM19, COREOM21, COREOM25, COREOM26, COREOM29, COREOM32, COREOM33) %>% rowMeans(na.rm=TRUE)
+coreom_riskharm_l <- restart_loppukysely %>% dplyr::select(COREOM9, COREOM6, COREOM16, COREOM22, COREOM24, COREOM34) %>% rowMeans(na.rm=TRUE)
+coreom_total_l <- restart_loppukysely %>% dplyr::select(COREOM1:COREOM34) %>% rowMeans(na.rm=TRUE)
+
+#CIUS scores
+cius_total_l <- restart_loppukysely %>% dplyr::select(CIUS1:CIUS5) %>% rowMeans(na.rm=TRUE)
+
+#IGDT score
+#igdt_total_l <- restart_loppukysely %>% dplyr::select(IGDT1:IGDT10) %>% rowMeans(na.rm=TRUE) #alla virallinen skooraus
+
+igdt_total_l <- restart_loppukysely %>% dplyr::select(IGDT1:IGDT10) %>% 
+  dplyr::mutate(IGDT1 = ifelse(IGDT1 == 1 | IGDT1 == 2, 0, 1),
+                IGDT2 = ifelse(IGDT2 == 1 | IGDT2 == 2, 0, 1),
+                IGDT3 = ifelse(IGDT3 == 1 | IGDT3 == 2, 0, 1),
+                IGDT4 = ifelse(IGDT4 == 1 | IGDT4 == 2, 0, 1),
+                IGDT5 = ifelse(IGDT5 == 1 | IGDT5 == 2, 0, 1),
+                IGDT6 = ifelse(IGDT6 == 1 | IGDT6 == 2, 0, 1),
+                IGDT7 = ifelse(IGDT7 == 1 | IGDT7 == 2, 0, 1),
+                IGDT8 = ifelse(IGDT8 == 1 | IGDT8 == 2, 0, 1),
+                IGDT9 = ifelse(IGDT9 == 1 | IGDT9 == 2, 0, 1),
+                IGDT10 = ifelse(IGDT10 == 1 | IGDT10 == 2, 0, 1),
+                IGDTextra = ifelse(IGDT9 == 0 & IGDT10 == 0, 0, 1)) %>%
+  dplyr::select(-c(IGDT9, IGDT10)) %>% rowSums(na.rm=TRUE)
+
+
+#POGQ score
+pogq_total_l <- restart_loppukysely %>% dplyr::select(POGQ1:POGQ18) %>% rowMeans(na.rm=TRUE)
+
+
+#Combine
+restart_loppukysely <- cbind(restart_loppukysely, coreom_wellbeingdefs_l, coreom_problems_l, coreom_functdiff_l, coreom_riskharm_l, 
+                            coreom_total_l, cius_total_l, igdt_total_l, pogq_total_l)
+
+
+restart_loppukysely <- restart_loppukysely %>% dplyr::select(-c(COREOM1:COREOM34, CIUS1:CIUS5, IGDT1:IGDT10, POGQ1:POGQ18))
+
+
+
+
+
+
+
+###
+#3kk SEURANTA
+###
+
+#[600] Kuinka monena p?iv?n? viikossa olet pelannut viimeisen 3 kuukauden aikana?	184
+#[719] Pelien ostamiseen k?ytetty raha (viimeiset 3 kk)	197
+#[720] Ostettujen pelien m??r? (viimeiset 3 kk)	197
+#[724] Lootboxien ja muun lis?sis?ll?n hankkimiseen k?ytetty raha (viimeiset 3 kk)	199
+#[726] Peleihin liittyvien palveluiden kuukausimaksuihin k?ytetty raha (viimeiset 3 kk)	199 #HUOM EI SAMA kk-m??r? kuin aiemmin, ei voine k?ytt??
+#IGDT: 744, 745, 747, 749, 750, 752-756
+#POGQ: 759, 769-776, 778-782, 786-789
+#CIUS: 1091, 822-825
+#psyyk terv. 827, fyys terv. 828
+#COREOM: 830-849, 851-856, 858-862, 873-875
+
+
+restart_seuranta3kk <- restart_seuranta3kk %>% dplyr::select("User ID", "600", "719", "720", "724", "726",
+                                                             "744", "745", "747", "749", "750", "752":"756",
+                                                             "759", "769":"776", "778":"782", "786":"789",
+                                                             "1091", "822":"825",
+                                                             "827", "828",
+                                                             "830":"849", "851":"856", "858":"862", "873":"875")
+
+names(restart_seuranta3kk) <- c("id", "pelatut_paivat_3kk", "ostoraha_3kk", "ostetut_pelit_3kk", "lootbox_raha_3kk", "kuukausimaksut_3kk",
+                                "IGDT1", "IGDT2", "IGDT3", "IGDT4", "IGDT5", "IGDT6", "IGDT7", "IGDT8", "IGDT9", "IGDT10",
+                                "POGQ1", "POGQ2", "POGQ3", "POGQ4", "POGQ5", "POGQ6", "POGQ7", "POGQ8", "POGQ9", "POGQ10", 
+                                "POGQ11", "POGQ12", "POGQ13", "POGQ14", "POGQ15", "POGQ16", "POGQ17", "POGQ18",
+                                "CIUS1", "CIUS2", "CIUS3", "CIUS4", "CIUS5",
+                                "psyyk_terv_3kk", "fyys_terv_3kk",
+                                "COREOM1", "COREOM2", "COREOM3", "COREOM4", "COREOM5", "COREOM6", "COREOM7", "COREOM8", "COREOM9", "COREOM10",
+                                "COREOM11", "COREOM12", "COREOM13", "COREOM14", "COREOM15", "COREOM16", "COREOM17", "COREOM18", "COREOM19", "COREOM20",
+                                "COREOM21", "COREOM22", "COREOM23", "COREOM24", "COREOM25", "COREOM26", "COREOM27", "COREOM28", "COREOM29", "COREOM30",
+                                "COREOM31", "COREOM32", "COREOM33", "COREOM34")
+
+
+#muuta muuttujia numeerisiksi (liian ep?sensitiivinen, korjaile)
+restart_seuranta3kk <- data.frame(lapply(restart_seuranta3kk, function(x) as.numeric(as.character(x))))
+
+#99s into NAs
+restart_seuranta3kk <- data.frame(lapply(restart_seuranta3kk, function(x) ifelse(x==99, NA, x)))
+
+
+#CORE-OM scores
+coreom_wellbeingdefs_3kk <- restart_seuranta3kk %>% dplyr::select(COREOM4, COREOM14, COREOM17, COREOM31) %>% rowMeans(na.rm=TRUE)
+coreom_problems_3kk <- restart_seuranta3kk %>% dplyr::select(COREOM2, COREOM5, COREOM8, COREOM11, COREOM13, COREOM15, COREOM18, COREOM20, COREOM23, COREOM27, COREOM28, COREOM30) %>% rowMeans(na.rm=TRUE)
+coreom_functdiff_3kk <- restart_seuranta3kk %>% dplyr::select(COREOM1, COREOM3, COREOM7, COREOM12, COREOM10, COREOM19, COREOM21, COREOM25, COREOM26, COREOM29, COREOM32, COREOM33) %>% rowMeans(na.rm=TRUE)
+coreom_riskharm_3kk <- restart_seuranta3kk %>% dplyr::select(COREOM9, COREOM6, COREOM16, COREOM22, COREOM24, COREOM34) %>% rowMeans(na.rm=TRUE)
+coreom_total_3kk <- restart_seuranta3kk %>% dplyr::select(COREOM1:COREOM34) %>% rowMeans(na.rm=TRUE)
+
+#CIUS scores
+cius_total_3kk <- restart_seuranta3kk %>% dplyr::select(CIUS1:CIUS5) %>% rowMeans(na.rm=TRUE)
+
+#IGDT score
+#igdt_total_3kk <- restart_seuranta3kk %>% dplyr::select(IGDT1:IGDT10) %>% rowMeans(na.rm=TRUE) #alla virallinen skooraus
+
+igdt_total_3kk <- restart_seuranta3kk %>% dplyr::select(IGDT1:IGDT10) %>% 
+  dplyr::mutate(IGDT1 = ifelse(IGDT1 == 1 | IGDT1 == 2, 0, 1),
+                IGDT2 = ifelse(IGDT2 == 1 | IGDT2 == 2, 0, 1),
+                IGDT3 = ifelse(IGDT3 == 1 | IGDT3 == 2, 0, 1),
+                IGDT4 = ifelse(IGDT4 == 1 | IGDT4 == 2, 0, 1),
+                IGDT5 = ifelse(IGDT5 == 1 | IGDT5 == 2, 0, 1),
+                IGDT6 = ifelse(IGDT6 == 1 | IGDT6 == 2, 0, 1),
+                IGDT7 = ifelse(IGDT7 == 1 | IGDT7 == 2, 0, 1),
+                IGDT8 = ifelse(IGDT8 == 1 | IGDT8 == 2, 0, 1),
+                IGDT9 = ifelse(IGDT9 == 1 | IGDT9 == 2, 0, 1),
+                IGDT10 = ifelse(IGDT10 == 1 | IGDT10 == 2, 0, 1),
+                IGDTextra = ifelse(IGDT9 == 0 & IGDT10 == 0, 0, 1)) %>%
+  dplyr::select(-c(IGDT9, IGDT10)) %>% rowSums(na.rm=TRUE)
+
+#POGQ score
+pogq_total_3kk <- restart_seuranta3kk %>% dplyr::select(POGQ1:POGQ18) %>% rowMeans(na.rm=TRUE)
+
+
+#Combine
+restart_seuranta3kk <- cbind(restart_seuranta3kk, coreom_wellbeingdefs_3kk, coreom_problems_3kk, coreom_functdiff_3kk, coreom_riskharm_3kk, 
+                             coreom_total_3kk, cius_total_3kk, igdt_total_3kk, pogq_total_3kk)
+
+
+restart_seuranta3kk <- restart_seuranta3kk %>% dplyr::select(-c(COREOM1:COREOM34, CIUS1:CIUS5, IGDT1:IGDT10, POGQ1:POGQ18))
+
+
+
+###
+#6kk SEURANTA
+###
+
+#[748] Kuinka monena p?iv?n? viikossa olet pelannut viimeisen 3 kuukauden aikana?	231
+#[808] Pelien ostamiseen k?ytetty raha (viimeiset 3 kk)	243
+#[809] Ostettujen pelien m??r? (viimeiset 3 kk)	243
+#[813] Lootboxien ja muun lis?sis?ll?n hankkimiseen k?ytetty raha (viimeiset 3 kk)	245
+#[816] Peleihin liittyvien palveluiden kuukausimaksuihin k?ytetty raha (viimeiset 3 kk)	245
+#IGDT: 863-872
+#POGQ: 883-900
+#CIUS: 902-906
+#psyyk terv. 908 fyys terv. 909
+#COREOM: 911-944
+
+restart_seuranta6kk <- restart_seuranta6kk %>% dplyr::select("User ID", "748", "808", "809", "813", "816",
+                                                             "863":"872", "883":"900", "902":"906",
+                                                             "908", "909",
+                                                             "911":"944")
+
+names(restart_seuranta6kk) <- c("id", "pelatut_paivat_6kk", "ostoraha_6kk", "ostetut_pelit_6kk", "lootbox_raha_6kk", "kuukausimaksut_6kk",
+                                "IGDT1", "IGDT2", "IGDT3", "IGDT4", "IGDT5", "IGDT6", "IGDT7", "IGDT8", "IGDT9", "IGDT10",
+                                "POGQ1", "POGQ2", "POGQ3", "POGQ4", "POGQ5", "POGQ6", "POGQ7", "POGQ8", "POGQ9", "POGQ10", 
+                                "POGQ11", "POGQ12", "POGQ13", "POGQ14", "POGQ15", "POGQ16", "POGQ17", "POGQ18",
+                                "CIUS1", "CIUS2", "CIUS3", "CIUS4", "CIUS5",
+                                "psyyk_terv_6kk", "fyys_terv_6kk",
+                                "COREOM1", "COREOM2", "COREOM3", "COREOM4", "COREOM5", "COREOM6", "COREOM7", "COREOM8", "COREOM9", "COREOM10",
+                                "COREOM11", "COREOM12", "COREOM13", "COREOM14", "COREOM15", "COREOM16", "COREOM17", "COREOM18", "COREOM19", "COREOM20",
+                                "COREOM21", "COREOM22", "COREOM23", "COREOM24", "COREOM25", "COREOM26", "COREOM27", "COREOM28", "COREOM29", "COREOM30",
+                                "COREOM31", "COREOM32", "COREOM33", "COREOM34")
+
+
+#muuta muuttujia numeerisiksi (liian ep?sensitiivinen, korjaile)
+restart_seuranta6kk <- data.frame(lapply(restart_seuranta6kk, function(x) as.numeric(as.character(x))))
+
+#99s into NAs
+restart_seuranta6kk <- data.frame(lapply(restart_seuranta6kk, function(x) ifelse(x==99, NA, x)))
+
+
+#CORE-OM scores
+coreom_wellbeingdefs_6kk <- restart_seuranta6kk %>% dplyr::select(COREOM4, COREOM14, COREOM17, COREOM31) %>% rowMeans(na.rm=TRUE)
+coreom_problems_6kk <- restart_seuranta6kk %>% dplyr::select(COREOM2, COREOM5, COREOM8, COREOM11, COREOM13, COREOM15, COREOM18, COREOM20, COREOM23, COREOM27, COREOM28, COREOM30) %>% rowMeans(na.rm=TRUE)
+coreom_functdiff_6kk <- restart_seuranta6kk %>% dplyr::select(COREOM1, COREOM3, COREOM7, COREOM12, COREOM10, COREOM19, COREOM21, COREOM25, COREOM26, COREOM29, COREOM32, COREOM33) %>% rowMeans(na.rm=TRUE)
+coreom_riskharm_6kk <- restart_seuranta6kk %>% dplyr::select(COREOM9, COREOM6, COREOM16, COREOM22, COREOM24, COREOM34) %>% rowMeans(na.rm=TRUE)
+coreom_total_6kk <- restart_seuranta6kk %>% dplyr::select(COREOM1:COREOM34) %>% rowMeans(na.rm=TRUE)
+
+#CIUS scores
+cius_total_6kk <- restart_seuranta6kk %>% dplyr::select(CIUS1:CIUS5) %>% rowMeans(na.rm=TRUE)
+
+#IGDT score
+#igdt_total_6kk <- restart_seuranta6kk %>% dplyr::select(IGDT1:IGDT10) %>% rowMeans(na.rm=TRUE) #alla virallinen skooraus
+
+igdt_total_6kk <- restart_seuranta6kk %>% dplyr::select(IGDT1:IGDT10) %>% 
+  dplyr::mutate(IGDT1 = ifelse(IGDT1 == 1 | IGDT1 == 2, 0, 1),
+                IGDT2 = ifelse(IGDT2 == 1 | IGDT2 == 2, 0, 1),
+                IGDT3 = ifelse(IGDT3 == 1 | IGDT3 == 2, 0, 1),
+                IGDT4 = ifelse(IGDT4 == 1 | IGDT4 == 2, 0, 1),
+                IGDT5 = ifelse(IGDT5 == 1 | IGDT5 == 2, 0, 1),
+                IGDT6 = ifelse(IGDT6 == 1 | IGDT6 == 2, 0, 1),
+                IGDT7 = ifelse(IGDT7 == 1 | IGDT7 == 2, 0, 1),
+                IGDT8 = ifelse(IGDT8 == 1 | IGDT8 == 2, 0, 1),
+                IGDT9 = ifelse(IGDT9 == 1 | IGDT9 == 2, 0, 1),
+                IGDT10 = ifelse(IGDT10 == 1 | IGDT10 == 2, 0, 1),
+                IGDTextra = ifelse(IGDT9 == 0 & IGDT10 == 0, 0, 1)) %>%
+  dplyr::select(-c(IGDT9, IGDT10)) %>% rowSums(na.rm=TRUE)
+
+
+#POGQ score
+pogq_total_6kk <- restart_seuranta6kk %>% dplyr::select(POGQ1:POGQ18) %>% rowMeans(na.rm=TRUE)
+
+
+#Combine
+restart_seuranta6kk <- cbind(restart_seuranta6kk, coreom_wellbeingdefs_6kk, coreom_problems_6kk, coreom_functdiff_6kk, coreom_riskharm_6kk, 
+                             coreom_total_6kk, cius_total_6kk, igdt_total_6kk, pogq_total_6kk)
+
+
+restart_seuranta6kk <- restart_seuranta6kk %>% dplyr::select(-c(COREOM1:COREOM34, CIUS1:CIUS5, IGDT1:IGDT10, POGQ1:POGQ18))
+
+
+
+###
+#12kk SEURANTA
+###
+
+#[956] Kuinka monena p?iv?n? viikossa olet pelannut viimeisen 6 kuukauden aikana?	277
+#[988] Pelien ostamiseen k?ytetty raha (viimeiset 6 kk)	289
+#[990] Ostettujen pelien m??r? (viimeiset 6 kk)	290
+#[994] Lootboxien ja muun lis?sis?ll?n hankkimiseen k?ytetty raha (viimeiset 6 kk)	291
+#[996] Peleihin liittyvien palveluiden kuukausimaksuihin k?ytetty raha (viimeiset 6 kk)	292 #HUOM seurantajaksojen pituus ongelmallinen ehk?
+#IGDT: 1004-1013
+#POGQ: 1015-1032
+#CIUS: 1034-1038
+#psyyk terv. 1040 fyys terv. 1041
+#COREOM: 1043-1076
+
+
+restart_seuranta12kk <- restart_seuranta12kk %>% dplyr::select("User ID", "956", "988", "990", "994", "996",
+                                                               "1004":"1013", "1015":"1032", "1034":"1038",
+                                                               "1040", "1041",
+                                                               "1043":"1076")
+
+names(restart_seuranta12kk) <- c("id", "pelatut_paivat_12kk", "ostoraha_12kk", "ostetut_pelit_12kk", "lootbox_raha_12kk", "kuukausimaksut_12kk",
+                                "IGDT1", "IGDT2", "IGDT3", "IGDT4", "IGDT5", "IGDT6", "IGDT7", "IGDT8", "IGDT9", "IGDT10",
+                                "POGQ1", "POGQ2", "POGQ3", "POGQ4", "POGQ5", "POGQ6", "POGQ7", "POGQ8", "POGQ9", "POGQ10", 
+                                "POGQ11", "POGQ12", "POGQ13", "POGQ14", "POGQ15", "POGQ16", "POGQ17", "POGQ18",
+                                "CIUS1", "CIUS2", "CIUS3", "CIUS4", "CIUS5",
+                                "psyyk_terv_12kk", "fyys_terv_12kk",
+                                "COREOM1", "COREOM2", "COREOM3", "COREOM4", "COREOM5", "COREOM6", "COREOM7", "COREOM8", "COREOM9", "COREOM10",
+                                "COREOM11", "COREOM12", "COREOM13", "COREOM14", "COREOM15", "COREOM16", "COREOM17", "COREOM18", "COREOM19", "COREOM20",
+                                "COREOM21", "COREOM22", "COREOM23", "COREOM24", "COREOM25", "COREOM26", "COREOM27", "COREOM28", "COREOM29", "COREOM30",
+                                "COREOM31", "COREOM32", "COREOM33", "COREOM34")
+
+
+#muuta muuttujia numeerisiksi (liian ep?sensitiivinen, korjaile)
+restart_seuranta12kk <- data.frame(lapply(restart_seuranta12kk, function(x) as.numeric(as.character(x))))
+
+#99s into NAs
+restart_seuranta12kk <- data.frame(lapply(restart_seuranta12kk, function(x) ifelse(x==99, NA, x)))
+
+
+#CORE-OM scores
+coreom_wellbeingdefs_12kk <- restart_seuranta12kk %>% dplyr::select(COREOM4, COREOM14, COREOM17, COREOM31) %>% rowMeans(na.rm=TRUE)
+coreom_problems_12kk <- restart_seuranta12kk %>% dplyr::select(COREOM2, COREOM5, COREOM8, COREOM11, COREOM13, COREOM15, COREOM18, COREOM20, COREOM23, COREOM27, COREOM28, COREOM30) %>% rowMeans(na.rm=TRUE)
+coreom_functdiff_12kk <- restart_seuranta12kk %>% dplyr::select(COREOM1, COREOM3, COREOM7, COREOM12, COREOM10, COREOM19, COREOM21, COREOM25, COREOM26, COREOM29, COREOM32, COREOM33) %>% rowMeans(na.rm=TRUE)
+coreom_riskharm_12kk <- restart_seuranta12kk %>% dplyr::select(COREOM9, COREOM6, COREOM16, COREOM22, COREOM24, COREOM34) %>% rowMeans(na.rm=TRUE)
+coreom_total_12kk <- restart_seuranta12kk %>% dplyr::select(COREOM1:COREOM34) %>% rowMeans(na.rm=TRUE)
+
+#CIUS scores
+cius_total_12kk <- restart_seuranta12kk %>% dplyr::select(CIUS1:CIUS5) %>% rowMeans(na.rm=TRUE)
+
+#IGDT score
+#igdt_total_12kk <- restart_seuranta12kk %>% dplyr::select(IGDT1:IGDT10) %>% rowMeans(na.rm=TRUE) #alla virallinen skooraus
+
+igdt_total_12kk <- restart_seuranta12kk %>% dplyr::select(IGDT1:IGDT10) %>% 
+  dplyr::mutate(IGDT1 = ifelse(IGDT1 == 1 | IGDT1 == 2, 0, 1),
+                IGDT2 = ifelse(IGDT2 == 1 | IGDT2 == 2, 0, 1),
+                IGDT3 = ifelse(IGDT3 == 1 | IGDT3 == 2, 0, 1),
+                IGDT4 = ifelse(IGDT4 == 1 | IGDT4 == 2, 0, 1),
+                IGDT5 = ifelse(IGDT5 == 1 | IGDT5 == 2, 0, 1),
+                IGDT6 = ifelse(IGDT6 == 1 | IGDT6 == 2, 0, 1),
+                IGDT7 = ifelse(IGDT7 == 1 | IGDT7 == 2, 0, 1),
+                IGDT8 = ifelse(IGDT8 == 1 | IGDT8 == 2, 0, 1),
+                IGDT9 = ifelse(IGDT9 == 1 | IGDT9 == 2, 0, 1),
+                IGDT10 = ifelse(IGDT10 == 1 | IGDT10 == 2, 0, 1),
+                IGDTextra = ifelse(IGDT9 == 0 & IGDT10 == 0, 0, 1)) %>%
+  dplyr::select(-c(IGDT9, IGDT10)) %>% rowSums(na.rm=TRUE)
+
+
+
+#POGQ score
+pogq_total_12kk <- restart_seuranta12kk %>% dplyr::select(POGQ1:POGQ18) %>% rowMeans(na.rm=TRUE)
+
+
+#Combine
+restart_seuranta12kk <- cbind(restart_seuranta12kk, coreom_wellbeingdefs_12kk, coreom_problems_12kk, coreom_functdiff_12kk, coreom_riskharm_12kk, 
+                             coreom_total_12kk, cius_total_12kk, igdt_total_12kk, pogq_total_12kk)
+
+
+restart_seuranta12kk <- restart_seuranta12kk %>% dplyr::select(-c(COREOM1:COREOM34, CIUS1:CIUS5, IGDT1:IGDT10, POGQ1:POGQ18))
+
+
+###
+#ALL DATAFILES
+###
+
+#Join all datafiles
+restart_all <- left_join(restart_hakemus, restart_alkukysely, by="id") %>%
+  left_join(., restart_loppukysely, by="id") %>%
+  left_join(., restart_seuranta3kk, by="id") %>%
+  left_join(., restart_seuranta6kk, by="id") %>%
+  left_join(., restart_seuranta12kk, by="id")
+
+
+restart_all <- restart_all %>% rename(QA1 = pelatut_paivat_h, QA2 = pelatut_paivat_a, QA3 = pelatut_paivat_l, QA4 = pelatut_paivat_3kk, QA5 = pelatut_paivat_6kk, QA6 = pelatut_paivat_12kk,
+                                      QB1 = ostoraha_h, QB2 = ostoraha_a, QB3 = ostoraha_l, QB4 = ostoraha_3kk, QB5 = ostoraha_6kk, QB6 = ostoraha_12kk,
+                                      QC1 = ostetut_pelit_h, QC2 = ostetut_pelit_a, QC3 = ostetut_pelit_l, QC4 = ostetut_pelit_3kk, QC5 = ostetut_pelit_6kk, QC6 = ostetut_pelit_12kk,
+                                      QD1 = lootbox_raha_h, QD2 = lootbox_raha_a, QD3 = lootbox_raha_l, QD4 = lootbox_raha_3kk, QD5 = lootbox_raha_6kk, QD6 = lootbox_raha_12kk,
+                                      QE1 = kuukausimaksut_h, QE2 = kuukausimaksut_a, QE3 = kuukausimaksut_l, QE4 = kuukausimaksut_3kk, QE5 = kuukausimaksut_6kk, QE6 = kuukausimaksut_12kk,
+                                      QP1 = psyyk_terv_h, QP2 = psyyk_terv_a, QP3 = psyyk_terv_l, QP4 = psyyk_terv_3kk, QP5 = psyyk_terv_6kk, QP6 = psyyk_terv_12kk, #"F" not used, signifies FALSE
+                                      QG1 = fyys_terv_h, QG2 = fyys_terv_a, QG3 = fyys_terv_l, QG4 = fyys_terv_3kk, QG5 = fyys_terv_6kk, QG6 = fyys_terv_12kk,
+                                      QH1 = coreom_wellbeingdefs_h, QH2 = coreom_wellbeingdefs_a, QH3 = coreom_wellbeingdefs_l, QH4 = coreom_wellbeingdefs_3kk, QH5 = coreom_wellbeingdefs_6kk, QH6 = coreom_wellbeingdefs_12kk,
+                                      QI1 = coreom_problems_h, QI2 = coreom_problems_a, QI3 = coreom_problems_l, QI4 = coreom_problems_3kk, QI5 = coreom_problems_6kk, QI6 = coreom_problems_12kk,
+                                      QJ1 = coreom_functdiff_h, QJ2 = coreom_functdiff_a, QJ3 = coreom_functdiff_l, QJ4 = coreom_functdiff_3kk, QJ5 = coreom_functdiff_6kk, QJ6 = coreom_functdiff_12kk,
+                                      QK1 = coreom_riskharm_h, QK2 = coreom_riskharm_a, QK3 = coreom_riskharm_l, QK4 = coreom_riskharm_3kk, QK5 = coreom_riskharm_6kk, QK6 = coreom_riskharm_12kk,
+                                      QL1 = coreom_total_h, QL2 = coreom_total_a, QL3 = coreom_total_l, QL4 = coreom_total_3kk, QL5 = coreom_total_6kk, QL6 = coreom_total_12kk,
+                                      QM1 = cius_total_h, QM2 = cius_total_a, QM3 = cius_total_l, QM4 = cius_total_3kk, QM5 = cius_total_6kk, QM6 = cius_total_12kk,
+                                      QN1 = igdt_total_h, QN2 = igdt_total_a, QN3 = igdt_total_l, QN4 = igdt_total_3kk, QN5 = igdt_total_6kk, QN6 = igdt_total_12kk,
+                                      QO1 = pogq_total_h, QO2 = pogq_total_a, QO3 = pogq_total_l, QO4 = pogq_total_3kk, QO5 = pogq_total_6kk, QO6 = pogq_total_12kk) %>%
+  gather(var, value, QA1, QB1:QE1, QP1, QG1, QH1:QG3, QH3:QO6) %>% #J?rjestys se, mik? se datassa on (aja yll? oleva p?tk? koodia, ja katso names(restart_all))
+  separate(var, into = c("var", "dv", "seuranta"), 1:2) %>%
+  unite(var, var, seuranta, sep="") %>%
+  spread(dv, value) %>% rename(seuranta=var, pelatut_paivat = A, ostoraha = B, ostetut_pelit = C,
+                               lootbox_raha = D, kuukausimaksut = E, psyyk_terv = P, fyys_terv = G,
+                               coreom_wellbeingdefs = H, coreom_problems = I, coreom_functdiff= J,
+                               coreom_riskharm = K, coreom_total = L, cius_total = M, igdt_total = N, pogq_total = O)
+  
+
+#Faktoroi muuttujia
+restart_all$seuranta <- factor(restart_all$seuranta, labels=c("Hakemus", "Alkukysely", "Loppukysely", "Seuranta3", "Seuranta6", "Seuranta12"))
+restart_all$sukupuoli <- factor(restart_all$sukupuoli, labels=c("Mies", "Nainen"))
+restart_all$yhteiso <- factor(restart_all$yhteiso, labels=c("Kuuluu yhteis??n", "Ei kuulu yhteis??n"))
+
+#Filter?id??n pois rivit, joista puuttuu jonkin tietyn muuttujan arvot
+#N?ytt?? silt? ett? jos filter?i pogq:n avulla, rivim??r?t t?sm??v?t excelien riveihin, eli pois putoavat vain "puhtaat" NAt, joilla ei ole seurantamittauksia
+restart_all_filtered <- restart_all %>% filter(!is.na(pogq_total))
+
+#lis?t??n vuosilukumuuttuja
+restart_all_filtered <- restart_all_filtered %>% dplyr::mutate(vuosi = case_when(id <= 150 ~ 2020,
+                                                                                 id > 150 & id <= 404 ~ 2021,
+                                                                                 id > 404 ~ 2022))
+
+#Lis?t??n ik?
+restart_all_filtered <- restart_all_filtered %>% dplyr::mutate(ika = vuosi-syntymavuosi)
+
+
+#Visualizations
+
+#CIUS
+cius <- restart_all_filtered %>% dplyr::filter(!is.na(sukupuoli), seuranta!="Hakemus") %>%
+  ggplot(aes(seuranta, cius_total)) + 
+  geom_path(aes(group=id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.05, linetype=1) + 
+  geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.15, size=1.5) +
+  theme_bw(base_size=14) + 
+  #scale_x_discrete(name = NULL, labels = c("Haku", "Alku", "Loppu", "3kk", "6kk", "12kk")) + #SUOMEKSI
+  scale_x_discrete(name = NULL, labels = c("Entry", "Start", "End", "3m", "6m", "12m")) + #ENKUKSI
+  #stat_summary(fun.data=mean_cl_boot, geom="point", position=position_dodge(.9), color="blue", size=2) +
+  #stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.08, size=1, aes(group=FINANCE_SIT_Q2, color=FINANCE_SIT_Q2), position=position_dodge(.1)) +
+  #stat_summary(fun=mean, geom="line", aes(group = finance_sit, color=finance_sit), size=1.5, alpha=.6) +
+  labs(y="CIUS pisteet", title=NULL) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.15, size=1.3, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="line", aes(group = 1), size=1.2, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="point", size=3, alpha=.5, color="blue") +
+  theme(legend.position="bottom") + facet_wrap("sukupuoli")
+
+#IGDT
+igdt <- restart_all_filtered %>% dplyr::filter(!is.na(sukupuoli), seuranta!="Hakemus") %>%
+  ggplot(aes(seuranta, igdt_total)) + 
+  geom_path(aes(group=id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.05, linetype=1) + 
+  geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.15, size=1.5) +
+  theme_bw(base_size=14) + 
+  #scale_x_discrete(name = NULL, labels = c("Haku", "Alku", "Loppu", "3kk", "6kk", "12kk")) + 
+  scale_x_discrete(name = NULL, labels = c("Entry", "Start", "End", "3m", "6m", "12m")) + #ENKUKSI
+  #stat_summary(fun.data=mean_cl_boot, geom="point", position=position_dodge(.9), color="blue", size=2) +
+  #stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.08, size=1, aes(group=FINANCE_SIT_Q2, color=FINANCE_SIT_Q2), position=position_dodge(.1)) +
+  #stat_summary(fun=mean, geom="line", aes(group = finance_sit, color=finance_sit), size=1.5, alpha=.6) +
+  labs(y="IGDT pisteet", title=NULL) +
+  scale_y_continuous(breaks=c(0:9)) +
+  #geom_hline(yintercept=5, linetype=2, colour="blue", alpha=.8) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.15, size=1.3, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="line", aes(group = 1), size=1.2, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="point", size=3, alpha=.5, color="blue") +
+  theme(legend.position="bottom") + facet_wrap("sukupuoli")
+
+#POGQ
+pogq <- restart_all_filtered %>% dplyr::filter(!is.na(sukupuoli), seuranta!="Hakemus") %>%
+  ggplot(aes(seuranta, pogq_total)) + 
+  geom_path(aes(group=id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.05, linetype=1) + 
+  geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.15, size=1.5) +
+  theme_bw(base_size=14) + 
+  #scale_x_discrete(name = NULL, labels = c("Haku", "Alku", "Loppu", "3kk", "6kk", "12kk")) + 
+  scale_x_discrete(name = NULL, labels = c("Entry", "Start", "End", "3m", "6m", "12m")) + #ENKUKSI
+  #stat_summary(fun.data=mean_cl_boot, geom="point", position=position_dodge(.9), color="blue", size=2) +
+  #stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.08, size=1, aes(group=FINANCE_SIT_Q2, color=FINANCE_SIT_Q2), position=position_dodge(.1)) +
+  #stat_summary(fun=mean, geom="line", aes(group = finance_sit, color=finance_sit), size=1.5, alpha=.6) +
+  labs(y="POGQ pisteet", title=NULL) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.15, size=1.3, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="line", aes(group = 1), size=1.2, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="point", size=3, alpha=.5, color="blue") +
+  theme(legend.position="bottom") + facet_wrap("sukupuoli")
+
+
+#COREOM
+coreom <- restart_all_filtered %>% dplyr::filter(!is.na(sukupuoli), seuranta!="Hakemus") %>%
+  ggplot(aes(seuranta, coreom_total)) + 
+  geom_path(aes(group=id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.05, linetype=1) + 
+  geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.15, size=1.5) +
+  theme_bw(base_size=14) + 
+  #scale_x_discrete(name = NULL, labels = c("Haku", "Alku", "Loppu", "3kk", "6kk", "12kk")) + 
+  scale_x_discrete(name = NULL, labels = c("Entry", "Start", "End", "3m", "6m", "12m")) + #ENKUKSI
+  #stat_summary(fun.data=mean_cl_boot, geom="point", position=position_dodge(.9), color="blue", size=2) +
+  #stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.08, size=1, aes(group=FINANCE_SIT_Q2, color=FINANCE_SIT_Q2), position=position_dodge(.1)) +
+  #stat_summary(fun=mean, geom="line", aes(group = finance_sit, color=finance_sit), size=1.5, alpha=.6) +
+  labs(y="COREOM pisteet", title=NULL) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.15, size=1.3, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="line", aes(group = 1), size=1.2, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="point", size=3, alpha=.5, color="blue") +
+  theme(legend.position="bottom") + facet_wrap("sukupuoli")
+
+
+#PSYYKKINEN TERVEYS
+psyyk <- restart_all_filtered %>% dplyr::filter(!is.na(sukupuoli)) %>%
+  ggplot(aes(seuranta, psyyk_terv)) + 
+  geom_path(aes(group=id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.15, linetype=2) + 
+  geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.15) +
+  theme_bw(base_size=14) + 
+  scale_x_discrete(name = NULL, labels = c("Haku", "Alku", "Loppu", "3kk", "6kk", "12kk")) + 
+  #stat_summary(fun.data=mean_cl_boot, geom="point", position=position_dodge(.9), color="blue", size=2) +
+  #stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.08, size=1, aes(group=FINANCE_SIT_Q2, color=FINANCE_SIT_Q2), position=position_dodge(.1)) +
+  #stat_summary(fun=mean, geom="line", aes(group = finance_sit, color=finance_sit), size=1.5, alpha=.6) +
+  labs(y="Psyykkinen terveys", title=NULL) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.15, size=1.3, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="line", aes(group = 1), size=1.2, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="point", size=3, alpha=.5, color="blue") +
+  theme(legend.position="bottom") + facet_wrap("sukupuoli")
+
+
+#FYYSINEN TERVEYS
+fyys <- restart_all_filtered %>% dplyr::filter(!is.na(sukupuoli)) %>%
+  ggplot(aes(seuranta, fyys_terv)) + 
+  geom_path(aes(group=id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.15, linetype=2) + 
+  geom_point(position = position_jitter(width = .15, height = .35, seed = 1), alpha=.15) +
+  theme_bw(base_size=14) + 
+  scale_x_discrete(name = NULL, labels = c("Haku", "Alku", "Loppu", "3kk", "6kk", "12kk")) + 
+  #stat_summary(fun.data=mean_cl_boot, geom="point", position=position_dodge(.9), color="blue", size=2) +
+  #stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.08, size=1, aes(group=FINANCE_SIT_Q2, color=FINANCE_SIT_Q2), position=position_dodge(.1)) +
+  #stat_summary(fun=mean, geom="line", aes(group = finance_sit, color=finance_sit), size=1.5, alpha=.6) +
+  labs(y="Fyysinen terveys", title=NULL) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.15, size=1.3, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="line", aes(group = 1), size=1.2, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="point", size=3, alpha=.5, color="blue") +
+  theme(legend.position="bottom") + facet_wrap("sukupuoli")
+
+
+ggarrange(cius, igdt, pogq, coreom, psyyk, fyys, nrow=3, ncol=2)
+ggarrange(cius, igdt, pogq, coreom, nrow=2, ncol=2)
+
+
+ggsave("restart_teho.png", width=12, height=8)
+ggsave("restart_teho.png", width=11, height=6)
+
+
+summary(lmer(pogq_total ~ seuranta + factor(sukupuoli) + koulutus + vuositulot + (1 | id), data=restart_all_filtered))
+summary(lmer(igdt_total ~ seuranta + factor(sukupuoli) + koulutus + vuositulot + (1 | id), data=restart_all_filtered))
+summary(lmer(cius_total ~ seuranta + (1 | id), data=restart_all_filtered))
+summary(lmer(coreom_total ~ seuranta + (1 | id), data=restart_all_filtered))
+summary(lmer(psyyk_terv ~ seuranta + (1 | id), data=restart_all_filtered))
+summary(lmer(fyys_terv ~ seuranta + (1 | id), data=restart_all_filtered))
+
+
+
+#####
+#####
+#####
+# 6 (asuinymp?rist?), 7 (sukupuoli), 8 (Syntym?vuosi), 9 (seurustelu/avoliitto), 1094 (asumistilanne), 11 (koulutus)
+# 1097 (ty?tilanne), 13 (vuositulot), 14 (kuinka monena p?iv?n? viikossa pelannut viim 12k), 
+# 17-22 (laite jota k?ytt?nyt pelaamiseen viim 12kk), 1100 (muu laite jota k?ytetty pelaamiseen viim 12kk), 
+# 23-25 (yksin v. muiden kanssa pelaaminen), 29,30,36,37,38,39,40,41,74,75,76,77 (pelityypit), 1083 (ansaitseeko rahaa pelaamisella), 
+# 1084 (p??asiallinen elinkeino), 84 (ostamiseen k?ytetty raha 12kk), 85 (ostettujen pelien lkm), 92 (lootboxeihin k?ytetty raha, 12kk), 
+# 94 (pelien kuukausimaksuihin k?ytetty raha 12kk), 110 (katsooko striimej?), 111 (striimaako itse), 114 ( kuuluuko yhteis??n), 
+# 117 (pelin sis?inen vedonly?nti), 121 (e-urheilun seuraaminen), 122 ( e-urheilun harrastaminen), 
+# 135,137,141,145,149,151,155,157,159,160,161,163,167,175,179,180,181 (POGQ), 
+# 183,184,185,187,188 (CIUS-5), 
+# 289 (psyyk terveydentila), 290 (fyys terveydentila), 
+# 292-298,306,310,312,313,318,320,394,395,396,397,398,399,400,401,402,403,404,405,406,407,408,409,410,411,412,413,414 (CORE-OM), 
+# 415-417 (AUDIT), 420 (aiemmin hakenut apua?), 
+
+#Unassorted
+
+restart_2020_2021 <- restart_all_filtered %>% filter(vuosi != 2022)
+
+restart_all_filtered %>% dplyr::filter(!is.na(sukupuoli), seuranta!="Hakemus") %>%
+  dplyr::mutate(cut_off = ifelse(igdt_total >= 5, 1, 0),
+                cut_off = factor(cut_off, labels=c("Kliinisesti ei-relevantti", "Kliinisesti relevantti"))) %>%
+  ggplot(aes(seuranta, igdt_total)) + 
+  geom_path(aes(group=id), position=position_jitter(width = .15, height = .35, seed = 1), alpha=.05, linetype=1) + 
+  geom_point(aes(color=factor(cut_off)), position = position_jitter(width = .15, height = .35, seed = 1), alpha=.15, size=1.5) +
+  theme_bw(base_size=14) + 
+  scale_color_manual(values=c("black", "red")) +
+  scale_x_discrete(name = NULL, labels = c("Alku", "Loppu", "3kk", "6kk", "12kk")) + 
+  labs(y="IGDT pisteet", title=NULL) +
+  scale_y_continuous(breaks=c(0:9)) +
+  geom_hline(yintercept=5, linetype=2, colour="blue", alpha=.8) +
+  stat_summary(fun.data=mean_cl_boot, geom="errorbar", width=.15, size=1.3, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="line", aes(group = 1), size=1.2, alpha=.5, color="blue") +
+  stat_summary(fun=mean, geom="point", size=3, alpha=.5, color="blue") +
+  theme(legend.position="bottom") + facet_wrap("sukupuoli") + labs(color=NULL)
+
+ggsave("restart_teho.png", width=5, height=4)
+
+
+restart_all_filtered %>% filter(seuranta=="Hakemus") %>% 
+  ggplot(aes(koulutus)) + geom_histogram(aes(y=..density..), bins=4, alpha=.85, color="black", fill="lightblue") + theme_ipsum(base_size=15) +
+  geom_vline(aes(xintercept=mean(koulutus, na.rm=T), color="Keskiarvo"), size=1) +
+  geom_vline(aes(xintercept=median(koulutus, na.rm=T), color="Mediaani"), size=1) +
+  scale_color_manual(values=c("red", "blue")) + labs(color=NULL, x=NULL, y=NULL, title="Koulutus") +
+  theme(legend.position="bottom") +
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1L)) +
+  scale_x_continuous(breaks=c(2:5), labels=c("Perusaste", "Toinen\naste", "Alempi\nkorkea-aste\ntai opintoaste", "Ylempi\nkorkea-aste"))
+
+
+restart_all_filtered %>% filter(seuranta=="Hakemus") %>% 
+  dplyr::mutate(ika = vuosi-syntymavuosi) %>% #varmista mist? voisi saada p?iv?m??r?n jotta luku (2021?) on oikein
+  ggplot(aes(ika)) + geom_histogram(aes(y=..density..), alpha=.85, color="black", fill="lightblue") + theme_ipsum(base_size=15) +
+  geom_vline(aes(xintercept=mean(ika, na.rm=T), color="Keskiarvo"), size=1) + #eri koko koska ovat ihan p??llekk?in palkit (i?n mediaani ja keskiarvo)
+  geom_vline(aes(xintercept=median(ika, na.rm=T), color="Mediaani"), size=1) +
+  scale_color_manual(values=c("red", "blue")) + labs(color=NULL, x=NULL, y=NULL, title="Ik?") +
+  theme(legend.position="bottom") +
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1L))
+
+
+restart_all_filtered %>% filter(seuranta=="Hakemus") %>% 
+  ggplot(aes(vuositulot)) + geom_histogram(aes(y=..density..), bins=8, alpha=.85, color="black", fill="lightblue") + theme_ipsum(base_size=15) +
+  geom_vline(aes(xintercept=mean(vuositulot, na.rm=T), color="Keskiarvo"), size=1) + #eri koko koska ovat ihan p??llekk?in palkit (i?n mediaani ja keskiarvo)
+  geom_vline(aes(xintercept=median(vuositulot, na.rm=T), color="Mediaani"), size=1) +
+  scale_color_manual(values=c("red", "blue")) + labs(color=NULL, x=NULL, y=NULL, title="Vuositulot (tuhatta euroa)") +
+  theme(legend.position="bottom") +
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1L)) +
+  scale_x_continuous(breaks=c(1:8), labels=c("alle 6,5", "6,5-9,9", "10-13,49", "13,5-16,49", 
+                                             "16,5-24,99", "25-34,99", "35-49,99", "yli 50")) +
+  theme(axis.text.x = element_text(angle = -40, vjust = -0.5, hjust=0.4))
+
+
+
+
+
