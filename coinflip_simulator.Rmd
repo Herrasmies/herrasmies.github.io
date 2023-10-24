@@ -1,5 +1,5 @@
 ---
-title: "Video poker simulator"
+title: "Coin flip simulator"
 author: "(c) Jussi Palomäki, 2023"
 output:
   html_document:
@@ -12,26 +12,6 @@ output:
 knitr::opts_chunk$set(include = TRUE, echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
-This video poker simulator seeks to illustrate the spread (variance) of wins and losses between multiple hypothetical players and different levels of game volatility. The simulator may be helpful for players who are unfamiliar with the logic of gambling, and who may be at risk of becoming problem gamblers. In the simulations...
-
-* The bet size is 1 euro each round
-* 5 rounds are played per minute
-* The spread of wins and their probabilities (under optimal strategy) in the low / medium / high volatility version of the game are
-  + Royal flush: 2000e / 500e / 100e (0.002%)
-  + Straight flush: 50e / 55e / 50e (0.011%)
-  + Four of a kind: 33e / 45e / 30e (0.236%)
-  + Full house: 14e / 13e / 15e (1.151%)
-  + Flush: 7e / 7e / 8e (1.101%)
-  + Straight: 5e / 6e / 7e (1.123%)
-  + Three of a kind: 3e / 3e / 3e (7.445%)
-  + Two pair: 2e / 2e / 2e (12.928%)
-* The return to player (RTP) rates on optimal strategy are 89.955% (low volatility), 89.934% (medium volatility), and 89.965% (high volatility) 
-* Optimal playing strategy is used
-* The "luckiest" and "unluckiest" players are visualized based on their results at the end of each simulation
-
-These wins and their probabilities are based on information provided in https://www.pinnacle.com/en/betting-articles/casino/video-poker-odds-and-strategy/8RP2WGBBQFJ498LD , but may significantly differ from other video poker games (and other similar games) elsewhere
-
-See also https://link.springer.com/article/10.1007/s10899-011-9238-0 for simulations and analyses on volatility, house edge and prize structures in different gambling games
 
 ```{r, message=FALSE}
 library(tidyverse)
@@ -44,37 +24,57 @@ casino_simulator <- function(rounds, players, topbottom = F, volatility = "low")
   
   simulations = data.frame(nrow = 0)
   
+  #For first win simulations (Nigel Turner's idea)
+  first_win = data.frame(nrow = 0)
+  
+  #Theoretical 95 % confidence interval helpers
+  cumEV = cumsum(rep(0, rounds))
+  cumSD = sqrt(cumsum(rep(1^2, rounds))) #first convert to variance, then convert the sum back to SD // betsize = 1
+  lower <- qnorm(0.025, cumEV, cumSD)
+  upper <- qnorm(0.975, cumEV, cumSD)
+  confidence <- data.frame(cbind(lower, upper))
+  confidence$ID <- seq.int(nrow(confidence))
+  
+  
   if (volatility=="low") {
-    payout <- c(100, 50, 30, 15, 8, 7, 3, 2, 0) - 1
-    probability <- c(0.002, 0.011, 0.236, 1.151, 1.101, 1.123, 7.445, 12.928, 76.003)/100
-    ev <- sum(payout*probability) #ev = -0.10045
+    payout <- c(0, 2) - 1
+    probability <- c(50, 50)/100
+    ev <- sum(payout*probability)
   }
   
   else if (volatility=="med") {
-    payout <- c(500, 65, 45, 13, 7, 6, 3, 2, 0) - 1
-    probability <- c(0.002, 0.011, 0.236, 1.151, 1.101, 1.123, 7.445, 12.928, 76.003)/100
-    ev <- sum(payout*probability) #ev = -0.10066
+    payout <- c(0, 2) - 1
+    probability <- c(50, 50)/100
+    ev <- sum(payout*probability)
   }
   
   else { 
-    payout <- c(2000, 50, 33, 14, 7, 5, 3, 2, 0) - 1
-    probability <- c(0.002, 0.011, 0.236, 1.151, 1.101, 1.123, 7.445, 12.928, 76.003)/100
-    ev <- sum(payout*probability) #ev = -0.10035
+    payout <- c(0, 2) - 1
+    probability <- c(50, 50)/100
+    ev <- sum(payout*probability)
   }
 
   for (i in 1:players) {
     
     test <- sample(payout, rounds, replace=TRUE, prob=probability)
     test <- data.frame(run = test)
-    names(test)[1] <- i
+    names(test)[1] <- i #replaces run with simple integer (for simplicity). Code needs tidying a bit.
   
     simulations <- cbind(simulations, cumsum(test))
     simulations$nrow <- NULL
+    
+    #Locate first win among all bets
+    first_win_temp <- which(test > 0)[1]
+    first_win_temp <- data.frame(run = first_win_temp)
+    names(first_win_temp)[1] <- i
+    first_win <- cbind(first_win, first_win_temp)
+    first_win$nrow <- NULL
     
   }
   
   max_value <- which(tail(simulations, 1) == max(tail(simulations, 1))) # Among the last row, which column has the highest value
   min_value <- which(tail(simulations, 1) == min(tail(simulations, 1))) # Among the last row, which column has the lowest value
+  
   
   #How many are winning at the end
   winners <- length(which(tail(simulations, 1) > 0))
@@ -207,6 +207,8 @@ casino_simulator <- function(rounds, players, topbottom = F, volatility = "low")
     geom_line(aes(colour = maxmin, alpha = maxmin, size = maxmin)) +
     geom_abline(intercept = 0, slope = ev, linetype="dashed", size=0.5, color="red", alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
+    geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
     xlab("Hours played") + ylab("Money (euros)") +
     scale_color_manual(values=c("blue", "red", "grey")) +
     theme_minimal(base_size=14) +
@@ -257,6 +259,7 @@ casino_simulator <- function(rounds, players, topbottom = F, volatility = "low")
 }
 
 #for basic calculations e.g. mean(replicate(5, casino_simulator(300, 100, F, "low"))); FOR THIS USE "winners" as the return output!
+
 ```
 
 ## Low volatility (10 hours)
