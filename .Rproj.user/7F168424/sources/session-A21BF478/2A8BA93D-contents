@@ -1,0 +1,69 @@
+---
+title: "Simple winning streak simulation"
+author: "(c) Jussi Palomäki, 2023"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 3
+    code_folding: hide
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(include = TRUE, echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Test
+
+```{r, message=FALSE}
+library(tidyverse)
+
+#Loss = 0, Win = 1
+payout <- c(0, 1)
+
+#Probability for Loss = 15 %, probability for Win = 85 %
+probability <- c(0.15, 0.85)
+
+#Streak length of interest
+streak <- 44
+
+#Number of games played
+games <- 50000
+
+#How many times we iterate over the simulation
+replicates <- 1000
+
+#Simulate sample of 20000 games such that in each game, we win 85% of the time and lose 15% of the time
+#Result: list of 0s and 1s for each game
+sample(payout, games, replace=TRUE, prob = probability)
+
+#For these games, calculate the length of each win streak. Result: list of winning streak lengths across all 20000 games
+rle(sample(payout, games, replace=TRUE, prob = probability))$lengths
+
+#Calculate the number of winning streaks longer than 44
+sum(rle(sample(payout, games, replace=TRUE, prob = probability))$lengths > streak)
+
+#Do all of the above simultaneously 1000 times
+replicate(replicates, sum(rle(sample(payout, games, replace=TRUE, prob = probability))$lengths > streak))
+
+#Calculate the number of times there were 0 winning streaks of at least 44 games, express it as a probability
+sum(replicate(replicates, sum(rle(sample(payout, games, replace=TRUE, prob = probability))$lengths > streak)) == 0) / replicates
+
+#Histogram of MAX winstreak lengths
+hist(replicate(replicates, max(rle(sample(payout, games, replace=TRUE, prob = probability))$lengths)))
+
+
+#Prettier histogram
+chess_data <- tibble(x = replicate(replicates, max(rle(sample(payout, games, replace=TRUE, prob = probability))$lengths)))
+
+chess_data %>% ggplot(aes(x)) +
+  geom_histogram(aes(y=..density..), color = "black", fill = "lightblue") +
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1L)) +
+  labs(y = "Proportion", x = "Maximum winning streak length (number of games)",
+       title = "20k games played (simulated 1000 times), 300 elo difference")
+```
+
+## todo
+### todo
+```{r}
+
+```

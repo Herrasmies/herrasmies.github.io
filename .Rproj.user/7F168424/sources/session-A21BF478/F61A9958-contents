@@ -1,0 +1,1596 @@
+library(tidyverse)
+#library(lubridate)
+#install.packages("srvyr")
+#library(srvyr)
+library(survey)
+library(jtools)
+library(lme4)
+library(ggpubr)
+
+
+#Jussin analyysit from scratch
+
+vk1215 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 12_15_2022/SPSS_viikot_12_15.csv", sep = ";", dec = ",")
+vk1619 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 16_19_2022/SPSS_viikot_16-19.csv", sep = ";", dec = ",")
+vk2023 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 20_23_2022/SPSS_viikot_20-23.csv", sep = ";", dec = ",")
+vk2427 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 24_27_2022/SPSS_viikot_24-27.csv", sep = ";", dec = ",")
+vk2932 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 29_32/SPSS_viikot_29-32.csv", sep = ";", dec = ",")
+vk3336 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 33_36_2022/SPSS_viikot_33-36.csv", sep = ";", dec = ",")
+vk3841 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 38_41_2022/SPSS_viikot_38-41.csv", sep = ";", dec = ",")
+vk4245 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 42_45_2022/SPSS_viikot_42-45.csv", sep = ";", dec = ",")
+vk4649 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 46_49_2022/SPSS_viikot_46-49.csv", sep = ";", dec = ",")
+vk5103 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 51_03/SPSS_viikot_51_2022-03_2023.csv", sep = ";", dec = ",")
+vk0407 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 04_07_2023/SPSS_viikot_04-07.csv", sep = ";", dec = ",")
+vk0811 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 08_11_2023/SPSS_viikot_08-11_2023.csv", sep = ";", dec = ",")
+vk1316 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 13_16_2023/SPSS_viikot_13-16_2023.csv", sep = ";", dec = ",")
+vk1720 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 17_20_2023/SPSS_viikot_17-20_2023.csv", sep = ";", dec = ",")
+vk2124 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 21_24_2023/SPSS_viikot_21-24_2023.csv", sep = ";", dec = ",")
+vk2528 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 25_28_2023/SPSS_viikot_25-28_2023.csv", sep = ";", dec = ",")
+vk3134 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 31_34_2023/SPSS_viikot_31-34_2023.csv", sep = ";", dec = ",")
+vk3538 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 35_38_2023/SPSS_viikot_35-38_2023.csv", sep = ";", dec = ",")
+
+
+#First half without"rape2c1" or "rape2c2" (?)
+
+jaksot1 <- c("2022-12-15", "2022-16-19", "2022-20-23", "2022-24-27", "2022-29-32", 
+             "2022-33-36", "2022-38-41", "2022-42-45", "2022-46-49", "2022-51-03")
+
+offshore_data1 <- bind_rows(vk1215, vk1619, vk2023, vk2427, vk2932,
+                            vk3336, vk3841, vk4245, vk4649, vk5103, .id = "jakso")
+
+offshore_data1 <- offshore_data1 %>% 
+  dplyr::mutate(jakso = factor(jakso, levels = 1:10, labels = jaksot))
+
+
+#Second half with manually removing "rape2c1" or "rape2c2" (?)
+
+jaksot2 <- c("2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", 
+             "2023-25-28", "2023-31-34", "2023-35-38")
+
+offshore_data2 <- bind_rows(vk0407, vk0811, vk1316, vk1720, vk2124, 
+                            vk2528, vk3134, vk3538, .id = "jakso")
+
+offshore_data2 <- offshore_data2 %>% 
+  dplyr::mutate(jakso = factor(jakso, levels = 1:8, labels = jaksot2)) %>%
+  dplyr::select(-c("rape2c1", "rape2c2")) %>%
+  dplyr::filter(!is.na(rape1))
+
+
+#Combine
+offshore <- rbind(offshore_data1, offshore_data2)
+
+#Tomi's code
+offshore$veikkaus_viikoittain <- ifelse(offshore$rape2a<3, 1, 0)
+offshore$offshore_viikoittain <- ifelse(offshore$rape2b<3, 1, 0)
+offshore$ongelmia <- ifelse(offshore$rape5>1 & offshore$rape5<5, 1, 0)
+offshore$pelannut <- ifelse(offshore$rape1==1, 1, 0)
+
+#Factorise
+offshore$veikkaus_viikoittain_f <- factor(offshore$veikkaus_viikoittain)
+offshore$offshore_viikoittain_f <- factor(offshore$offshore_viikoittain)
+offshore$ongelmia_f <- factor(offshore$ongelmia)
+offshore$pelannut_f <- factor(offshore$pelannut)
+offshore$ongelmia_NONA = factor(ifelse(is.na(offshore$ongelmia), 0, offshore$ongelmia))
+offshore$suku <- factor(offshore$suku, labels = c("Female", "Male"))
+
+
+#remove rape2a / 2b "EOS"
+#Dichotomous variables indexing offshore vs not
+offshore <- offshore %>% dplyr::mutate(rape2a_no6 = ifelse(rape2a == 6, NA, rape2a),
+                                       rape2b_no6 = ifelse(rape2b == 6, NA, rape2b),
+                                       no_offshore = factor(ifelse(rape2b == 5, 1, 0), 
+                                                            labels = c("Offshore", "No offshore"))) # 1 = no offshore
+
+#Some figures
+
+#deprecated
+# offshore %>%
+#   gather(key, value, rape2a, rape2b) %>%
+#   dplyr::mutate(key = factor(key, labels = c("Kotimaiset", "Offshore"))) %>%
+#   ggplot(aes(value)) +
+#   geom_bar(aes(y = (..count..)/sum(..count..)), color = "black", fill = "lightblue") +
+#   #geom_histogram(bins = 6, color = "black", fill ="lightblue") +
+#   scale_x_continuous(breaks = 1:6, 
+#                    labels = c("Tänään tai eilen", "Viikon aikana", "Kuukauden aikana",
+#                                             "12kk aikana", "Vuosi sitten tai ei lainkaan", "Ei osaa sanoa")) +
+#   theme_bw() +
+#   facet_wrap("key") +
+#   coord_flip()
+
+
+#exclude first half, remove "not sure" responses
+offshore_filtered <- offshore %>%
+  dplyr::mutate(tulo_no8 = ifelse(tulo == 8, NA, tulo),
+                t1_no8 = ifelse(t1 == 8, NA, t1)) %>%
+  dplyr::filter(jakso %in% c("2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", 
+                             "2023-25-28", "2023-31-34", "2023-35-38")) %>%
+  dplyr::mutate(jakso = droplevels(jakso))
+
+
+offshore %>% 
+  group_by(jakso, suku) %>%
+  dplyr::mutate(ongelmia_NONA = ifelse(is.na(ongelmia), 0, ongelmia)) %>%
+  dplyr::select(veikkaus_viikoittain, offshore_viikoittain, ongelmia_NONA, suku) %>%
+  na.omit() %>%
+  dplyr::summarize(veikkaus_prop = sum(veikkaus_viikoittain)/n(),
+                   offshore_prop = sum(offshore_viikoittain)/n(),
+                   ongelmia_NONA_prop = sum(ongelmia_NONA)/n(),
+                   lower_veikkaus=prop.test(sum(veikkaus_viikoittain),n())$conf.int[1],
+                   upper_veikkaus=prop.test(sum(veikkaus_viikoittain),n())$conf.int[2],
+                   lower_offshore=prop.test(sum(offshore_viikoittain),n())$conf.int[1],
+                   upper_offshore=prop.test(sum(offshore_viikoittain),n())$conf.int[2],
+                   lower_ongelmia=prop.test(sum(ongelmia_NONA),n())$conf.int[1],
+                   upper_ongelmia=prop.test(sum(ongelmia_NONA),n())$conf.int[2]) %>%
+  gather(key, value, veikkaus_prop, offshore_prop) %>%
+  dplyr::mutate(key = factor(key, levels = c("veikkaus_prop", "offshore_prop"),
+                             labels = c("Veikkaus", "Offshore"))) %>%
+  ggplot(aes(jakso, value, color = key)) +
+  scale_color_manual(values = c("blue", "salmon")) +
+  scale_y_continuous(breaks = seq(0, 65, by = 0.10), labels = scales::percent, limits = c(0, .65)) +
+  geom_path(aes(group=key)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = lower_veikkaus, ymax = upper_veikkaus), color = "blue", alpha = .35, width=0.25) +
+  geom_errorbar(aes(ymin = lower_offshore, ymax = upper_offshore), color = "salmon", alpha = .35, width=0.25) +
+  #geom_errorbar(aes(ymin = lower_ongelmia, ymax = upper_ongelmia), color = "red", alpha = .35, width=0.25) +
+  theme_bw(base_size=14) +
+  labs(x = NULL, color = NULL, y = "Proportion of weekly players") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = c(.75, .5)) +
+  facet_wrap("suku")
+
+
+#Here we use the offshore_filtered dataset since the early data collections did not properly ask for gambling problems
+raw_fig1 <- offshore_filtered %>% 
+  group_by(jakso, offshore_viikoittain_f) %>%
+  dplyr::mutate(ongelmia_NONA = ifelse(is.na(ongelmia), 0, ongelmia)) %>% #not used currently
+  dplyr::select(offshore_viikoittain_f, ongelmia) %>%
+  na.omit() %>%
+  dplyr::mutate(offshore_viikoittain_f = factor(offshore_viikoittain_f,
+                                                levels = c(1,0),
+                                                labels = c("Yes", "No"))) %>%
+  dplyr::summarize(ongelmia_prop = sum(ongelmia)/n(),
+                   lower_ongelmia=prop.test(sum(ongelmia),n())$conf.int[1],
+                   upper_ongelmia=prop.test(sum(ongelmia),n())$conf.int[2]) %>%
+  ggplot(aes(jakso, ongelmia_prop, color = offshore_viikoittain_f, group=offshore_viikoittain_f)) +
+  geom_line(position = position_dodge(.9)) +
+  geom_errorbar(aes(ymin = lower_ongelmia, ymax = upper_ongelmia), width=.2, position=position_dodge(.9), alpha = .35) +
+  geom_point(size=2.5, alpha=.35, position=position_dodge(.9)) +
+  scale_color_manual(values=c("blue", "red")) +
+  scale_fill_manual(values=c("blue", "red")) +
+  scale_y_continuous(breaks = seq(0, 65, by = 0.10), labels = scales::percent, limits = c(0, .65)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = c(0.8,0.7)) +
+  labs(color = "Weekly offshore", y = "Proportion of self-reported gambling problems", x = NULL)
+
+
+raw_fig2 <- offshore_filtered %>% 
+  group_by(jakso, veikkaus_viikoittain_f) %>%
+  dplyr::mutate(ongelmia_NONA = ifelse(is.na(ongelmia), 0, ongelmia)) %>% #not used currently
+  dplyr::select(veikkaus_viikoittain_f, ongelmia) %>%
+  na.omit() %>%
+  dplyr::mutate(veikkaus_viikoittain_f = factor(veikkaus_viikoittain_f,
+                                                levels = c(1,0),
+                                                labels = c("Yes", "No"))) %>%
+  dplyr::summarize(ongelmia_prop = sum(ongelmia)/n(),
+                   lower_ongelmia=prop.test(sum(ongelmia),n())$conf.int[1],
+                   upper_ongelmia=prop.test(sum(ongelmia),n())$conf.int[2]) %>%
+  ggplot(aes(jakso, ongelmia_prop, color = veikkaus_viikoittain_f, group=veikkaus_viikoittain_f)) +
+  geom_line(position= position_dodge(.9)) +
+  geom_errorbar(aes(ymin = lower_ongelmia, ymax = upper_ongelmia), width=.2, position=position_dodge(.9), alpha = .35) +
+  geom_point(size=2.5, alpha=.35, position=position_dodge(.9)) +
+  scale_color_manual(values=c("blue", "red")) +
+  scale_fill_manual(values=c("blue", "red")) +
+  scale_y_continuous(breaks = seq(0, 65, by = 0.10), labels = scales::percent, limits = c(0, .65)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = c(0.8,0.7)) +
+  labs(color = "Weekly Veikkaus", y = " ", x = NULL)
+  
+
+final_figure1 <- annotate_figure(ggarrange(raw_fig1, raw_fig2) , top = text_grob("Raw data without control variables", 
+                                      color = "black", face = "bold", size = 14))
+
+
+##MODELLING (glmer + glm logit)
+
+offshore_glmer1 <-glmer(ongelmia_f ~ veikkaus_viikoittain_f+offshore_viikoittain_f+suku+ikaluok+tulo_no8+t1_no8+(1|jakso), 
+                        family="binomial",
+                        data=offshore_filtered)
+summ(offshore_glmer1)
+
+
+offshore_logit1 <- glm(ongelmia_f ~ 
+                         veikkaus_viikoittain_f*offshore_viikoittain_f+
+                         ikaluok+
+                         t1_no8+
+                         tulo_no8+
+                         suku+
+                         jakso,
+                      data=offshore_filtered, family="binomial")
+
+summary(offshore_logit1)
+summ(offshore_logit1, vifs=T)
+
+#emmeans and effects give slightly different results... why?
+offshore_logit1_ef <- as_tibble(effect(c("offshore_viikoittain_f", "veikkaus_viikoittain_f"), offshore_logit1))
+#offshore_logit1_ef <- as_tibble(emmeans(offshore_logit1, c("offshore_viikoittain_f", "jakso"), type = "response"))
+#plot(allEffects(offshore_logit1))
+
+
+offshore_logit1_ef %>% ggplot(aes(offshore_viikoittain_f, fit, color = veikkaus_viikoittain_f)) + 
+  geom_point() + 
+  geom_line(aes(group = veikkaus_viikoittain_f)) + 
+  theme_bw()
+
+fig1 <- offshore_logit1_ef %>% 
+  
+  #Lisää jos halutaan veikkaus_viikoittain
+  # dplyr::mutate(veikkaus_viikoittain = factor(veikkaus_viikoittain, labels = c("No", "Yes")),
+  #               offshore_viikoittain = factor(offshore_viikoittain, labels = c("No", "Yes"))) %>%
+  
+  dplyr::mutate(offshore_viikoittain_f = factor(offshore_viikoittain_f, 
+                                              levels = c(1,0), 
+                                              labels = c("Yes", "No"))) %>%
+  ggplot(aes(x = jakso, y = fit, color = offshore_viikoittain_f, group = offshore_viikoittain_f)) + 
+  
+  #Lisää seuraava jos halutaan myös veikkaus_viikoittain mallintaa
+  #geom_line(aes(group = interaction(offshore_viikoittain, veikkaus_viikoittain)))
+  
+  geom_line() +
+  #geom_ribbon(aes(ymin=lower, ymax=upper, fill=varkaus_omaisuusrikos), alpha=.1, color=NA) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width=.2, position=position_dodge(.1), alpha = .35) +
+  geom_point(size=2.5, alpha=.35, position=position_dodge(.1)) +
+  scale_color_manual(values=c("blue", "red")) +
+  scale_fill_manual(values=c("blue", "red")) +
+  scale_y_continuous(breaks = seq(0, 50, by = 0.10), labels = scales::percent, limits = c(0, 0.55)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = c(0.8,0.7)) +
+  labs(color = "Weekly offshore", y = "Probability of self-reported gambling problem", x = NULL)
+
+
+offshore_logit1_ef2 <- as_tibble(effect(c("veikkaus_viikoittain_f", "jakso"), offshore_logit1))
+
+fig2 <- offshore_logit1_ef2 %>%
+
+  dplyr::mutate(veikkaus_viikoittain_f = factor(veikkaus_viikoittain_f,
+                                              levels = c(1,0),
+                                              labels = c("Yes", "No"))) %>%
+  ggplot(aes(x = jakso, y = fit, color = veikkaus_viikoittain_f, group = veikkaus_viikoittain_f)) +
+  geom_line(position = position_dodge(.9)) +
+  #geom_ribbon(aes(ymin=lower, ymax=upper, fill=varkaus_omaisuusrikos), alpha=.1, color=NA) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width=.2, position=position_dodge(.9), alpha = .35) +
+  geom_point(size=2.5, alpha=.35, position=position_dodge(.9)) +
+  scale_color_manual(values=c("blue", "red")) +
+  scale_fill_manual(values=c("blue", "red")) +
+  scale_y_continuous(breaks = seq(0, 50, by = 0.10), labels = scales::percent, limits = c(0, 0.55)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = c(0.8,0.7)) +
+  labs(color = "Weekly Veikkaus", y = " ", x = NULL)
+
+
+final_figure2 <- annotate_figure(ggarrange(fig1, fig2) , top = text_grob("Logistic regression estimations with control variables (no interactions)", 
+                                                                                 color = "black", face = "bold", size = 14))
+
+ggarrange(final_figure1, final_figure2, ncol=1, nrow=2)
+
+
+
+
+
+
+#Effect of rape2a (Veikkaus) on problems separately for has vs. has not gambled offshore
+#rape2a_no6 higher score = less playing on Veikkaus!
+#Try: rape2b_no6 instead of no_offshore
+test <- glm(ongelmia_f ~ rape2a_no6*no_offshore+jakso,
+            data=offshore_filtered, family="binomial")
+
+summary(test)
+
+test_ef <- as_tibble(effect(c("rape2a_no6:no_offshore"), test))
+
+test(emtrends(test, "no_offshore", var = "rape2a_no6"))
+
+#Interpretation: Effect of "rape2a" on likelihood of gambling is significant only when person has not played offshore?
+
+
+test_ef %>%
+  ggplot(aes(x = rape2a_no6, y = fit, color = no_offshore, group = no_offshore)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width=.2 , alpha = .35) +
+  geom_point(size=2.5, alpha=.35) +
+  scale_color_manual(values=c("blue", "red")) +
+  scale_fill_manual(values=c("blue", "red")) +
+  #scale_y_continuous(breaks = seq(0, 38, by = 0.10), labels = scales::percent, limits = c(0, 0.38)) +
+  theme_bw(base_size=14) +
+  theme(legend.position = c(.75,0.85)) +
+  scale_x_continuous(breaks = 1:5, 
+                     labels=c("Today or\nyesterday", "During the\npast week", "During the \npast month", 
+                              "During the\npast year", "Over a year ago\nor not at all")) +
+  labs(color = NULL, y = "Probability of self-reported gambling problem", x = "Playing on Veikkaus")
+  #facet_wrap("jakso")
+
+
+
+
+
+
+
+
+
+
+
+#Tomin analyysit, objektin nimi muutettu (offshore)
+offshore$offshore_dummy <- ifelse(offshore$rape2b<5, 1, 0)
+offshore$offshore_pelannut <- ifelse(is.na(offshore$offshore_dummy), 0, offshore$offshore_dummy)
+offshore$pelannut <- ifelse(offshore$rape1==1, 1, 0)
+offshore$offshore_kpl <- offshore$rape3.1+offshore$rape3.2+offshore$rape3.3+offshore$rape3.4+offshore$rape3.5+offshore$rape3.6
+offshore$ongelmia <- ifelse(offshore$rape5>1 & offshore$rape5<5, 1, 0)
+offshore$veikkaus_viikoittain <- ifelse(offshore$rape2a<3, 1, 0)
+offshore$offshore_viikoittain <- ifelse(offshore$rape2b<3, 1, 0)
+offshore$offshore_viikottain <- ifelse(is.na(offshore$offshore_viikoittain), 0, offshore$offshore_viikoittain)
+offshore$veikkaus_viikottain <- ifelse(is.na(offshore$veikkaus_viikoittain), 0, offshore$veikkaus_viikoittain)
+
+offshore$vain_veikkaus <- ifelse(offshore$rape1>0 & offshore$rape2a<5 & offshore$rape2b>4, 1, 0)
+offshore$vain_veikkaus <- ifelse(is.na(offshore$vain_veikkaus), 0, offshore$vain_veikkaus)
+offshore$vain_offshore <- ifelse(offshore$rape1>0 & offshore$rape2a>4 & offshore$rape2b<5, 1, 0)
+offshore$vain_offshore <- ifelse(is.na(offshore$vain_offshore), 0, offshore$vain_offshore)
+offshore$molemmat <- ifelse(offshore$rape1>0 & offshore$rape2a<5 & offshore$rape2b<5, 1, 0)
+#offshore$molemmat <- ifelse(offshore$rape1>0 & (offshore$rape2a<5|offshore$rape2a==6) & (offshore$rape2b<5|offshore$rape2b==6), 1, 0)
+offshore$molemmat <- ifelse(is.na(offshore$molemmat), 0, offshore$molemmat)
+offshore$ei_pelannut <- ifelse(offshore$rape1==2|(offshore$rape1==1 & offshore$rape2b==5 & offshore$rape2a==5), 1, 0)
+offshore$ei_pelannut <- ifelse(is.na(offshore$ei_pelannut), 0, offshore$ei_pelannut)
+#offshore$eos <- ifelse(offshore$rape1==3, 1, 0)
+offshore$eos <- ifelse(offshore$rape1==3|(offshore$rape2a==6 & offshore$rape2b>4)|(offshore$rape2a>4 & offshore$rape2b==6), 1, 0)
+offshore$eos <- ifelse(is.na(offshore$eos), 0, offshore$eos)
+
+
+
+#tarkastellaan tarkemmin niitä, jotka vastanneet pelanneensa mutta yli 12kk sitten tai eivät osaa sanoa koska
+offshore %>% filter(rape2a>4 | rape2b>4) %>% select(lomake, rape1, rape2a, rape2b, jakso) %>% View()
+offshore %>% filter(rape2a>4 | rape2b>4) %>% select(lomake, rape1, rape2a, rape2b, jakso) %>% group_by(jakso) %>% dplyr::summarize(n=n()) %>% View()
+
+offshore %>% filter(rape2a>4 & rape2b>4) %>% select(lomake, rape1, rape2a, rape2b, jakso) %>% View()
+offshore %>% filter(rape2a>4 & rape2b>4) %>% select(lomake, rape1, rape2a, rape2b, jakso) %>% group_by(jakso) %>% dplyr::summarize(n=n()) %>% View()
+
+
+ikaluok.labs <- c(as.character(1:12))
+names(ikaluok.labs)[1:12] <- c("18-24", "25-29", "30-34","35-39", "40-44", "45-49", "50-54", "55-59", "60-64","65-69", "70-74", "75-79")
+# vastanneet ikäluokittain ja jaksoittain
+ggplot(offshore %>% group_by(jakso, ikaluok) %>% dplyr::summarise(n=n()), aes(x=jakso, y=n)) + facet_wrap(~ikaluok) + geom_col() + theme(legend.title=element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + xlab("jakso")
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/vastanneet_ikaryhmittain.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+# offshoressa pelanneiden osuus ikäluokittain ja jaksoittain
+ggplot(offshore %>% group_by(jakso, ikaluok) %>% dplyr::summarise(offshoressa_pelannut=mean(offshore_pelannut)), aes(x=jakso, y=offshoressa_pelannut)) + facet_wrap(~ikaluok) + geom_col() + theme(legend.title=element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("offshoressa pelanneet") + xlab("jakso")
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_pelaaja_osuudet_ikaryhma.png", width = 30, height = 25, units = "cm",dpi=600)
+
+offshore$ikaluok <- as.factor(offshore$ikaluok)
+ggplot(offshore %>% filter(offshore_pelannut>0) %>% group_by(jakso, ikaluok) %>% dplyr::summarise(offshore_pelanneet=n()) %>% ungroup() %>% group_by(jakso) %>% dplyr::mutate(yht=sum(offshore_pelanneet)), aes(x=jakso, y=offshore_pelanneet/yht, fill=ikaluok)) + geom_col() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("offshoressa pelanneet") + xlab("jakso") + scale_fill_discrete(name = "Ikaluokka", labels = c("1"="18-24", "2"="25-29", "3"="30-34","4"="35-39", "5"="40-44", "6"="45-49", "7"="50-54", "8"="55-59", "9"="60-64","10"="65-69", "11"="70-74", "12"="75-79"))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_pelaajat_ikaryhma_osuus.png", width = 30, height = 25, units = "cm",dpi=600)
+
+#ggplot(offshore %>% filter(offshore_pelannut>0) %>% group_by(jakso, ikaluok), aes(x=jakso, fill=ikaluok)) + geom_histogram(aes(y = (..count..)/sum(..count..))) + scale_fill_discrete(name = "Ikaluokka", labels = c("1"="18-24", "2"="25-29", "3"="30-34","4"="35-39", "5"="40-44", "6"="45-49", "7"="50-54", "8"="55-59", "9"="60-64","10"="65-69", "11"="70-74", "12"="75-79"))
+
+
+#offshore$vain_veikkaus <- ifelse(is.na(offshore$vain_veikkaus), 0, offshore$vain_veikkaus)
+#offshore$vain_offshore <- ifelse(is.na(offshore$vain_offshore), 0, offshore$vain_offshore)
+#offshore$molemmat <- ifelse(is.na(offshore$molemmat), 0, offshore$molemmat)
+#offshore$eos <- ifelse(is.na(offshore$eos), 0, offshore$eos)
+#offshore$offshore_viikottain <- ifelse(is.na(offshore$offshore_viikoittain), 0, offshore$offshore_viikoittain)
+#offshore$veikkaus_viikottain <- ifelse(is.na(offshore$veikkaus_viikoittain), 0, offshore$veikkaus_viikoittain)
+
+# Kuinka monta pelaajaa on ilmoittanut pelanneensa verkossa, mutta ei osaa sanoa joko Veikkauksen tai Offshoren kohdalla, että koska viimeksi
+offshore %>% filter(rape1==1 & (rape2b==6|rape2a==6)) %>% View()
+offshore %>% filter(rape1==1 & (rape2b==5|rape2a==5)) %>% View()
+
+# tehdään avoimista uusista offshore-tarjoajista oma aineisto
+offshore_uudet <- offshore %>% filter(rape3.6==1)
+offshore_uudet <- offshore_uudet %>% select(lomake, jakso, rape3_avoin) %>% spread(jakso, rape3_avoin)
+#offshore_uudet <- offshore %>% select(rape3_avoin) %>% as.numeric()
+#write.csv(offshore_uudet, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_uudet.csv")
+
+# eri tarjoajien pelaaminen jaksoittain
+offshore_tarjoajat <- offshore %>% group_by(jakso) %>% dplyr::summarise(paf=sum(rape3.1, na.rm=T), unibet=sum(rape3.2, na.rm=T), betsson=sum(rape3.3, na.rm=T), kolikkopelit=sum(rape3.4, na.rm=T), nordicbet=sum(rape3.5, na.rm=T), muut=sum(rape3.6, na.rm=T), eos=sum(rape3.7, na.rm=T)) 
+#write.csv(offshore_tarjoajat, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_tarjoajat.csv")
+
+
+#offshore$offshore_dummy <- ifelse(offshore$rape2b<5, 1, 0)
+#offshore$pelannut <- ifelse(offshore$rape1==1, 1, 0)
+#offshore$offshore_kpl <- offshore$rape3.1+offshore$rape3.2+offshore$rape3.3+offshore$rape3.4+offshore$rape3.5+offshore$rape3.6
+offshore_osuudet <- offshore %>% group_by(jakso) %>% dplyr::mutate(n=n()) %>% dplyr::summarize(pelanneet=sum(pelannut), offshore_pelanneet=sum(offshore_dummy, na.rm = T), 
+                                                                          offshore_osuus_pelanneista=(offshore_pelanneet/pelanneet)*100, n=unique(n), offshore_osuus_kaikista=(offshore_pelanneet/n)*100, 
+                                                                          pelanneiden_osuus_kaikista=(pelanneet/n)*100, offshore_tarjoajat=mean(offshore_kpl, na.rm=T),
+                                                                          ka_viikottainen_offshore=mean(offshore_viikoittain, na.rm=T)*100, ka_viikoittain_veikkaus=mean(veikkaus_viikoittain, na.rm=T)*100,
+                                                                          sum_offshore_haittoja=sum(ongelmia*offshore_dummy, na.rm=T), sum_haittoja=sum(ongelmia, na.rm=T),
+                                                                          offshore_ongelmia_osuus=(sum_offshore_haittoja/offshore_pelanneet)*100, molempia=sum(molemmat, na.rm=T), molempia_osuus=(molempia/n)*100, 
+                                                                          vain_offshore=sum(vain_offshore, na.rm=T), vain_offshore_osuus=(vain_offshore/n)*100, vain_veikkaus=sum(vain_veikkaus, na.rm=T), 
+                                                                          vain_veikkaus_osuus=(vain_veikkaus/n)*100, veikkaus_osuus_offshoresta=(molempia/(molempia+vain_offshore))*100)
+#write.csv(offshore_osuudet, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/frekvenssit_offshore_pelaaminen.csv")
+
+
+# verkossa pelanneiden osuus
+ggplot(offshore_osuudet, aes(x=jakso, y=pelanneiden_osuus_kaikista)) + geom_line(group=1) + geom_point() + ylab("Verkkopelaajien osuus") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_pelaaja_osuudet_verkkopelaajista.png", width = 30, height = 25, units = "cm",dpi=600)
+
+# veikkausta pelanneiden osuus offshore-pelaajista
+ggplot(offshore_osuudet, aes(x=jakso, y=veikkaus_osuus_offshoresta)) + geom_line(group=1) + geom_point() + ylab("Veikkausta pelanneiden osuus offshore-pelaajista") + coord_cartesian(ylim=c(50,100)) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/veikkaus_pelaaja_osuus_offshore_pelaajista.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+# offshore pelaajien osuus verkossapelanneista
+ggplot(offshore_osuudet, aes(x=jakso, y=offshore_osuus_pelanneista)) + geom_line(group=1) + geom_point() + ylab("Offshore osuus verkkopelaajista") + coord_cartesian(ylim=c(0,30)) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_pelaaja_osuudet_verkkopelaajista.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+ggplot(offshore_osuudet %>% select(c("jakso", "offshore_osuus_kaikista", "ka_viikottainen_offshore")) %>% gather("mittari", "osuus", -jakso), aes(x=jakso, y=osuus, group=mittari, color=mittari)) + geom_line() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + scale_fill_discrete(name = "Mittari", labels = c("ka_viikottainen_offshore"="Viikon sisällä pelannut offshorea", "offshore_ongelmia_osuus"="Ongelmaisten määrä offshoressa", "offshore_osuus_kaikista"="offshore pelaajien osuus koko otoksessa", "pelanneiden_osuus_kaikista"="pelanneiden osuus koko otoksessa")) + xlab("viikot") + ylab("%") 
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_pelaaja_osuudet.png", width = 30, height = 25, units = "cm",dpi=600)
+
+ggplot(offshore_osuudet %>% select(c("jakso", "offshore_ongelmia_osuus", "offshore_osuus_kaikista", "ka_viikottainen_offshore")) %>% gather("mittari", "osuus", -jakso), aes(x=jakso, y=osuus, group=mittari, color=mittari)) + geom_line() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + scale_fill_discrete(name = "Mittari", labels = c("ka_viikottainen_offshore"="Viikon sisällä pelannut offshorea", "offshore_ongelmia_osuus"="Ongelmaisten määrä offshoressa", "offshore_osuus_kaikista"="offshore pelaajien osuus koko otoksessa", "pelanneiden_osuus_kaikista"="pelanneiden osuus koko otoksessa")) + xlab("viikot") + ylab("%") 
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_onglema_osuudet.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+
+# lasketaan osuudet sen mukaan mitä pelannut. 
+# huom. tässä saattaa tulla hieman heittoa, mikäli ei huomioida että vastaaja ei ole myöhemmässä vaiheessa osannut sanoa koska on pelannut joko Veikkausta tai offshorea
+offshore %>% group_by(jakso) %>% dplyr::summarize(vain_veikkaus=mean(vain_veikkaus), vain_offshore=mean(vain_offshore), molempia=mean(molemmat), ei_pelannut=mean(ei_pelannut), eos=mean(eos)) %>% dplyr::mutate(yht=vain_veikkaus+vain_offshore+molempia+ei_pelannut+eos) %>% View()
+ggplot(offshore %>% group_by(jakso) %>% dplyr::summarize(vain_veikkaus=mean(vain_veikkaus), vain_offshore=mean(vain_offshore), molempia=mean(molemmat), ei_pelannut=mean(ei_pelannut), eos=mean(eos)) %>% gather("status", "osuus", -jakso), aes(fill=status, x=jakso, y=osuus)) + geom_col() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/pelaamis_status_jaksot.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+# Pelaajat pelikanavien ja offshore-pelaamisen useuden mukaan jaoteltuna
+# pelannut molempia offshoren yleisyyden mukaan
+ggplot(offshore %>% filter(molemmat>0) %>% group_by(jakso, rape2b) %>% dplyr::summarise(n=n()), aes(x=jakso, y=n)) + facet_wrap(~ rape2b) + geom_col() + theme(legend.title=element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + xlab("jakso") + ylab("Pelannut molempia offshore (pelaamisen yleisyyden suhteen jaoteltuna)")
+
+# pelannut vain offshoressa yleisyyden mukaan
+ggplot(offshore %>% filter(vain_offshore>0) %>% group_by(jakso, rape2b) %>% dplyr::summarise(n=n()), aes(x=jakso, y=n)) + facet_wrap(~ rape2b) + geom_col() + theme(legend.title=element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + xlab("jakso") + ylab("Pelannut vain offshore (pelaamisen yleisyyden suhteen jaoteltuna)")
+
+
+# vain offshoressa pelanneiden ongelmia kokoneiden määrä
+ggplot(offshore %>% filter(vain_offshore>0 & ongelmia>0) %>% group_by(jakso) %>% dplyr::summarise(offshore_ongelmia=n()), aes(x=jakso, y=offshore_ongelmia)) + geom_line(group=1) + theme(legend.title=element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + xlab("jakso") + ylab("Pelannut vain offshoressa ja kokenut ongelmia")
+
+# molemmissa pelanneiden ongelmia kokoneiden määrä
+ggplot(offshore %>% filter(molemmat>0 & ongelmia>0) %>% group_by(jakso) %>% dplyr::summarise(molemmat_ongelmia=n()), aes(x=jakso, y=molemmat_ongelmia)) + geom_line(group=1) + theme(legend.title=element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + xlab("jakso") + ylab("Pelannut molemmissa ja kokenut ongelmia")
+
+
+
+ggplot(offshore %>% group_by(jakso), aes(x = offshore_kpl)) + geom_histogram(aes(y = (..count..))) +  facet_wrap(~ jakso, scales="free")
+ggplot(offshore %>% filter(offshore_dummy>0) %>% group_by(jakso), aes(x = offshore_kpl)) + geom_histogram(aes(y = (..count..)/sum(..count..))) +  facet_wrap(~ jakso, scales="free")
+
+pelityypit_offshore <- offshore %>% group_by(jakso) %>% filter(offshore_dummy>0) %>% dplyr::summarize(lotto=mean(rape4.1)*100, rahaautomaatit=mean(rape4.2)*100, 
+                                                                                                     hevospelit=mean(rape4.3)*100, vedonlyonti=mean(rape4.4)*100,
+                                                                                                     poytapelit=mean(rape4.5)*100, arvat=mean(rape4.6)*100,
+                                                                                                     muut=mean(rape4.7)*100, eos=mean(rape4.8)*100, n=n())
+#write.csv(pelityypit_offshore, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/pelityypit_offshore_vk12-36.csv")
+
+
+ggplot(pelityypit_offshore, aes(x=jakso)) + geom_col(aes(y=lotto), color="darkred") + geom_line(aes(y=automaatit), color="steelblue") + geom_line(aes(y=hevospelit), color="green") + geom_line(aes(y=vedonlyonti), color="orange") + geom_line(aes(y=pokeri), color="grey") + geom_line(aes(y=arvat), color="yellow") + geom_line(aes(y=muut), color="purple") + geom_line(aes(y=eos), color="black") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggplot(pelityypit_offshore %>% select(-n) %>% gather("peli", "osuus", -jakso), aes(x=jakso, y=osuus)) + geom_line(aes(color=peli), group=1) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+ggplot(pelityypit_offshore %>% select(-n) %>% gather("peli", "osuus", -jakso), aes(x=jakso, y=osuus)) + geom_col() + facet_wrap(~ peli) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("%")
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/pelityyppi_osuudet_offshore.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+
+# Yleisimmät pelityypit heillä, jotka kokeneet ongelmia
+pelityypit_ongelmaisilla <- offshore %>% group_by(jakso) %>% filter(ongelmia>0) %>% dplyr::summarize(lotto_mean=mean(rape4.1)*100, slot_mean=mean(rape4.2)*100, 
+                                                                                hevos_mean=mean(rape4.3)*100, betting_mean=mean(rape4.4)*100,
+                                                                                poker_mean=mean(rape4.5)*100, scratch_mean=mean(rape4.6)*100,
+                                                                                muu_mean=mean(rape4.7)*100, eos_mean=mean(rape4.8)*100, n=n())
+#write.csv(pelityypit_ongelmaisilla, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/pelityypit_ongelmaisilla_vk12-36.csv")
+
+
+ggplot(offshore %>% group_by(jakso), aes(x = rape2b)) + geom_histogram(aes(y = (..count..))) +  facet_wrap(~ jakso, scales="free") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+# Ongelmat ikäluokittain ja jaksoittain
+ongelmat_ikaluok_jakso <- offshore %>% dplyr::mutate(ikaluokka=as.factor(ikaluok)) %>% group_by(jakso, ikaluokka) %>% dplyr::summarize(ongelmia=mean(ongelmia, na.rm=T))
+#write.csv(ongelmat_ikaluok_jakso, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/ongelmat_ikaluok_jakso_vk12-36.csv")
+
+ggplot(ongelmat_ikaluok_jakso, aes(y=ongelmia, x=jakso)) + geom_line(group=1) + facet_wrap(~ikaluokka)
+ggplot(offshore %>% group_by(jakso, ikaluok) %>% dplyr::summarize(ongelmia=mean(ongelmia, na.rm=T)), aes(y=ongelmia, x=ikaluok)) +  facet_wrap(~ jakso, scales="free")
+
+
+# Offshore ikäluokittain
+offshore_ikaluok_jakso <- offshore %>% dplyr::mutate(ikaluokka=as.factor(ikaluok)) %>% group_by(jakso, ikaluokka) %>% dplyr::summarize(offshore_osuus=mean(offshore_dummy, na.rm=T))
+#write.csv(offshore_ikaluok_jakso, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_ikaluok_jakso_vk12-36.csv")
+
+pd <- position_dodge(0.1) # move them .05 to the left and right
+#geom_errorbar(aes(ymin=offshore_osuus-sd, ymax=offshore_osuus+sd), width=.1, position=pd)
+ggplot(offshore %>% dplyr::mutate(ikaluokka=as.factor(ikaluok)) %>% group_by(jakso, ikaluokka) %>% dplyr::summarize(offshore_osuus=mean(offshore_dummy, na.rm=T), sd=sd(offshore_dummy,na.rm=T)), aes(x=ikaluokka, y=offshore_osuus)) + geom_line(group=1, position=pd) + geom_point(position=pd) +  facet_wrap(~ jakso, scales="free") + ylab("Offshoressa pelanneiden osuus ikäluokasta")
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_osuudet_ikaluok_jakso.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+ggplot(offshore %>% dplyr::mutate(ikaluokka=factor(ikaluok, labels=c("18-24", "25-29", "30-34","35-39", "40-44", "45-49", "50-54", "55-59", "60-64","65-69", "70-74", "75-79"))) %>% group_by(jakso, ikaluokka) %>% dplyr::summarize(offshore_osuus=mean(offshore_dummy, na.rm=T), sd=sd(offshore_dummy,na.rm=T)), aes(x=jakso, y=offshore_osuus)) + geom_line(group=1, position=pd) + geom_point(position=pd) +  facet_wrap(~ ikaluokka) + ylab("Offshoren osuus ikäluokan kaikista verkossa pelanneista") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_osuudet_jakso_ikaluok.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+ggplot(offshore %>% dplyr::mutate(ikaluokka=as.factor(ikaluok)) %>% group_by(jakso, ikaluokka) %>% dplyr::summarize(offshore_osuus=mean(offshore_dummy, na.rm=T)), aes(x=jakso, y=offshore_osuus)) + geom_point() + geom_line(group=1) +  facet_wrap(~ ikaluokka, scales="free") + ylab("Offshoressa pelanneiden osuus ikäluokasta")
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_osuudet_ikaluok.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+# ikaluokkien osuudet vastanneista
+ikaluok_jakso <- offshore %>% dplyr::mutate(ikaluokka=as.factor(ikaluok)) %>% group_by(ikaluokka, jakso) %>% dplyr::summarize(ikaryhma_koko=n())
+ikaluok_jakso <- dplyr::left_join(ikaluok_jakso, offshore_osuudet, by=c("jakso")) %>% dplyr::mutate(ikaryhma_osuus=ikaryhma_koko/n) %>% select(ikaluokka, jakso, ikaryhma_osuus)
+#write.csv(ikaluok_jakso, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/ikaluok_jakso_vastanneet.csv")
+
+#ggplot(ikaluok_jakso %>% dplyr::mutate(ikaluokka=factor(ikaluok, labels=c("18-24", "25-29", "30-34","35-39", "40-44", "45-49", "50-54", "55-59", "60-64","65-69", "70-74", "75-79"))), aes(x=ikaluokka, y=ikaryhma_osuus)) + geom_point() +  facet_wrap(~ jakso, scales="free")
+
+# vastaajaosuudet ikäluokittain
+ggplot(ikaluok_jakso, aes(fill=ikaluokka, x=jakso, y=ikaryhma_osuus)) + geom_col() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("Osuus vastaajista") + scale_fill_discrete(name = "ikaluokka", labels = c("1"="18-24", "2"="25-29", "3"="30-34","4"="35-39", "5"="40-44", "6"="45-49", "7"="50-54", "8"="55-59", "9"="60-64","10"="65-69", "11"="70-74", "12"="75-79"))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/vastaus_osuudet_ikaluokittain.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+
+
+
+
+####  Painotettu aineisto  ######
+
+#vk1215w <- vk1215 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk1215_wt <- svydesign(id = ~lomake, 
+                         strata = ~jakso,
+                         weights = ~weight,
+                         nest = TRUE,
+                         data = vk1215)
+
+offshore_osuus_w_1215 <- as.data.frame(svymean(~offshore_pelannut, vk1215_wt, na = TRUE))
+offshore_osuus_pelanneista_w_1215 <- as.data.frame(svymean(~offshore_dummy, vk1215_wt, na = TRUE))
+offshore_viikottain_osuus_w_1215 <- as.data.frame(svymean(~offshore_viikottain, vk1215_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_1215 <- as.data.frame(svymean(~veikkaus_viikottain, vk1215_wt, na = TRUE))
+vain_veikkaus_osuus_w_1215 <- as.data.frame(svymean(~vain_veikkaus, vk1215_wt, na = TRUE))
+vain_offshore_osuus_w_1215 <- as.data.frame(svymean(~vain_offshore, vk1215_wt, na = TRUE))
+molemmat_osuus_w_1215 <- as.data.frame(svymean(~molemmat, vk1215_wt, na = TRUE))
+ei_pelannut_osuus_w_1215 <- as.data.frame(svymean(~ei_pelannut, vk1215_wt, na = TRUE))
+eos_osuus_w_1215 <- as.data.frame(svymean(~eos, vk1215_wt, na = TRUE))
+
+
+
+#vk1619w <- vk1619 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk1619_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk1619)
+
+offshore_osuus_w_1619 <- as.data.frame(svymean(~offshore_pelannut, vk1619_wt, na = TRUE))
+offshore_osuus_pelanneista_w_1619 <- as.data.frame(svymean(~offshore_pelannut, vk1619_wt, na = TRUE))
+offshore_viikottain_osuus_w_1619 <- as.data.frame(svymean(~offshore_viikottain, vk1619_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_1619 <- as.data.frame(svymean(~veikkaus_viikottain, vk1619_wt, na = TRUE))
+vain_veikkaus_osuus_w_1619 <- as.data.frame(svymean(~vain_veikkaus, vk1619_wt, na = TRUE))
+vain_offshore_osuus_w_1619 <- as.data.frame(svymean(~vain_offshore, vk1619_wt, na = TRUE))
+molemmat_osuus_w_1619 <- as.data.frame(svymean(~molemmat, vk1619_wt, na = TRUE))
+ei_pelannut_osuus_w_1619 <- as.data.frame(svymean(~ei_pelannut, vk1619_wt, na = TRUE))
+eos_osuus_w_1619 <- as.data.frame(svymean(~eos, vk1619_wt, na = TRUE))
+
+
+
+#vk2023w <- vk2023 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk2023_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk2023)
+
+offshore_osuus_w_2023 <- as.data.frame(svymean(~offshore_pelannut, vk2023_wt, na = TRUE))
+offshore_osuus_pelanneista_w_2023 <- as.data.frame(svymean(~offshore_pelannut, vk2023_wt, na = TRUE))
+offshore_viikottain_osuus_w_2023 <- as.data.frame(svymean(~offshore_viikottain, vk2023_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_2023 <- as.data.frame(svymean(~veikkaus_viikottain, vk2023_wt, na = TRUE))
+vain_veikkaus_osuus_w_2023 <- as.data.frame(svymean(~vain_veikkaus, vk2023_wt, na = TRUE))
+vain_offshore_osuus_w_2023 <- as.data.frame(svymean(~vain_offshore, vk2023_wt, na = TRUE))
+molemmat_osuus_w_2023 <- as.data.frame(svymean(~molemmat, vk2023_wt, na = TRUE))
+ei_pelannut_osuus_w_2023 <- as.data.frame(svymean(~ei_pelannut, vk2023_wt, na = TRUE))
+eos_osuus_w_2023 <- as.data.frame(svymean(~eos, vk2023_wt, na = TRUE))
+
+
+
+#vk2427w <- vk2427 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk2427_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk2427)
+
+offshore_osuus_w_2427 <- as.data.frame(svymean(~offshore_pelannut, vk2427_wt, na = TRUE))
+offshore_osuus_pelanneista_w_2427 <- as.data.frame(svymean(~offshore_pelannut, vk2427_wt, na = TRUE))
+offshore_viikottain_osuus_w_2427 <- as.data.frame(svymean(~offshore_viikottain, vk2427_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_2427 <- as.data.frame(svymean(~veikkaus_viikottain, vk2427_wt, na = TRUE))
+vain_veikkaus_osuus_w_2427 <- as.data.frame(svymean(~vain_veikkaus, vk2427_wt, na = TRUE))
+vain_offshore_osuus_w_2427 <- as.data.frame(svymean(~vain_offshore, vk2427_wt, na = TRUE))
+molemmat_osuus_w_2427 <- as.data.frame(svymean(~molemmat, vk2427_wt, na = TRUE))
+ei_pelannut_osuus_w_2427 <- as.data.frame(svymean(~ei_pelannut, vk2427_wt, na = TRUE))
+eos_osuus_w_2427 <- as.data.frame(svymean(~eos, vk2427_wt, na = TRUE))
+
+
+
+#vk2932w <- vk2932 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk2932_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk2932)
+
+offshore_osuus_w_2932 <- as.data.frame(svymean(~offshore_pelannut, vk2932_wt, na = TRUE))
+offshore_osuus_pelanneista_w_2932 <- as.data.frame(svymean(~offshore_pelannut, vk2932_wt, na = TRUE))
+offshore_viikottain_osuus_w_2932 <- as.data.frame(svymean(~offshore_viikottain, vk2932_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_2932 <- as.data.frame(svymean(~veikkaus_viikottain, vk2932_wt, na = TRUE))
+vain_veikkaus_osuus_w_2932 <- as.data.frame(svymean(~vain_veikkaus, vk2932_wt, na = TRUE))
+vain_offshore_osuus_w_2932 <- as.data.frame(svymean(~vain_offshore, vk2932_wt, na = TRUE))
+molemmat_osuus_w_2932 <- as.data.frame(svymean(~molemmat, vk2932_wt, na = TRUE))
+ei_pelannut_osuus_w_2932 <- as.data.frame(svymean(~ei_pelannut, vk2932_wt, na = TRUE))
+eos_osuus_w_2932 <- as.data.frame(svymean(~eos, vk2932_wt, na = TRUE))
+
+
+
+#vk3336w <- vk3336 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk3336_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk3336)
+
+offshore_osuus_w_3336 <- as.data.frame(svymean(~offshore_pelannut, vk3336_wt, na = TRUE))
+offshore_viikottain_osuus_w_3336 <- as.data.frame(svymean(~offshore_viikottain, vk3336_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_3336 <- as.data.frame(svymean(~veikkaus_viikottain, vk3336_wt, na = TRUE))
+vain_veikkaus_osuus_w_3336 <- as.data.frame(svymean(~vain_veikkaus, vk3336_wt, na = TRUE))
+vain_offshore_osuus_w_3336 <- as.data.frame(svymean(~vain_offshore, vk3336_wt, na = TRUE))
+molemmat_osuus_w_3336 <- as.data.frame(svymean(~molemmat, vk3336_wt, na = TRUE))
+ei_pelannut_osuus_w_3336 <- as.data.frame(svymean(~ei_pelannut, vk3336_wt, na = TRUE))
+eos_osuus_w_3336 <- as.data.frame(svymean(~eos, vk3336_wt, na = TRUE))
+
+
+#vk3841w <- vk3841 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk3841_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk3841)
+
+offshore_osuus_w_3841 <- as.data.frame(svymean(~offshore_pelannut, vk3841_wt, na = TRUE))
+offshore_viikottain_osuus_w_3841 <- as.data.frame(svymean(~offshore_viikottain, vk3841_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_3841 <- as.data.frame(svymean(~veikkaus_viikottain, vk3841_wt, na = TRUE))
+vain_veikkaus_osuus_w_3841 <- as.data.frame(svymean(~vain_veikkaus, vk3841_wt, na = TRUE))
+vain_offshore_osuus_w_3841 <- as.data.frame(svymean(~vain_offshore, vk3841_wt, na = TRUE))
+molemmat_osuus_w_3841 <- as.data.frame(svymean(~molemmat, vk3841_wt, na = TRUE))
+ei_pelannut_osuus_w_3841 <- as.data.frame(svymean(~ei_pelannut, vk3841_wt, na = TRUE))
+eos_osuus_w_3841 <- as.data.frame(svymean(~eos, vk3841_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk3841_wt)
+
+
+#vk4245w <- vk4245 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk4245_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk4245)
+
+offshore_osuus_w_4245 <- as.data.frame(svymean(~offshore_pelannut, vk4245_wt, na = TRUE))
+offshore_viikottain_osuus_w_4245 <- as.data.frame(svymean(~offshore_viikottain, vk4245_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_4245 <- as.data.frame(svymean(~veikkaus_viikottain, vk4245_wt, na = TRUE))
+vain_veikkaus_osuus_w_4245 <- as.data.frame(svymean(~vain_veikkaus, vk4245_wt, na = TRUE))
+vain_offshore_osuus_w_4245 <- as.data.frame(svymean(~vain_offshore, vk4245_wt, na = TRUE))
+molemmat_osuus_w_4245 <- as.data.frame(svymean(~molemmat, vk4245_wt, na = TRUE))
+ei_pelannut_osuus_w_4245 <- as.data.frame(svymean(~ei_pelannut, vk4245_wt, na = TRUE))
+eos_osuus_w_4245 <- as.data.frame(svymean(~eos, vk4245_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk4245_wt)
+
+
+#vk4649w <- vk4649 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk4649_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk4649)
+
+offshore_osuus_w_4649 <- as.data.frame(svymean(~offshore_pelannut, vk4649_wt, na = TRUE))
+offshore_viikottain_osuus_w_4649 <- as.data.frame(svymean(~offshore_viikottain, vk4649_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_4649 <- as.data.frame(svymean(~veikkaus_viikottain, vk4649_wt, na = TRUE))
+vain_veikkaus_osuus_w_4649 <- as.data.frame(svymean(~vain_veikkaus, vk4649_wt, na = TRUE))
+vain_offshore_osuus_w_4649 <- as.data.frame(svymean(~vain_offshore, vk4649_wt, na = TRUE))
+molemmat_osuus_w_4649 <- as.data.frame(svymean(~molemmat, vk4649_wt, na = TRUE))
+ei_pelannut_osuus_w_4649 <- as.data.frame(svymean(~ei_pelannut, vk4649_wt, na = TRUE))
+eos_osuus_w_4649 <- as.data.frame(svymean(~eos, vk4649_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk4649_wt)
+
+
+#vk5103w <- vk5103 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk5103_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk5103)
+
+offshore_osuus_w_5103 <- as.data.frame(svymean(~offshore_pelannut, vk5103_wt, na = TRUE))
+offshore_viikottain_osuus_w_5103 <- as.data.frame(svymean(~offshore_viikottain, vk5103_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_5103 <- as.data.frame(svymean(~veikkaus_viikottain, vk5103_wt, na = TRUE))
+vain_veikkaus_osuus_w_5103 <- as.data.frame(svymean(~vain_veikkaus, vk5103_wt, na = TRUE))
+vain_offshore_osuus_w_5103 <- as.data.frame(svymean(~vain_offshore, vk5103_wt, na = TRUE))
+molemmat_osuus_w_5103 <- as.data.frame(svymean(~molemmat, vk5103_wt, na = TRUE))
+ei_pelannut_osuus_w_5103 <- as.data.frame(svymean(~ei_pelannut, vk5103_wt, na = TRUE))
+eos_osuus_w_5103 <- as.data.frame(svymean(~eos, vk5103_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk5103_wt)
+
+
+
+#vk0407w <- vk0407 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk0407_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk0407)
+
+offshore_osuus_w_0407 <- as.data.frame(svymean(~offshore_pelannut, vk0407_wt, na = TRUE))
+offshore_viikottain_osuus_w_0407 <- as.data.frame(svymean(~offshore_viikottain, vk0407_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_0407 <- as.data.frame(svymean(~veikkaus_viikottain, vk0407_wt, na = TRUE))
+vain_veikkaus_osuus_w_0407 <- as.data.frame(svymean(~vain_veikkaus, vk0407_wt, na = TRUE))
+vain_offshore_osuus_w_0407 <- as.data.frame(svymean(~vain_offshore, vk0407_wt, na = TRUE))
+molemmat_osuus_w_0407 <- as.data.frame(svymean(~molemmat, vk0407_wt, na = TRUE))
+ei_pelannut_osuus_w_0407 <- as.data.frame(svymean(~ei_pelannut, vk0407_wt, na = TRUE))
+eos_osuus_w_0407 <- as.data.frame(svymean(~eos, vk0407_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk0407_wt)
+
+
+#vk0811w <- vk0811 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk0811_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk0811)
+
+offshore_osuus_w_0811 <- as.data.frame(svymean(~offshore_pelannut, vk0811_wt, na = TRUE))
+offshore_viikottain_osuus_w_0811 <- as.data.frame(svymean(~offshore_viikottain, vk0811_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_0811 <- as.data.frame(svymean(~veikkaus_viikottain, vk0811_wt, na = TRUE))
+vain_veikkaus_osuus_w_0811 <- as.data.frame(svymean(~vain_veikkaus, vk0811_wt, na = TRUE))
+vain_offshore_osuus_w_0811 <- as.data.frame(svymean(~vain_offshore, vk0811_wt, na = TRUE))
+molemmat_osuus_w_0811 <- as.data.frame(svymean(~molemmat, vk0811_wt, na = TRUE))
+ei_pelannut_osuus_w_0811 <- as.data.frame(svymean(~ei_pelannut, vk0811_wt, na = TRUE))
+eos_osuus_w_0811 <- as.data.frame(svymean(~eos, vk0811_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk0811_wt)
+
+
+#vk1316w <- vk1316 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk1316_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk1316)
+
+offshore_osuus_w_1316 <- as.data.frame(svymean(~offshore_pelannut, vk1316_wt, na = TRUE))
+offshore_viikottain_osuus_w_1316 <- as.data.frame(svymean(~offshore_viikottain, vk1316_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_1316 <- as.data.frame(svymean(~veikkaus_viikottain, vk1316_wt, na = TRUE))
+vain_veikkaus_osuus_w_1316 <- as.data.frame(svymean(~vain_veikkaus, vk1316_wt, na = TRUE))
+vain_offshore_osuus_w_1316 <- as.data.frame(svymean(~vain_offshore, vk1316_wt, na = TRUE))
+molemmat_osuus_w_1316 <- as.data.frame(svymean(~molemmat, vk1316_wt, na = TRUE))
+ei_pelannut_osuus_w_1316 <- as.data.frame(svymean(~ei_pelannut, vk1316_wt, na = TRUE))
+eos_osuus_w_1316 <- as.data.frame(svymean(~eos, vk1316_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk1316_wt)
+
+
+#vk1720w <- vk1720 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk1720_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk1720)
+
+offshore_osuus_w_1720 <- as.data.frame(svymean(~offshore_pelannut, vk1720_wt, na = TRUE))
+offshore_viikottain_osuus_w_1720 <- as.data.frame(svymean(~offshore_viikottain, vk1720_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_1720 <- as.data.frame(svymean(~veikkaus_viikottain, vk1720_wt, na = TRUE))
+vain_veikkaus_osuus_w_1720 <- as.data.frame(svymean(~vain_veikkaus, vk1720_wt, na = TRUE))
+vain_offshore_osuus_w_1720 <- as.data.frame(svymean(~vain_offshore, vk1720_wt, na = TRUE))
+molemmat_osuus_w_1720 <- as.data.frame(svymean(~molemmat, vk1720_wt, na = TRUE))
+ei_pelannut_osuus_w_1720 <- as.data.frame(svymean(~ei_pelannut, vk1720_wt, na = TRUE))
+eos_osuus_w_1720 <- as.data.frame(svymean(~eos, vk1720_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk1720_wt)
+
+
+#vk2124w <- vk2124 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk2124_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk2124)
+
+offshore_osuus_w_2124 <- as.data.frame(svymean(~offshore_pelannut, vk2124_wt, na = TRUE))
+offshore_viikottain_osuus_w_2124 <- as.data.frame(svymean(~offshore_viikottain, vk2124_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_2124 <- as.data.frame(svymean(~veikkaus_viikottain, vk2124_wt, na = TRUE))
+vain_veikkaus_osuus_w_2124 <- as.data.frame(svymean(~vain_veikkaus, vk2124_wt, na = TRUE))
+vain_offshore_osuus_w_2124 <- as.data.frame(svymean(~vain_offshore, vk2124_wt, na = TRUE))
+molemmat_osuus_w_2124 <- as.data.frame(svymean(~molemmat, vk2124_wt, na = TRUE))
+ei_pelannut_osuus_w_2124 <- as.data.frame(svymean(~ei_pelannut, vk2124_wt, na = TRUE))
+eos_osuus_w_2124 <- as.data.frame(svymean(~eos, vk2124_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk2124_wt)
+
+
+#vk2528w <- vk2528 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk2528_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk2528)
+
+offshore_osuus_w_2528 <- as.data.frame(svymean(~offshore_pelannut, vk2528_wt, na = TRUE))
+offshore_viikottain_osuus_w_2528 <- as.data.frame(svymean(~offshore_viikottain, vk2528_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_2528 <- as.data.frame(svymean(~veikkaus_viikottain, vk2528_wt, na = TRUE))
+vain_veikkaus_osuus_w_2528 <- as.data.frame(svymean(~vain_veikkaus, vk2528_wt, na = TRUE))
+vain_offshore_osuus_w_2528 <- as.data.frame(svymean(~vain_offshore, vk2528_wt, na = TRUE))
+molemmat_osuus_w_2528 <- as.data.frame(svymean(~molemmat, vk2528_wt, na = TRUE))
+ei_pelannut_osuus_w_2528 <- as.data.frame(svymean(~ei_pelannut, vk2528_wt, na = TRUE))
+eos_osuus_w_2528 <- as.data.frame(svymean(~eos, vk2528_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk2528_wt)
+
+
+
+#vk3134w <- vk3134 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk3134_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk3134)
+
+offshore_osuus_w_3134 <- as.data.frame(svymean(~offshore_pelannut, vk3134_wt, na = TRUE))
+offshore_viikottain_osuus_w_3134 <- as.data.frame(svymean(~offshore_viikottain, vk3134_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_3134 <- as.data.frame(svymean(~veikkaus_viikottain, vk3134_wt, na = TRUE))
+vain_veikkaus_osuus_w_3134 <- as.data.frame(svymean(~vain_veikkaus, vk3134_wt, na = TRUE))
+vain_offshore_osuus_w_3134 <- as.data.frame(svymean(~vain_offshore, vk3134_wt, na = TRUE))
+molemmat_osuus_w_3134 <- as.data.frame(svymean(~molemmat, vk3134_wt, na = TRUE))
+ei_pelannut_osuus_w_3134 <- as.data.frame(svymean(~ei_pelannut, vk3134_wt, na = TRUE))
+eos_osuus_w_3134 <- as.data.frame(svymean(~eos, vk3134_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk3134_wt)
+
+
+
+#vk3538w <- vk3538 %>% dplyr::mutate(offshore_dummy=ifelse(is.na(offshore_dummy), 0, offshore_dummy))
+
+vk3538_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk3538)
+
+offshore_osuus_w_3538 <- as.data.frame(svymean(~offshore_pelannut, vk3538_wt, na = TRUE))
+offshore_viikottain_osuus_w_3538 <- as.data.frame(svymean(~offshore_viikottain, vk3538_wt, na = TRUE))
+veikkaus_viikottain_osuus_w_3538 <- as.data.frame(svymean(~veikkaus_viikottain, vk3538_wt, na = TRUE))
+vain_veikkaus_osuus_w_3538 <- as.data.frame(svymean(~vain_veikkaus, vk3538_wt, na = TRUE))
+vain_offshore_osuus_w_3538 <- as.data.frame(svymean(~vain_offshore, vk3538_wt, na = TRUE))
+molemmat_osuus_w_3538 <- as.data.frame(svymean(~molemmat, vk3538_wt, na = TRUE))
+ei_pelannut_osuus_w_3538 <- as.data.frame(svymean(~ei_pelannut, vk3538_wt, na = TRUE))
+eos_osuus_w_3538 <- as.data.frame(svymean(~eos, vk3538_wt, na = TRUE))
+#svytable(~offshore_dummy, design = vk3538_wt)
+
+
+# offshoressa 12kk aikana pelanneiden väestöosuus
+offshore_osuus_w <- rbind(offshore_osuus_w_1215, offshore_osuus_w_1619, offshore_osuus_w_2023, offshore_osuus_w_2427, offshore_osuus_w_2932, offshore_osuus_w_3336, offshore_osuus_w_3841, offshore_osuus_w_4245, offshore_osuus_w_4649, offshore_osuus_w_5103, offshore_osuus_w_0407, offshore_osuus_w_0811, offshore_osuus_w_1316, offshore_osuus_w_1720, offshore_osuus_w_2124, offshore_osuus_w_2528, offshore_osuus_w_3134, offshore_osuus_w_3538)
+#names(offshore_osuus_w)[1] <- "Offshore osuus"
+names(offshore_osuus_w)[2] <- "sd"
+offshore_osuus_w$vk <- c("2022-12-15", "2022-16-19","2022-20-23","2022-24-27","2022-29-32","2022-33-36", "2022-38-41", "2022-42-45", "2022-46-49", "2022-51-03", "2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", "2023-25-28", "2023-31-34", "2023-35-38")
+#write.csv(offshore_osuus_w, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_vaesto.csv")
+
+
+# ilman luottamusvälejä
+ggplot(offshore_osuus_w, aes(x=vk, y=mean)) + geom_line(group=1) + geom_point() +coord_cartesian(ylim = c(0,0.08)) + ylab("Veikkauksen ulkopuolisia pelejä viimeisen 12kk sisällä pelanneiden väestöosuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_vaesto_osuus_w_no_ci.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+# luottamusväleillä
+ggplot(offshore_osuus_w, aes(x=vk, y=mean)) + geom_errorbar(aes(ymin=mean-1.96*sd, ymax=mean+1.96*sd), width=.1) + geom_line(group=1) + geom_point() +coord_cartesian(ylim = c(0,0.1)) + ylab("Veikkauksen ulkopuolisia pelejä viimeisen 12kk sisällä pelanneiden väestöosuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_vaesto_osuus_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+# offshoressa 12kk aikana pelanneiden osuus kaikista verkossa pelanneista
+offshore_osuus_pelanneista_w <- rbind(offshore_osuus_pelanneista_w_1215, offshore_osuus_pelanneista_w_1619, offshore_osuus_pelanneista_w_2023, offshore_osuus_pelanneista_w_2427, offshore_osuus_pelanneista_w_2932, offshore_osuus_pelanneista_w_3336, offshore_osuus_pelanneista_w_3841, offshore_osuus_pelanneista_w_4245, offshore_osuus_pelanneista_w_4649, offshore_osuus_pelanneista_w_5103, offshore_osuus_pelanneista_w_0407, offshore_osuus_pelanneista_w_0811, offshore_osuus_pelanneista_w_1316, offshore_osuus_pelanneista_w_1720, offshore_osuus_pelanneista_w_2124, offshore_osuus_pelanneista_w_2528)
+#names(offshore_osuus_w)[1] <- "Offshore osuus"
+names(offshore_osuus_pelanneista_w)[2] <- "sd"
+offshore_osuus_pelanneista_w$vk <- c("2022-12-15", "2022-16-19","2022-20-23","2022-24-27","2022-29-32","2022-33-36", "2022-38-41", "2022-42-45", "2022-46-49", "2022-51-03", "2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", "2023-25-28")
+
+ggplot(offshore_osuus_pelanneista_w, aes(x=vk, y=mean)) + geom_errorbar(aes(ymin=mean-1.96*sd, ymax=mean+1.96*sd), width=.1) + geom_line(group=1) + geom_point() + ylab("Offshoressa pelanneiden osuus verkossa pelanneista") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_osuus_pelanneista_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+
+# viikon sisällä offshoressa pelanneiden väestöosuus
+offshore_viikottain_osuus_w <- rbind(offshore_viikottain_osuus_w_1215, offshore_viikottain_osuus_w_1619, offshore_viikottain_osuus_w_2023, offshore_viikottain_osuus_w_2427, offshore_viikottain_osuus_w_2932, offshore_viikottain_osuus_w_3336, offshore_viikottain_osuus_w_3841, offshore_viikottain_osuus_w_4245, offshore_viikottain_osuus_w_4649, offshore_viikottain_osuus_w_5103, offshore_viikottain_osuus_w_0407, offshore_viikottain_osuus_w_0811, offshore_viikottain_osuus_w_1316, offshore_viikottain_osuus_w_1720, offshore_viikottain_osuus_w_2124, offshore_viikottain_osuus_w_2528, offshore_viikottain_osuus_w_3134, offshore_viikottain_osuus_w_3538)
+names(offshore_viikottain_osuus_w)[2] <- "sd"
+offshore_viikottain_osuus_w$vk <- c("2022-12-15", "2022-16-19","2022-20-23","2022-24-27","2022-29-32","2022-33-36", "2022-38-41", "2022-42-45", "2022-46-49", "2022-51-03", "2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", "2023-25-28", "2023-31-34", "2023-35-38")
+#write.csv(offshore_viikottain_osuus_w, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_viikon_sis_vaesto.csv")
+
+ggplot(offshore_viikottain_osuus_w, aes(x=vk, y=mean)) + geom_errorbar(aes(ymin=mean-1.96*sd, ymax=mean+1.96*sd), width=.1) + geom_line(group=1) + geom_point() + ylab("Offshoressa viikon sisällä pelanneiden väestöosuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_viikko_vaesto_osuus_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+#ilman luot.väl.
+ggplot(offshore_viikottain_osuus_w, aes(x=vk, y=mean)) + geom_line(group=1) + geom_point() + coord_cartesian(ylim=c(0,0.04)) + ylab("Offshoressa viikon sisällä pelanneiden väestöosuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_viikko_vaesto_osuus_w_no_ci.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+
+# veikkauksen pelejä viikottain pelanneiden osuus
+veikkaus_viikottain_osuus_w <- rbind(veikkaus_viikottain_osuus_w_1215, veikkaus_viikottain_osuus_w_1619, veikkaus_viikottain_osuus_w_2023, veikkaus_viikottain_osuus_w_2427, veikkaus_viikottain_osuus_w_2932, veikkaus_viikottain_osuus_w_3336, veikkaus_viikottain_osuus_w_3841, veikkaus_viikottain_osuus_w_4245, veikkaus_viikottain_osuus_w_4649, veikkaus_viikottain_osuus_w_5103, veikkaus_viikottain_osuus_w_0407, veikkaus_viikottain_osuus_w_0811, veikkaus_viikottain_osuus_w_1316, veikkaus_viikottain_osuus_w_1720, veikkaus_viikottain_osuus_w_2124, veikkaus_viikottain_osuus_w_2528, veikkaus_viikottain_osuus_w_3134)
+names(veikkaus_viikottain_osuus_w)[2] <- "sd"
+veikkaus_viikottain_osuus_w$vk <- c("2022-12-15", "2022-16-19","2022-20-23","2022-24-27","2022-29-32","2022-33-36", "2022-38-41", "2022-42-45", "2022-46-49", "2022-51-03", "2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", "2023-25-28", "2023-31-34")
+
+ggplot(veikkaus_viikottain_osuus_w, aes(x=vk, y=mean)) + geom_errorbar(aes(ymin=mean-1.96*sd, ymax=mean+1.96*sd), width=.1) + geom_line(group=1) + geom_point() + ylab("Veikkauksen pelejä verkossa viikon sisällä pelanneiden väestöosuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/veikkaus_viikko_vaesto_osuus_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+ggplot(veikkaus_viikottain_osuus_w, aes(x=vk, y=mean)) + geom_line(group=1) + geom_point() + ylab("Veikkauksen pelejä verkossa viikon sisällä pelanneiden väestöosuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/veikkaus_viikko_vaesto_osuus_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+
+
+
+
+
+# pelaaminen eri kanavittain; Veikkaus, molemmat, offshore, ei pelannut, ei osaa sanoa
+
+# vain veikkauksen pelejä pelanneiden osuus
+vain_veikkaus_osuus_w <- rbind(vain_veikkaus_osuus_w_1215, vain_veikkaus_osuus_w_1619, vain_veikkaus_osuus_w_2023, vain_veikkaus_osuus_w_2427, vain_veikkaus_osuus_w_2932, vain_veikkaus_osuus_w_3336, vain_veikkaus_osuus_w_3841, vain_veikkaus_osuus_w_4245, vain_veikkaus_osuus_w_4649, vain_veikkaus_osuus_w_5103, vain_veikkaus_osuus_w_0407, vain_veikkaus_osuus_w_0811, vain_veikkaus_osuus_w_1316, vain_veikkaus_osuus_w_1720, vain_veikkaus_osuus_w_2124, vain_veikkaus_osuus_w_2528, vain_veikkaus_osuus_w_3134, vain_veikkaus_osuus_w_3538)
+names(vain_veikkaus_osuus_w)[2] <- "sd"
+vain_veikkaus_osuus_w$vk <- c("2022-12-15", "2022-16-19","2022-20-23","2022-24-27","2022-29-32","2022-33-36", "2022-38-41", "2022-42-45", "2022-46-49", "2022-51-03", "2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", "2023-25-28", "2023-31-34", "2023-35-38")
+
+vain_veikkaus_osuus_w$osuus <- rep("vain Veikkaus", length(unique(vain_veikkaus_osuus_w$vk)))
+
+ggplot(vain_veikkaus_osuus_w, aes(x=vk, y=mean)) + geom_errorbar(aes(ymin=mean-1.96*sd, ymax=mean+1.96*sd), width=.1) + geom_line(group=1) + geom_point() + ylab("Vain Veikkausta pelanneiden väestöosuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/vain_veikkaus_osuus_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+# vain offshore pelejä pelanneiden osuus
+vain_offshore_osuus_w <- rbind(vain_offshore_osuus_w_1215, vain_offshore_osuus_w_1619, vain_offshore_osuus_w_2023, vain_offshore_osuus_w_2427, vain_offshore_osuus_w_2932, vain_offshore_osuus_w_3336, vain_offshore_osuus_w_3841, vain_offshore_osuus_w_4245, vain_offshore_osuus_w_4649, vain_offshore_osuus_w_5103, vain_offshore_osuus_w_0407, vain_offshore_osuus_w_0811, vain_offshore_osuus_w_1316, vain_offshore_osuus_w_1720, vain_offshore_osuus_w_2124, vain_offshore_osuus_w_2528, vain_offshore_osuus_w_3134, vain_offshore_osuus_w_3538)
+names(vain_offshore_osuus_w)[2] <- "sd"
+vain_offshore_osuus_w$vk <- c("2022-12-15", "2022-16-19","2022-20-23","2022-24-27","2022-29-32","2022-33-36", "2022-38-41", "2022-42-45", "2022-46-49", "2022-51-03", "2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", "2023-25-28", "2023-31-34", "2023-35-38")
+
+vain_offshore_osuus_w$osuus <- rep("vain offshore", length(unique(vain_offshore_osuus_w$vk)))
+
+ggplot(vain_offshore_osuus_w, aes(x=vk, y=mean)) + geom_errorbar(aes(ymin=mean-1.96*sd, ymax=mean+1.96*sd), width=.1) + geom_line(group=1) + geom_point() + ylab("Vain offshoressa pelanneiden väestöosuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/vain_offshore_osuus_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+# molempia pelejä pelanneiden osuus
+molemmat_osuus_w <- rbind(molemmat_osuus_w_1215, molemmat_osuus_w_1619, molemmat_osuus_w_2023, molemmat_osuus_w_2427, molemmat_osuus_w_2932, molemmat_osuus_w_3336, molemmat_osuus_w_3841, molemmat_osuus_w_4245, molemmat_osuus_w_4649, molemmat_osuus_w_5103, molemmat_osuus_w_0407, molemmat_osuus_w_0811, molemmat_osuus_w_1316, molemmat_osuus_w_1720, molemmat_osuus_w_2124, molemmat_osuus_w_2528, molemmat_osuus_w_3134, molemmat_osuus_w_3538)
+names(molemmat_osuus_w)[2] <- "sd"
+molemmat_osuus_w$vk <- c("2022-12-15", "2022-16-19","2022-20-23","2022-24-27","2022-29-32","2022-33-36", "2022-38-41", "2022-42-45", "2022-46-49", "2022-51-03", "2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", "2023-25-28", "2023-31-34", "2023-35-38")
+
+molemmat_osuus_w$osuus <- rep("molempia", length(unique(molemmat_osuus_w$vk)))
+
+ggplot(molemmat_osuus_w, aes(x=vk, y=mean)) + geom_errorbar(aes(ymin=mean-1.96*sd, ymax=mean+1.96*sd), width=.1) + geom_line(group=1) + geom_point() + ylab("Veikkausta ja offshorea pelanneiden väestöosuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/molemmat_osuus_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+# ei verkossa pelanneiden osuus
+ei_pelannut_osuus_w <- rbind(ei_pelannut_osuus_w_1215, ei_pelannut_osuus_w_1619, ei_pelannut_osuus_w_2023, ei_pelannut_osuus_w_2427, ei_pelannut_osuus_w_2932, ei_pelannut_osuus_w_3336, ei_pelannut_osuus_w_3841, ei_pelannut_osuus_w_4245, ei_pelannut_osuus_w_4649, ei_pelannut_osuus_w_5103, ei_pelannut_osuus_w_0407, ei_pelannut_osuus_w_0811, ei_pelannut_osuus_w_1316, ei_pelannut_osuus_w_1720, ei_pelannut_osuus_w_2124, ei_pelannut_osuus_w_2528, ei_pelannut_osuus_w_3134, ei_pelannut_osuus_w_3538)
+names(ei_pelannut_osuus_w)[2] <- "sd"
+ei_pelannut_osuus_w$vk <- c("2022-12-15", "2022-16-19","2022-20-23","2022-24-27","2022-29-32","2022-33-36", "2022-38-41", "2022-42-45", "2022-46-49", "2022-51-03", "2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", "2023-25-28", "2023-31-34", "2023-35-38")
+
+ei_pelannut_osuus_w$osuus <- rep("ei pelannut", length(unique(ei_pelannut_osuus_w$vk)))
+
+ggplot(ei_pelannut_osuus_w, aes(x=vk, y=mean)) + geom_errorbar(aes(ymin=mean-1.96*sd, ymax=mean+1.96*sd), width=.1) + geom_line(group=1) + geom_point() + ylab("Ei verkossa pelanneiden väestöosuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/ei_pelannut_osuus_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+# ei osaa sanoa osuus
+eos_osuus_w <- rbind(eos_osuus_w_1215, eos_osuus_w_1619, eos_osuus_w_2023, eos_osuus_w_2427, eos_osuus_w_2932, eos_osuus_w_3336, eos_osuus_w_3841, eos_osuus_w_4245, eos_osuus_w_4649, eos_osuus_w_5103, eos_osuus_w_0407, eos_osuus_w_0811, eos_osuus_w_1316, eos_osuus_w_1720, eos_osuus_w_2124, eos_osuus_w_2528, eos_osuus_w_3134, eos_osuus_w_3538)
+names(eos_osuus_w)[2] <- "sd"
+eos_osuus_w$vk <- c("2022-12-15", "2022-16-19","2022-20-23","2022-24-27","2022-29-32","2022-33-36", "2022-38-41", "2022-42-45", "2022-46-49", "2022-51-03", "2023-04-07", "2023-08-11", "2023-13-16", "2023-17-20", "2023-21-24", "2023-25-28", "2023-31-34", "2023-35-38")
+
+eos_osuus_w$osuus <- rep("eos", length(unique(eos_osuus_w$vk)))
+
+ggplot(eos_osuus_w, aes(x=vk, y=mean)) + geom_errorbar(aes(ymin=mean-1.96*sd, ymax=mean+1.96*sd), width=.1) + geom_line(group=1) + geom_point() + ylab("Ei osaa sanoa osuus") + theme(axis.text.x=element_text(angle=90, size=7, hjust=-0.5))
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/eos_osuus_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+pelaamis_osuudet_w <- rbind(ei_pelannut_osuus_w, eos_osuus_w, molemmat_osuus_w, vain_offshore_osuus_w, vain_veikkaus_osuus_w)
+pelaamis_osuudet_w %>% group_by(vk) %>% dplyr::summarise(yht=sum(mean)) %>% View()
+#write.csv(pelaamis_osuudet_w, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/pelaamisosuudet_kanavittain_vaesto.csv")
+
+
+ggplot(pelaamis_osuudet_w, aes(fill=osuus, x=vk, y=mean)) + geom_col() + theme(legend.title=element_blank(), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + ylab("osuus vastaajista") + xlab("jakso")
+#ggsave("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/pelaamisosuudet_w.png", width = 30, height = 25, units = "cm",dpi=600)
+
+
+
+
+
+
+###### Tarkastellaan vastaajien arvioimia offshoressa pelattuja euroja  #######
+
+vk0407 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 04_07_2023/SPSS_viikot_04-07.csv", sep = ";", dec = ",")
+vk0407$jakso <- "2023-04-07"
+vk0407 <- vk0407 %>% filter(!is.na(rape1))
+vk0407$offshore_kpl <- vk0407$rape3.1+vk0407$rape3.2+vk0407$rape3.3+vk0407$rape3.4+vk0407$rape3.5+vk0407$rape3.6
+
+
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä voitolle: n. 33%
+(sum(vk0407$rape2c1==1, na.rm=T)/sum(!is.na(vk0407$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä tappiolle: n. 50%
+(sum(vk0407$rape2c1==2, na.rm=T)/sum(!is.na(vk0407$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä +-0: n. 15%
+(sum(vk0407$rape2c1==3, na.rm=T)/sum(!is.na(vk0407$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ei osaa sano onko jäänyt voitolle vai tappiolle: n. 2.5%
+(sum(vk0407$rape2c1==4, na.rm=T)/sum(!is.na(vk0407$rape2c1)))
+
+
+ggplot(vk0407 %>% filter(!is.na(rape2c1)), aes(x=rape2b, y=(..count..))) + geom_histogram() + xlab("1=pv, 2=vk, 3=kk, 4=v")                      
+
+ggplot(vk0407 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Päiväkulutus")                      
+ggplot(vk0407 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Viikkokulutus")                      
+ggplot(vk0407 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Kuukausikulutus")                     
+ggplot(vk0407 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Vuosikulutus")                      
+
+ggplot(vk0407 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk0407 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk0407 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk0407 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+
+vk0407 <- vk0407 %>% dplyr::mutate(arvio_vuosikulutuksesta_ub=(ifelse(rape2b==1, rape2c2*180, ifelse(rape2b==2, rape2c2*52, ifelse(rape2b==3, rape2c2*12, rape2c2))))*(-1), arvio_vuosikulutuksesta_lb=(ifelse(rape2b==1, rape2c2*90, ifelse(rape2b==2, rape2c2*26, ifelse(rape2b==3, rape2c2*6, rape2c2))))*(-1))
+ggplot(vk0407 %>% filter(arvio_vuosikulutuksesta_ub<50000 & arvio_vuosikulutuksesta_ub>-10000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+ggplot(vk0407 %>% filter(arvio_vuosikulutuksesta_lb<50000 & arvio_vuosikulutuksesta_lb>-10000), aes(x=arvio_vuosikulutuksesta_lb, y=(..count..)/sum(..count..))) + geom_histogram()
+
+ggplot(vk0407 %>% filter(arvio_vuosikulutuksesta_ub<5000 & arvio_vuosikulutuksesta_ub>-5000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+
+mean(vk0407[vk0407$arvio_vuosikulutuksesta_ub>-1,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk0407[vk0407$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk0407[vk0407$arvio_vuosikulutuksesta_ub>-1 & vk0407$arvio_vuosikulutuksesta_ub<50000,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+
+# maksimi vuosikulutusarvio on 63 000 euroa
+summary(vk0407[vk0407$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub)
+
+
+
+
+vk0407_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk0407[vk0407$arvio_vuosikulutuksesta_ub>0 & !is.na(vk0407$arvio_vuosikulutuksesta_ub),])
+
+offshore_vuosikulutus_w_0407 <- as.data.frame(svymean(~arvio_vuosikulutuksesta_ub, vk0407_wt, na = TRUE))
+names(offshore_vuosikulutus_w_0407)[1] <- "offshore_ub"
+names(offshore_vuosikulutus_w_0407)[2] <- "sd_ub"
+offshore_vuosikulutus_w_0407 <- cbind(offshore_vuosikulutus_w_0407, as.data.frame(svymean(~arvio_vuosikulutuksesta_lb, vk0407_wt, na = TRUE)))
+names(offshore_vuosikulutus_w_0407)[3] <- "offshore_lb"
+names(offshore_vuosikulutus_w_0407)[4] <- "sd_lb"
+
+offshore_vuosikulutus_w_0407$offshore_pelaaminen_yht_ub <- (4182039*0.04*offshore_vuosikulutus_w_0407$offshore_ub)
+offshore_vuosikulutus_w_0407$offshore_pelaaminen_yht_lb <- (4182039*0.04*offshore_vuosikulutus_w_0407$offshore_lb)
+#write.csv(offshore_vuosikulutus_w_0407, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_euro_arviot.csv")
+# upperbound 458 359 948 ~ 460 000 000 euroa
+# lowerbound 245 243 433 ~ 245 000 000 euroa
+
+
+# Upperbound 375 087 300 ~ 375 000 000 euroa
+sum(vk0407[vk0407$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)/(2000/4200000)
+# Lowerbound 196 935 900 ~ 197 000 000 euroa
+sum(vk0407[vk0407$arvio_vuosikulutuksesta_lb>0,]$arvio_vuosikulutuksesta_lb, na.rm=T)/(2000/4200000)
+
+
+#### 2023 vk 08-11
+
+vk0811 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 08_11_2023/SPSS_viikot_08-11_2023.csv", sep = ";", dec = ",")
+vk0811$jakso <- "2023-08-11"
+vk0811 <- vk0811 %>% filter(!is.na(rape1))
+vk0811$offshore_kpl <- vk0811$rape3.1+vk0811$rape3.2+vk0811$rape3.3+vk0811$rape3.4+vk0811$rape3.5+vk0811$rape3.6
+
+
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä voitolle: n. 33%
+(sum(vk0811$rape2c1==1, na.rm=T)/sum(!is.na(vk0811$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä tappiolle: n. 50%
+(sum(vk0811$rape2c1==2, na.rm=T)/sum(!is.na(vk0811$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä +-0: n. 15%
+(sum(vk0811$rape2c1==3, na.rm=T)/sum(!is.na(vk0811$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ei osaa sano onko jäänyt voitolle vai tappiolle: n. 2.5%
+(sum(vk0811$rape2c1==4, na.rm=T)/sum(!is.na(vk0811$rape2c1)))
+
+
+ggplot(vk0811 %>% filter(!is.na(rape2c1)), aes(x=rape2b, y=(..count..))) + geom_histogram() + xlab("1=pv, 2=vk, 3=kk, 4=v")                      
+
+ggplot(vk0811 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Päiväkulutus")                      
+ggplot(vk0811 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Viikkokulutus")                      
+ggplot(vk0811 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Kuukausikulutus")                     
+ggplot(vk0811 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Vuosikulutus")                      
+
+ggplot(vk0811 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk0811 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk0811 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk0811 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+
+vk0811 <- vk0811 %>% dplyr::mutate(arvio_vuosikulutuksesta_ub=(ifelse(rape2b==1, rape2c2*180, ifelse(rape2b==2, rape2c2*52, ifelse(rape2b==3, rape2c2*12, rape2c2))))*(-1), arvio_vuosikulutuksesta_lb=(ifelse(rape2b==1, rape2c2*90, ifelse(rape2b==2, rape2c2*26, ifelse(rape2b==3, rape2c2*6, rape2c2))))*(-1))
+ggplot(vk0811 %>% filter(arvio_vuosikulutuksesta_ub<50000 & arvio_vuosikulutuksesta_ub>-10000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+ggplot(vk0811 %>% filter(arvio_vuosikulutuksesta_lb<50000 & arvio_vuosikulutuksesta_lb>-10000), aes(x=arvio_vuosikulutuksesta_lb, y=(..count..)/sum(..count..))) + geom_histogram()
+
+ggplot(vk0811 %>% filter(arvio_vuosikulutuksesta_ub<5000 & arvio_vuosikulutuksesta_ub>-5000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+
+mean(vk0811[vk0811$arvio_vuosikulutuksesta_ub>-1,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk0811[vk0811$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk0811[vk0811$arvio_vuosikulutuksesta_ub>-1 & vk0811$arvio_vuosikulutuksesta_ub<50000,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+
+# maksimi vuosikulutusarvio vk08-11 on 260 000 euroa
+summary(vk0811[vk0811$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub)
+
+vk0811_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk0811[vk0811$arvio_vuosikulutuksesta_ub>0 & !is.na(vk0811$arvio_vuosikulutuksesta_ub),])
+
+offshore_vuosikulutus_w_0811 <- as.data.frame(svymean(~arvio_vuosikulutuksesta_ub, vk0811_wt, na = TRUE))
+names(offshore_vuosikulutus_w_0811)[1] <- "offshore_ub"
+names(offshore_vuosikulutus_w_0811)[2] <- "sd_ub"
+offshore_vuosikulutus_w_0811 <- cbind(offshore_vuosikulutus_w_0811, as.data.frame(svymean(~arvio_vuosikulutuksesta_lb, vk0811_wt, na = TRUE)))
+names(offshore_vuosikulutus_w_0811)[3] <- "offshore_lb"
+names(offshore_vuosikulutus_w_0811)[4] <- "sd_lb"
+
+offshore_vuosikulutus_w_0811$offshore_pelaaminen_yht_ub <- (4182039*0.04*offshore_vuosikulutus_w_0811$offshore_ub)
+offshore_vuosikulutus_w_0811$offshore_pelaaminen_yht_lb <- (4182039*0.04*offshore_vuosikulutus_w_0811$offshore_lb)
+#write.csv(offshore_vuosikulutus_w_0811, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_euro_arviot.csv")
+# upperbound 458 359 948 ~ 460 000 000 euroa
+# lowerbound 245 243 433 ~ 245 000 000 euroa
+
+
+# Upperbound 375 087 300 ~ 375 000 000 euroa
+sum(vk0811[vk0811$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)/(2000/4200000)
+# Lowerbound 196 935 900 ~ 197 000 000 euroa
+sum(vk0811[vk0811$arvio_vuosikulutuksesta_lb>0,]$arvio_vuosikulutuksesta_lb, na.rm=T)/(2000/4200000)
+
+
+
+#### 2023 vk 13-16
+
+vk1316 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 13_16_2023/SPSS_viikot_13-16_2023.csv", sep = ";", dec = ",")
+vk1316$jakso <- "2023-13-16"
+vk1316 <- vk1316 %>% filter(!is.na(rape1))
+vk1316$offshore_kpl <- vk1316$rape3.1+vk1316$rape3.2+vk1316$rape3.3+vk1316$rape3.4+vk1316$rape3.5+vk1316$rape3.6
+
+
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä voitolle: n. 33%
+(sum(vk1316$rape2c1==1, na.rm=T)/sum(!is.na(vk1316$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä tappiolle: n. 50%
+(sum(vk1316$rape2c1==2, na.rm=T)/sum(!is.na(vk1316$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä +-0: n. 15%
+(sum(vk1316$rape2c1==3, na.rm=T)/sum(!is.na(vk1316$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ei osaa sano onko jäänyt voitolle vai tappiolle: n. 2.5%
+(sum(vk1316$rape2c1==4, na.rm=T)/sum(!is.na(vk1316$rape2c1)))
+
+
+ggplot(vk1316 %>% filter(!is.na(rape2c1)), aes(x=rape2b, y=(..count..))) + geom_histogram() + xlab("1=pv, 2=vk, 3=kk, 4=v")                      
+
+ggplot(vk1316 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Päiväkulutus")                      
+ggplot(vk1316 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Viikkokulutus")                      
+ggplot(vk1316 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Kuukausikulutus")                     
+ggplot(vk1316 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Vuosikulutus")                      
+
+ggplot(vk1316 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk1316 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk1316 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk1316 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+
+vk1316 <- vk1316 %>% dplyr::mutate(arvio_vuosikulutuksesta_ub=(ifelse(rape2b==1, rape2c2*180, ifelse(rape2b==2, rape2c2*52, ifelse(rape2b==3, rape2c2*12, rape2c2))))*(-1), arvio_vuosikulutuksesta_lb=(ifelse(rape2b==1, rape2c2*90, ifelse(rape2b==2, rape2c2*26, ifelse(rape2b==3, rape2c2*6, rape2c2))))*(-1))
+ggplot(vk1316 %>% filter(arvio_vuosikulutuksesta_ub<50000 & arvio_vuosikulutuksesta_ub>-10000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+ggplot(vk1316 %>% filter(arvio_vuosikulutuksesta_lb<50000 & arvio_vuosikulutuksesta_lb>-10000), aes(x=arvio_vuosikulutuksesta_lb, y=(..count..)/sum(..count..))) + geom_histogram()
+
+ggplot(vk1316 %>% filter(arvio_vuosikulutuksesta_ub<5000 & arvio_vuosikulutuksesta_ub>-5000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+
+mean(vk1316[vk1316$arvio_vuosikulutuksesta_ub>-1,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk1316[vk1316$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk1316[vk1316$arvio_vuosikulutuksesta_ub>-1 & vk1316$arvio_vuosikulutuksesta_ub<50000,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+
+# maksimi vuosikulutusarvio vk08-11 on 260 000 euroa
+summary(vk1316[vk1316$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub)
+
+vk1316_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk1316[vk1316$arvio_vuosikulutuksesta_ub>0 & !is.na(vk1316$arvio_vuosikulutuksesta_ub),])
+
+offshore_vuosikulutus_w_1316 <- as.data.frame(svymean(~arvio_vuosikulutuksesta_ub, vk1316_wt, na = TRUE))
+names(offshore_vuosikulutus_w_1316)[1] <- "offshore_ub"
+names(offshore_vuosikulutus_w_1316)[2] <- "sd_ub"
+offshore_vuosikulutus_w_1316 <- cbind(offshore_vuosikulutus_w_1316, as.data.frame(svymean(~arvio_vuosikulutuksesta_lb, vk1316_wt, na = TRUE)))
+names(offshore_vuosikulutus_w_1316)[3] <- "offshore_lb"
+names(offshore_vuosikulutus_w_1316)[4] <- "sd_lb"
+
+offshore_vuosikulutus_w_1316$offshore_pelaaminen_yht_ub <- (4182039*0.04*offshore_vuosikulutus_w_1316$offshore_ub)
+offshore_vuosikulutus_w_1316$offshore_pelaaminen_yht_lb <- (4182039*0.04*offshore_vuosikulutus_w_1316$offshore_lb)
+#write.csv(offshore_vuosikulutus_w_1316, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_euro_arviot.csv")
+# upperbound 458 359 948 ~ 232 000 000 euroa
+# lowerbound 245 243 433 ~ 123 000 000 euroa
+
+
+# Upperbound 375 087 300 ~ 375 000 000 euroa
+sum(vk1316[vk1316$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)/(2000/4200000)
+# Lowerbound 196 935 900 ~ 197 000 000 euroa
+sum(vk1316[vk1316$arvio_vuosikulutuksesta_lb>0,]$arvio_vuosikulutuksesta_lb, na.rm=T)/(2000/4200000)
+
+
+
+#### 2023 vk 17-20
+
+vk1720 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 17_20_2023/SPSS_viikot_17-20_2023.csv", sep = ";", dec = ",")
+vk1720$jakso <- "2023-17-20"
+vk1720 <- vk1720 %>% filter(!is.na(rape1))
+vk1720$offshore_kpl <- vk1720$rape3.1+vk1720$rape3.2+vk1720$rape3.3+vk1720$rape3.4+vk1720$rape3.5+vk1720$rape3.6
+
+
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä voitolle: n. 33%
+(sum(vk1720$rape2c1==1, na.rm=T)/sum(!is.na(vk1720$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä tappiolle: n. 50%
+(sum(vk1720$rape2c1==2, na.rm=T)/sum(!is.na(vk1720$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä +-0: n. 15%
+(sum(vk1720$rape2c1==3, na.rm=T)/sum(!is.na(vk1720$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ei osaa sano onko jäänyt voitolle vai tappiolle: n. 2.5%
+(sum(vk1720$rape2c1==4, na.rm=T)/sum(!is.na(vk1720$rape2c1)))
+
+
+ggplot(vk1720 %>% filter(!is.na(rape2c1)), aes(x=rape2b, y=(..count..))) + geom_histogram() + xlab("1=pv, 2=vk, 3=kk, 4=v")                      
+
+ggplot(vk1720 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Päiväkulutus")                      
+ggplot(vk1720 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Viikkokulutus")                      
+ggplot(vk1720 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Kuukausikulutus")                     
+ggplot(vk1720 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Vuosikulutus")                      
+
+ggplot(vk1720 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk1720 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk1720 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk1720 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+
+vk1720 <- vk1720 %>% dplyr::mutate(arvio_vuosikulutuksesta_ub=(ifelse(rape2b==1, rape2c2*180, ifelse(rape2b==2, rape2c2*52, ifelse(rape2b==3, rape2c2*12, rape2c2))))*(-1), arvio_vuosikulutuksesta_lb=(ifelse(rape2b==1, rape2c2*90, ifelse(rape2b==2, rape2c2*26, ifelse(rape2b==3, rape2c2*6, rape2c2))))*(-1))
+ggplot(vk1720 %>% filter(arvio_vuosikulutuksesta_ub<50000 & arvio_vuosikulutuksesta_ub>-10000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+ggplot(vk1720 %>% filter(arvio_vuosikulutuksesta_lb<50000 & arvio_vuosikulutuksesta_lb>-10000), aes(x=arvio_vuosikulutuksesta_lb, y=(..count..)/sum(..count..))) + geom_histogram()
+
+ggplot(vk1720 %>% filter(arvio_vuosikulutuksesta_ub<5000 & arvio_vuosikulutuksesta_ub>-5000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+
+mean(vk1720[vk1720$arvio_vuosikulutuksesta_ub>-1,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk1720[vk1720$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk1720[vk1720$arvio_vuosikulutuksesta_ub>-1 & vk1720$arvio_vuosikulutuksesta_ub<50000,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+
+# maksimi vuosikulutusarvio vk08-11 on 260 000 euroa
+summary(vk1720[vk1720$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub)
+
+vk1720_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk1720[vk1720$arvio_vuosikulutuksesta_ub>0 & !is.na(vk1720$arvio_vuosikulutuksesta_ub),])
+
+offshore_vuosikulutus_w_1720 <- as.data.frame(svymean(~arvio_vuosikulutuksesta_ub, vk1720_wt, na = TRUE))
+names(offshore_vuosikulutus_w_1720)[1] <- "offshore_ub"
+names(offshore_vuosikulutus_w_1720)[2] <- "sd_ub"
+offshore_vuosikulutus_w_1720 <- cbind(offshore_vuosikulutus_w_1720, as.data.frame(svymean(~arvio_vuosikulutuksesta_lb, vk1720_wt, na = TRUE)))
+names(offshore_vuosikulutus_w_1720)[3] <- "offshore_lb"
+names(offshore_vuosikulutus_w_1720)[4] <- "sd_lb"
+
+offshore_vuosikulutus_w_1720$offshore_pelaaminen_yht_ub <- (4182039*0.04*offshore_vuosikulutus_w_1720$offshore_ub)
+offshore_vuosikulutus_w_1720$offshore_pelaaminen_yht_lb <- (4182039*0.04*offshore_vuosikulutus_w_1720$offshore_lb)
+#write.csv(offshore_vuosikulutus_w_1720, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_euro_arviot.csv")
+# upperbound 458 359 948 ~ 232 000 000 euroa
+# lowerbound 245 243 433 ~ 123 000 000 euroa
+
+
+# Upperbound 375 087 300 ~ 375 000 000 euroa
+sum(vk1720[vk1720$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)/(2000/4200000)
+# Lowerbound 196 935 900 ~ 197 000 000 euroa
+sum(vk1720[vk1720$arvio_vuosikulutuksesta_lb>0,]$arvio_vuosikulutuksesta_lb, na.rm=T)/(2000/4200000)
+
+
+
+#### 2023 vk 21-24
+
+vk2124 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 21_24_2023/SPSS_viikot_21-24_2023.csv", sep = ";", dec = ",")
+vk2124$jakso <- "2023-21-24"
+vk2124 <- vk2124 %>% filter(!is.na(rape1))
+vk2124$offshore_kpl <- vk2124$rape3.1+vk2124$rape3.2+vk2124$rape3.3+vk2124$rape3.4+vk2124$rape3.5+vk2124$rape3.6
+
+
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä voitolle: n. 33%
+(sum(vk2124$rape2c1==1, na.rm=T)/sum(!is.na(vk2124$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä tappiolle: n. 50%
+(sum(vk2124$rape2c1==2, na.rm=T)/sum(!is.na(vk2124$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä +-0: n. 15%
+(sum(vk2124$rape2c1==3, na.rm=T)/sum(!is.na(vk2124$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ei osaa sano onko jäänyt voitolle vai tappiolle: n. 2.5%
+(sum(vk2124$rape2c1==4, na.rm=T)/sum(!is.na(vk2124$rape2c1)))
+
+
+ggplot(vk2124 %>% filter(!is.na(rape2c1)), aes(x=rape2b, y=(..count..))) + geom_histogram() + xlab("1=pv, 2=vk, 3=kk, 4=v")                      
+
+ggplot(vk2124 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Päiväkulutus")                      
+ggplot(vk2124 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Viikkokulutus")                      
+ggplot(vk2124 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Kuukausikulutus")                     
+ggplot(vk2124 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Vuosikulutus")                      
+
+ggplot(vk2124 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk2124 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk2124 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk2124 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+
+vk2124 <- vk2124 %>% dplyr::mutate(arvio_vuosikulutuksesta_ub=(ifelse(rape2b==1, rape2c2*180, ifelse(rape2b==2, rape2c2*52, ifelse(rape2b==3, rape2c2*12, rape2c2))))*(-1), arvio_vuosikulutuksesta_lb=(ifelse(rape2b==1, rape2c2*90, ifelse(rape2b==2, rape2c2*26, ifelse(rape2b==3, rape2c2*6, rape2c2))))*(-1))
+ggplot(vk2124 %>% filter(arvio_vuosikulutuksesta_ub<50000 & arvio_vuosikulutuksesta_ub>-10000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+ggplot(vk2124 %>% filter(arvio_vuosikulutuksesta_lb<50000 & arvio_vuosikulutuksesta_lb>-10000), aes(x=arvio_vuosikulutuksesta_lb, y=(..count..)/sum(..count..))) + geom_histogram()
+
+ggplot(vk2124 %>% filter(arvio_vuosikulutuksesta_ub<5000 & arvio_vuosikulutuksesta_ub>-5000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+
+mean(vk2124[vk2124$arvio_vuosikulutuksesta_ub>-1,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk2124[vk2124$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk2124[vk2124$arvio_vuosikulutuksesta_ub>-1 & vk2124$arvio_vuosikulutuksesta_ub<50000,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+
+# maksimi vuosikulutusarvio vk08-11 on 260 000 euroa
+summary(vk2124[vk2124$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub)
+
+vk2124_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk2124[vk2124$arvio_vuosikulutuksesta_ub>0 & !is.na(vk2124$arvio_vuosikulutuksesta_ub),])
+
+offshore_vuosikulutus_w_2124 <- as.data.frame(svymean(~arvio_vuosikulutuksesta_ub, vk2124_wt, na = TRUE))
+names(offshore_vuosikulutus_w_2124)[1] <- "offshore_ub"
+names(offshore_vuosikulutus_w_2124)[2] <- "sd_ub"
+offshore_vuosikulutus_w_2124 <- cbind(offshore_vuosikulutus_w_2124, as.data.frame(svymean(~arvio_vuosikulutuksesta_lb, vk2124_wt, na = TRUE)))
+names(offshore_vuosikulutus_w_2124)[3] <- "offshore_lb"
+names(offshore_vuosikulutus_w_2124)[4] <- "sd_lb"
+
+offshore_vuosikulutus_w_2124$offshore_pelaaminen_yht_ub <- (4182039*0.04*offshore_vuosikulutus_w_2124$offshore_ub)
+offshore_vuosikulutus_w_2124$offshore_pelaaminen_yht_lb <- (4182039*0.04*offshore_vuosikulutus_w_2124$offshore_lb)
+#write.csv(offshore_vuosikulutus_w_2124, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_euro_arviot.csv")
+# upperbound 458 359 948 ~ 232 000 000 euroa
+# lowerbound 245 243 433 ~ 123 000 000 euroa
+
+
+# Upperbound 375 087 300 ~ 375 000 000 euroa
+sum(vk2124[vk2124$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)/(2000/4200000)
+# Lowerbound 196 935 900 ~ 197 000 000 euroa
+sum(vk2124[vk2124$arvio_vuosikulutuksesta_lb>0,]$arvio_vuosikulutuksesta_lb, na.rm=T)/(2000/4200000)
+
+
+
+#### 2023 vk 25-28
+
+vk2528 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 25_28_2023/SPSS_viikot_25-28_2023.csv", sep = ";", dec = ",")
+vk2528$jakso <- "2023-25-28"
+vk2528 <- vk2528 %>% filter(!is.na(rape1))
+vk2528$offshore_kpl <- vk2528$rape3.1+vk2528$rape3.2+vk2528$rape3.3+vk2528$rape3.4+vk2528$rape3.5+vk2528$rape3.6
+
+
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä voitolle: n. 33%
+(sum(vk2528$rape2c1==1, na.rm=T)/sum(!is.na(vk2528$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä tappiolle: n. 50%
+(sum(vk2528$rape2c1==2, na.rm=T)/sum(!is.na(vk2528$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä +-0: n. 15%
+(sum(vk2528$rape2c1==3, na.rm=T)/sum(!is.na(vk2528$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ei osaa sano onko jäänyt voitolle vai tappiolle: n. 2.5%
+(sum(vk2528$rape2c1==4, na.rm=T)/sum(!is.na(vk2528$rape2c1)))
+
+
+ggplot(vk2528 %>% filter(!is.na(rape2c1)), aes(x=rape2b, y=(..count..))) + geom_histogram() + xlab("1=pv, 2=vk, 3=kk, 4=v")                      
+
+ggplot(vk2528 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Päiväkulutus")                      
+ggplot(vk2528 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Viikkokulutus")                      
+ggplot(vk2528 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Kuukausikulutus")                     
+ggplot(vk2528 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Vuosikulutus")                      
+
+ggplot(vk2528 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk2528 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk2528 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk2528 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+
+vk2528 <- vk2528 %>% dplyr::mutate(arvio_vuosikulutuksesta_ub=(ifelse(rape2b==1, rape2c2*180, ifelse(rape2b==2, rape2c2*52, ifelse(rape2b==3, rape2c2*12, rape2c2))))*(-1), arvio_vuosikulutuksesta_lb=(ifelse(rape2b==1, rape2c2*90, ifelse(rape2b==2, rape2c2*26, ifelse(rape2b==3, rape2c2*6, rape2c2))))*(-1))
+ggplot(vk2528 %>% filter(arvio_vuosikulutuksesta_ub<50000 & arvio_vuosikulutuksesta_ub>-10000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+ggplot(vk2528 %>% filter(arvio_vuosikulutuksesta_lb<50000 & arvio_vuosikulutuksesta_lb>-10000), aes(x=arvio_vuosikulutuksesta_lb, y=(..count..)/sum(..count..))) + geom_histogram()
+
+ggplot(vk2528 %>% filter(arvio_vuosikulutuksesta_ub<5000 & arvio_vuosikulutuksesta_ub>-5000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+
+mean(vk2528[vk2528$arvio_vuosikulutuksesta_ub>-1,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk2528[vk2528$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk2528[vk2528$arvio_vuosikulutuksesta_ub>-1 & vk2528$arvio_vuosikulutuksesta_ub<50000,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+
+# maksimi vuosikulutusarvio vk08-11 on 260 000 euroa
+summary(vk2528[vk2528$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub)
+
+vk2528_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk2528[vk2528$arvio_vuosikulutuksesta_ub>0 & !is.na(vk2528$arvio_vuosikulutuksesta_ub),])
+
+offshore_vuosikulutus_w_2528 <- as.data.frame(svymean(~arvio_vuosikulutuksesta_ub, vk2528_wt, na = TRUE))
+names(offshore_vuosikulutus_w_2528)[1] <- "offshore_ub"
+names(offshore_vuosikulutus_w_2528)[2] <- "sd_ub"
+offshore_vuosikulutus_w_2528 <- cbind(offshore_vuosikulutus_w_2528, as.data.frame(svymean(~arvio_vuosikulutuksesta_lb, vk2528_wt, na = TRUE)))
+names(offshore_vuosikulutus_w_2528)[3] <- "offshore_lb"
+names(offshore_vuosikulutus_w_2528)[4] <- "sd_lb"
+
+offshore_vuosikulutus_w_2528$offshore_pelaaminen_yht_ub <- (4182039*0.04*offshore_vuosikulutus_w_2528$offshore_ub)
+offshore_vuosikulutus_w_2528$offshore_pelaaminen_yht_lb <- (4182039*0.04*offshore_vuosikulutus_w_2528$offshore_lb)
+#write.csv(offshore_vuosikulutus_w_2528, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_euro_arviot.csv")
+# upperbound 458 359 948 ~ 232 000 000 euroa
+# lowerbound 245 243 433 ~ 123 000 000 euroa
+
+
+# Upperbound 375 087 300 ~ 375 000 000 euroa
+sum(vk2528[vk2528$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)/(2000/4200000)
+# Lowerbound 196 935 900 ~ 197 000 000 euroa
+sum(vk2528[vk2528$arvio_vuosikulutuksesta_lb>0,]$arvio_vuosikulutuksesta_lb, na.rm=T)/(2000/4200000)
+
+
+
+
+#### 2023 vk 31-34
+
+vk3134 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 31_34_2023/SPSS_viikot_31-34_2023.csv", sep = ";", dec = ",")
+vk3134$jakso <- "2023-31-34"
+vk3134 <- vk3134 %>% filter(!is.na(rape1))
+vk3134$offshore_kpl <- vk3134$rape3.1+vk3134$rape3.2+vk3134$rape3.3+vk3134$rape3.4+vk3134$rape3.5+vk3134$rape3.6
+
+
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä voitolle: n. 33%
+(sum(vk3134$rape2c1==1, na.rm=T)/sum(!is.na(vk3134$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä tappiolle: n. 50%
+(sum(vk3134$rape2c1==2, na.rm=T)/sum(!is.na(vk3134$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä +-0: n. 15%
+(sum(vk3134$rape2c1==3, na.rm=T)/sum(!is.na(vk3134$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ei osaa sano onko jäänyt voitolle vai tappiolle: n. 2.5%
+(sum(vk3134$rape2c1==4, na.rm=T)/sum(!is.na(vk3134$rape2c1)))
+
+
+ggplot(vk3134 %>% filter(!is.na(rape2c1)), aes(x=rape2b, y=(..count..))) + geom_histogram() + xlab("1=pv, 2=vk, 3=kk, 4=v")                      
+
+ggplot(vk3134 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Päiväkulutus")                      
+ggplot(vk3134 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Viikkokulutus")                      
+ggplot(vk3134 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Kuukausikulutus")                     
+ggplot(vk3134 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..))) + geom_histogram() + xlab("Vuosikulutus")                      
+
+ggplot(vk3134 %>% filter(!is.na(rape2c1) & rape2b==1), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk3134 %>% filter(!is.na(rape2c1) & rape2b==2), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk3134 %>% filter(!is.na(rape2c1) & rape2b==3), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+ggplot(vk3134 %>% filter(!is.na(rape2c1) & rape2b==4), aes(x=rape2c2, y=(..count..)/sum(..count..))) + geom_histogram()                      
+
+vk3134 <- vk3134 %>% dplyr::mutate(arvio_vuosikulutuksesta_ub=(ifelse(rape2b==1, rape2c2*180, ifelse(rape2b==2, rape2c2*52, ifelse(rape2b==3, rape2c2*12, rape2c2))))*(-1), arvio_vuosikulutuksesta_lb=(ifelse(rape2b==1, rape2c2*90, ifelse(rape2b==2, rape2c2*26, ifelse(rape2b==3, rape2c2*6, rape2c2))))*(-1))
+ggplot(vk3134 %>% filter(arvio_vuosikulutuksesta_ub<50000 & arvio_vuosikulutuksesta_ub>-10000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+ggplot(vk3134 %>% filter(arvio_vuosikulutuksesta_lb<50000 & arvio_vuosikulutuksesta_lb>-10000), aes(x=arvio_vuosikulutuksesta_lb, y=(..count..)/sum(..count..))) + geom_histogram()
+
+ggplot(vk3134 %>% filter(arvio_vuosikulutuksesta_ub<5000 & arvio_vuosikulutuksesta_ub>-5000), aes(x=arvio_vuosikulutuksesta_ub, y=(..count..)/sum(..count..))) + geom_histogram()
+
+mean(vk3134[vk3134$arvio_vuosikulutuksesta_ub>-1,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk3134[vk3134$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+mean(vk3134[vk3134$arvio_vuosikulutuksesta_ub>-1 & vk3134$arvio_vuosikulutuksesta_ub<50000,]$arvio_vuosikulutuksesta_ub, na.rm=T)
+
+# maksimi vuosikulutusarvio vk08-11 on 260 000 euroa
+summary(vk3134[vk3134$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub)
+
+vk3134_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk3134[vk3134$arvio_vuosikulutuksesta_ub>0 & !is.na(vk3134$arvio_vuosikulutuksesta_ub),])
+
+offshore_vuosikulutus_w_3134 <- as.data.frame(svymean(~arvio_vuosikulutuksesta_ub, vk3134_wt, na = TRUE))
+names(offshore_vuosikulutus_w_3134)[1] <- "offshore_ub"
+names(offshore_vuosikulutus_w_3134)[2] <- "sd_ub"
+offshore_vuosikulutus_w_3134 <- cbind(offshore_vuosikulutus_w_3134, as.data.frame(svymean(~arvio_vuosikulutuksesta_lb, vk3134_wt, na = TRUE)))
+names(offshore_vuosikulutus_w_3134)[3] <- "offshore_lb"
+names(offshore_vuosikulutus_w_3134)[4] <- "sd_lb"
+
+offshore_vuosikulutus_w_3134$offshore_pelaaminen_yht_ub <- (4182039*0.04*offshore_vuosikulutus_w_3134$offshore_ub)
+offshore_vuosikulutus_w_3134$offshore_pelaaminen_yht_lb <- (4182039*0.04*offshore_vuosikulutus_w_3134$offshore_lb)
+#write.csv(offshore_vuosikulutus_w_3134, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/offshore_euro_arviot.csv")
+# upperbound 458 359 948 ~ 232 000 000 euroa
+# lowerbound 245 243 433 ~ 123 000 000 euroa
+
+
+# Upperbound 375 087 300 ~ 375 000 000 euroa
+sum(vk3134[vk3134$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)/(2000/4200000)
+# Lowerbound 196 935 900 ~ 197 000 000 euroa
+sum(vk3134[vk3134$arvio_vuosikulutuksesta_lb>0,]$arvio_vuosikulutuksesta_lb, na.rm=T)/(2000/4200000)
+
+
+
+
+# Lasketaan erikseen PAF vuosikulutus
+
+# Paljonko PAF pelaajia on kaikista vastaajista? 1.1% eli hieman yli 20 vastaajaa
+(sum(vk0407[vk0407$rape2b<5 & vk0407$offshore_kpl<2,]$rape3.1, na.rm=T)/length(unique(vk0407$lomake)))
+
+# kuinka suuri osa PAF-pelaajista ilmoittanut jääneensä voitolle: n. 33%
+(sum(vk0407_paf$rape2c1==1, na.rm=T)/sum(!is.na(vk0407_paf$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä tappiolle: n. 50%
+(sum(vk0407_paf$rape2c1==2, na.rm=T)/sum(!is.na(vk0407_paf$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä +-0: n. 15%
+(sum(vk0407_paf$rape2c1==3, na.rm=T)/sum(!is.na(vk0407_paf$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ei osaa sano onko jäänyt voitolle vai tappiolle: n. 2.5%
+(sum(vk0407_paf$rape2c1==4, na.rm=T)/sum(!is.na(vk0407_paf$rape2c1)))
+
+
+# Muodostetaan arvio PAF vuosikulutuksesta kaikille pelaajille (kerrotaan lopussa -1, jotta saadaan positiivinen kulutusarvio)
+vk0407_paf <- vk0407 %>% filter(rape3.1>0) %>% dplyr::mutate(arvio_vuosikulutuksesta_ub=(ifelse(rape2b==1, rape2c2*180, ifelse(rape2b==2, rape2c2*52, ifelse(rape2b==3, rape2c2*12, rape2c2))))*(-1), arvio_vuosikulutuksesta_lb=(ifelse(rape2b==1, rape2c2*90, ifelse(rape2b==2, rape2c2*26, ifelse(rape2b==3, rape2c2*6, rape2c2))))*(-1))
+vk0407_paf$offshore_kpl <- vk0407_paf$rape3.1+vk0407_paf$rape3.2+vk0407_paf$rape3.3+vk0407_paf$rape3.4+vk0407_paf$rape3.5+vk0407_paf$rape3.6
+
+
+vk0407_paf_wt <- svydesign(id = ~lomake, 
+                       strata = ~jakso,
+                       weights = ~weight,
+                       nest = TRUE,
+                       data = vk0407_paf[vk0407_paf$offshore_kpl<2 & vk0407_paf$arvio_vuosikulutuksesta_ub>0 & !is.na(vk0407_paf$arvio_vuosikulutuksesta_ub),])
+
+paf_vuosikulutus_w_0407 <- as.data.frame(svymean(~arvio_vuosikulutuksesta_ub, vk0407_paf_wt, na = TRUE))
+names(paf_vuosikulutus_w_0407)[1] <- "paf_ub"
+names(paf_vuosikulutus_w_0407)[2] <- "sd_ub"
+paf_vuosikulutus_w_0407 <- cbind(paf_vuosikulutus_w_0407, as.data.frame(svymean(~arvio_vuosikulutuksesta_lb, vk0407_paf_wt, na = TRUE)))
+names(paf_vuosikulutus_w_0407)[3] <- "paf_lb"
+names(paf_vuosikulutus_w_0407)[4] <- "sd_lb"
+
+paf_vuosikulutus_w_0407$paf_pelaaminen_yht_ub <- (4182039*0.0114*paf_vuosikulutus_w_0407$paf_ub)
+paf_vuosikulutus_w_0407$paf_pelaaminen_yht_lb <- (4182039*0.0114*paf_vuosikulutus_w_0407$paf_lb)
+#write.csv(paf_vuosikulutus_w_0407, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/paf_euro_arviot.csv")
+# upperbound 62823117 ~ 63 milj. euroa
+# lowerbound 31711827 ~ 32 milj. euroa
+
+
+# Upperbound 375 087 300 ~ 375 000 000 euroa
+sum(vk0407[vk0407$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)/(2000/4200000)
+# Lowerbound 196 935 900 ~ 197 000 000 euroa
+sum(vk0407[vk0407$arvio_vuosikulutuksesta_lb>0,]$arvio_vuosikulutuksesta_lb, na.rm=T)/(2000/4200000)
+
+
+
+
+
+
+# Muodostetaan arvio PAF vuosikulutuksesta kaikille pelaajille (kerrotaan lopussa -1, jotta saadaan positiivinen kulutusarvio)
+vk1316_paf <- vk1316 %>% filter(rape3.1>0) %>% dplyr::mutate(arvio_vuosikulutuksesta_ub=(ifelse(rape2b==1, rape2c2*180, ifelse(rape2b==2, rape2c2*52, ifelse(rape2b==3, rape2c2*12, rape2c2))))*(-1), arvio_vuosikulutuksesta_lb=(ifelse(rape2b==1, rape2c2*90, ifelse(rape2b==2, rape2c2*26, ifelse(rape2b==3, rape2c2*6, rape2c2))))*(-1))
+vk1316_paf$offshore_kpl <- vk1316_paf$rape3.1+vk1316_paf$rape3.2+vk1316_paf$rape3.3+vk1316_paf$rape3.4+vk1316_paf$rape3.5+vk1316_paf$rape3.6
+
+
+# Paljonko PAF pelaajia on kaikista vastaajista? reilu 1% eli hieman yli 20 vastaajaa
+(sum(vk1316[vk1316$rape2b<5 & vk1316$offshore_kpl<2,]$rape3.1, na.rm=T)/length(unique(vk1316$lomake)))
+
+# kuinka suuri osa PAF-pelaajista ilmoittanut jääneensä voitolle: n. 33%
+(sum(vk1316_paf$rape2c1==1, na.rm=T)/sum(!is.na(vk1316_paf$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä tappiolle: n. 50%
+(sum(vk1316_paf$rape2c1==2, na.rm=T)/sum(!is.na(vk1316_paf$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ilmoittanut jääneensä +-0: n. 15%
+(sum(vk1316_paf$rape2c1==3, na.rm=T)/sum(!is.na(vk1316_paf$rape2c1)))
+# kuinka suuri osa offshore-pelaajista ei osaa sano onko jäänyt voitolle vai tappiolle: n. 2.5%
+(sum(vk1316_paf$rape2c1==4, na.rm=T)/sum(!is.na(vk1316_paf$rape2c1)))
+
+
+vk1316_paf_wt <- svydesign(id = ~lomake, 
+                           strata = ~jakso,
+                           weights = ~weight,
+                           nest = TRUE,
+                           data = vk1316_paf[vk1316_paf$offshore_kpl<2 & vk1316_paf$arvio_vuosikulutuksesta_ub>0 & !is.na(vk1316_paf$arvio_vuosikulutuksesta_ub),])
+
+paf_vuosikulutus_w_1316 <- as.data.frame(svymean(~arvio_vuosikulutuksesta_ub, vk1316_paf_wt, na = TRUE))
+names(paf_vuosikulutus_w_1316)[1] <- "paf_ub"
+names(paf_vuosikulutus_w_1316)[2] <- "sd_ub"
+paf_vuosikulutus_w_1316 <- cbind(paf_vuosikulutus_w_1316, as.data.frame(svymean(~arvio_vuosikulutuksesta_lb, vk1316_paf_wt, na = TRUE)))
+names(paf_vuosikulutus_w_1316)[3] <- "paf_lb"
+names(paf_vuosikulutus_w_1316)[4] <- "sd_lb"
+
+paf_vuosikulutus_w_1316$paf_pelaaminen_yht_ub <- (4182039*0.012*paf_vuosikulutus_w_1316$paf_ub)
+paf_vuosikulutus_w_1316$paf_pelaaminen_yht_lb <- (4182039*0.012*paf_vuosikulutus_w_1316$paf_lb)
+#write.csv(paf_vuosikulutus_w_1316, "//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/paf_euro_arviot.csv")
+# upperbound 49392256 ~ 49 milj. euroa
+# lowerbound 	24942321 ~ 25 milj. euroa
+
+
+# Upperbound 375 087 300 ~ 375 000 000 euroa
+sum(vk1316[vk1316$arvio_vuosikulutuksesta_ub>0,]$arvio_vuosikulutuksesta_ub, na.rm=T)/(2000/4200000)
+# Lowerbound 196 935 900 ~ 197 000 000 euroa
+sum(vk1316[vk1316$arvio_vuosikulutuksesta_lb>0,]$arvio_vuosikulutuksesta_lb, na.rm=T)/(2000/4200000)
+

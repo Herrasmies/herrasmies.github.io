@@ -368,6 +368,9 @@ div.tocify {
     <li>
       <a href="videopoker_simulator_eng.html">Video poker simulator (updated English version)</a>
     </li>
+    <li>
+      <a href="winning_streak_simulation.html">Winning streak simulator</a>
+    </li>
     <li class="divider"></li>
     <li class="dropdown-header">Content to be added</li>
     <li class="dropdown-header">TBA</li>
@@ -453,6 +456,9 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
   
   simulations = data.frame(nrow = 0)
   
+  #For first win simulations (Nigel Turner&#39;s idea)
+  first_win = data.frame(nrow = 0)
+  
   if (volatility==&quot;low&quot;) {
     payout &lt;- c(100, 50, 30, 15, 8, 7, 3, 2, 0) - 1
     probability &lt;- c(0.002, 0.011, 0.236, 1.151, 1.101, 1.123, 7.445, 12.928, 76.003)/100
@@ -475,15 +481,23 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
     
     test &lt;- sample(payout, rounds, replace=TRUE, prob=probability)
     test &lt;- data.frame(run = test)
-    names(test)[1] &lt;- i
+    names(test)[1] &lt;- i #replaces run with simple integer (for simplicity). Code needs tidying a bit.
   
     simulations &lt;- cbind(simulations, cumsum(test))
     simulations$nrow &lt;- NULL
+    
+    #Locate first win among all bets
+    first_win_temp &lt;- which(test &gt; 0)[1]
+    first_win_temp &lt;- data.frame(run = first_win_temp)
+    names(first_win_temp)[1] &lt;- i
+    first_win &lt;- cbind(first_win, first_win_temp)
+    first_win$nrow &lt;- NULL
     
   }
   
   max_value &lt;- which(tail(simulations, 1) == max(tail(simulations, 1))) # Among the last row, which column has the highest value
   min_value &lt;- which(tail(simulations, 1) == min(tail(simulations, 1))) # Among the last row, which column has the lowest value
+  
   
   #How many are winning at the end
   winners &lt;- length(which(tail(simulations, 1) &gt; 0))
@@ -665,7 +679,21 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
     }
 }
 
-#for basic calculations e.g. mean(replicate(5, casino_simulator(300, 100, F, &quot;low&quot;))); FOR THIS USE &quot;winners&quot; as the return output!</code></pre>
+#for basic calculations e.g. mean(replicate(5, casino_simulator(300, 100, F, &quot;low&quot;))); FOR THIS USE &quot;winners&quot; as the return output!
+
+#Histograms of first win distributions. To use these, return must be at &quot;first_win&quot;
+
+# gather(casino_simulator(500, 1000, F, &quot;high&quot;)) %&gt;%
+#   ggplot(aes(value)) +
+#   geom_histogram(color = &quot;grey&quot;, fill =&quot;lightblue&quot;, bins = 25) +
+#   theme_classic() +
+#   labs(y = &quot;Observations&quot;, x = &quot;First win occurrence&quot;, color = NULL, title = &quot;Volatility: High&quot;) +
+#   geom_vline(aes(xintercept=median(as.numeric(value), na.rm=T), color=&quot;Median&quot;), size=1) +
+#   geom_vline(aes(xintercept=mean(as.numeric(value), na.rm=T), color=&quot;Mean&quot;), size=1) +
+#   geom_text(aes(label = mean(value), y = 200, x = mean(value)), color = &quot;red&quot;) +
+#   geom_text(aes(label = median(value), y = 250, x = median(value)), color = &quot;blue&quot;) +
+#   scale_color_manual(values = c(&quot;red&quot;, &quot;blue&quot;)) +
+#   theme(legend.position = c(.5, .5))</code></pre>
 <div id="low-volatility-10-hours" class="section level2">
 <h2>Low volatility (10 hours)</h2>
 <div id="animation" class="section level3">

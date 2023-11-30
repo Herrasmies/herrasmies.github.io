@@ -1,27 +1,28 @@
 {
-    "id": "2A8BA93D",
+    "id": "AAD92F4F",
     "path": "C:/Users/jpgk/Desktop/Henk.koht.nettisivu/herrasmies.github.io/coinflip_simulator.Rmd",
     "project_path": "coinflip_simulator.Rmd",
     "type": "r_markdown",
-    "hash": "0",
+    "hash": "2495963629",
     "contents": "",
     "dirty": false,
-    "created": 1697201457559.0,
+    "created": 1701341092307.0,
     "source_on_save": false,
-    "relative_order": 14,
+    "relative_order": 13,
     "properties": {
         "tempName": "Untitled1",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "13,0",
-        "scrollLine": "0"
+        "cursorPosition": "18,19",
+        "scrollLine": "0",
+        "last_setup_crc32": ""
     },
     "folds": "",
-    "lastKnownWriteTime": 1697201788,
+    "lastKnownWriteTime": 1701180090,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1697201788412,
+    "last_content_update": 1701180090,
     "read_only": false,
     "read_only_alternatives": []
 }

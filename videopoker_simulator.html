@@ -368,6 +368,9 @@ div.tocify {
     <li>
       <a href="videopoker_simulator_eng.html">Video poker simulator (updated English version)</a>
     </li>
+    <li>
+      <a href="winning_streak_simulation.html">Winning streak simulator</a>
+    </li>
     <li class="divider"></li>
     <li class="dropdown-header">Content to be added</li>
     <li class="dropdown-header">TBA</li>
@@ -409,25 +412,19 @@ div.tocify {
 videopokeripelin voittojen ja häviöiden jakautumista useiden eri
 pelaajien välillä. Simulaattori on viestinnällinen työkalu. Se on
 tarkoitettu erityisesti pelaajille, jotka eivät ole perehtyneet
-rahapelien logiikkaan ja joilla on tavanomaista korkeampi
-rahapeliongelman riski. Videopokerisimulaation taustaoletukset:</p>
+rahapelien logiikkaan ja joilla on tavanomaista korkeampi r * Käsien
+voittosumma euroissa korkean / keskitason / matalan volatiliteetin
+pelissä (sulkeissa todennäköisyys optimistrategialla) +
+Kuningasvärisuora: 2000e / 500e / 100e (0.002%) + Värisuora: 50e / 55e /
+50e (0.011%) + Neljä samaa: 33e / 45e / 30e (0.236%) + Täyskäsi: 14e /
+13e / 15e (1.151%) + Väri: 7e / 7e / 8e (1.101%) + Suora: 5e / 6e / 7e
+(1.123%) + Kolme samaa: 3e / 3e / 3e (7.445%) + Kaksi paria: 2e / 2e /
+2e (12.928%) * Palautusprosentit optimistrategialla: 89.955% (korkea
+volaahapeliongelman riski. Videopokerisimulaation taustaoletukset:</p>
 <ul>
 <li>Jokaisessa panostuskierroksessa on 1 euron panos</li>
-<li>Pelataan 5 panostuskierrosta minuutissa</li>
-<li>Käsien voittosumma euroissa korkean / keskitason / matalan
-volatiliteetin pelissä (sulkeissa todennäköisyys optimistrategialla)
-<ul>
-<li>Kuningasvärisuora: 2000e / 500e / 100e (0.002%)</li>
-<li>Värisuora: 50e / 55e / 50e (0.011%)</li>
-<li>Neljä samaa: 33e / 45e / 30e (0.236%)</li>
-<li>Täyskäsi: 14e / 13e / 15e (1.151%)</li>
-<li>Väri: 7e / 7e / 8e (1.101%)</li>
-<li>Suora: 5e / 6e / 7e (1.123%)</li>
-<li>Kolme samaa: 3e / 3e / 3e (7.445%)</li>
-<li>Kaksi paria: 2e / 2e / 2e (12.928%)</li>
-</ul></li>
-<li>Palautusprosentit optimistrategialla: 89.955% (korkea
-volatiliteetti) ja 89.934% (matala volatiliteetti)</li>
+<li>Pelataan 5 panostuskierrosta minuutissatiliteetti) ja 89.934%
+(matala volatiliteetti)</li>
 <li>Simulaatioissa oletetaan, että pelaajat pelaavat peliä
 optimistrategiaa hyödyntäen</li>
 <li>Kuvissa havainnollistetaan “onnekkain” ja “epäonnekkain” pelaaja,

@@ -38,7 +38,9 @@ casino_simulator <- function(rounds, players, topbottom = F, volatility = "low")
   
   if (volatility=="low") {
     payout <- c(0, 2) - 1
+    #payout <- c(-1, 0, 1) #shakkisekoilu
     probability <- c(50, 50)/100
+    #probability <- c(3, 3, 94)/100
     ev <- sum(payout*probability)
   }
   

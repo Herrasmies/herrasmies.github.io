@@ -25,6 +25,8 @@ navbar:
           href: videopoker_simulator.html
         - text: "Video poker simulator (updated English version)"
           href: videopoker_simulator_eng.html
+        - text: "Winning streak simulator"
+          href: winning_streak_simulation.html
         - text: "---------"
         - text: "Content to be added"
         - text: "TBA"
