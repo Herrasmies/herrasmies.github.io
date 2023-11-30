@@ -16,7 +16,7 @@ Below is a simple simulation for winning streak lengths when the outcome is eith
 
 I'm using a streak length of 44 as a "length of interest". If 50 000 games are played given these probabilities, then the likelihood of <b>not</b> having a winning streak of at least 44 games at least once, is 0.6% (0.006). 
 
-Over 50 000 games given the above probabilities for wins and losses, one should on average expect to have 4.967 winning streaks (SD = 2.18517) that are at least 44 games long. Finally, I visualize the distribution of the longest winning streaks for each 1000 simulated set of 50 thousand games. As can be seen in the figure (histogram), even winning streaks of 80+ games are certainly not unheard of, given these parameters.
+Over 50 000 games given the above probabilities for wins and losses, one should on average expect to have 4.961 winning streaks (SD = 2.232143) that are at least 44 games long. Finally, I visualize the distribution of the longest winning streaks for each 1000 simulated set of 50 thousand games. As can be seen in the figure (histogram), even winning streaks of 80+ games are certainly not unheard of, given these parameters.
 
 ## Simulations
 ```{r, message=FALSE, include=TRUE}
@@ -45,29 +45,32 @@ head(sample(result, games, replace=TRUE, prob = probability), 30)
 #For these games, calculate the length of each win streak. 
 #Result: list of winning streak lengths across all 50000 games (display first 30)
 set.seed(1)
-head(rle(sample(result, games, replace=TRUE, prob = probability))$lengths, 30)
+run_length_all <- rle(sample(result, games, replace=TRUE, prob = probability))
+run_length_wins <- run_length_all$lengths[run_length_all$values==1]
+run_length_losses <- run_length_all$lengths[run_length_all$values==0] #to be used later (not yet analysed)
+head(run_length_wins, 30)
 
 #Calculate the number of winning streaks longer than 44
-set.seed(1)
-sum(rle(sample(result, games, replace=TRUE, prob = probability))$lengths > streak)
+sum(run_length_wins > streak)
 
 #Calculate the number of winning streaks longer than 44 1000 times, obtain mean and standard deviation
 set.seed(1)
-head(replicate(replicates, sum(rle(sample(result, games, replace=TRUE, prob = probability))$lengths > streak)), 30)
-mean(replicate(replicates, sum(rle(sample(result, games, replace=TRUE, prob = probability))$lengths > streak)))
-sd(replicate(replicates, sum(rle(sample(result, games, replace=TRUE, prob = probability))$lengths > streak)))
+run_length_wins_repl <- replicate(replicates, with(rle(sample(result, games, replace=TRUE, prob = probability)), sum(lengths[values==1] > streak)))
+head(run_length_wins_repl, 30)
+mean(run_length_wins_repl)
+sd(run_length_wins_repl)
 
 
 #Calculate the number of times there were 0 winning streaks of at least 44 games, express it as a probability
 set.seed(1)
-sum(replicate(replicates, sum(rle(sample(result, games, replace=TRUE, prob = probability))$lengths > streak)) == 0) / replicates
+sum(run_length_wins_repl == 0) / replicates
 ```
 
 ## Histogram
 ```{r, message=FALSE, include=TRUE}
 #Histogram showing the distribution of the maximum streak lengths across all simulations
 set.seed(1)
-chess_data <- tibble(x = replicate(replicates, max(rle(sample(result, games, replace=TRUE, prob = probability))$lengths)))
+chess_data <- tibble(x = replicate(replicates, max(run_length_wins_repl)))
 
 chess_data %>% ggplot(aes(x)) +
   geom_histogram(aes(y=..density..), color = "black", fill = "lightblue") +
