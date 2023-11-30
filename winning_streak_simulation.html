@@ -476,7 +476,7 @@ sum(run_length_wins_repl == 0) / replicates</code></pre>
 <h2>Histogram</h2>
 <pre class="r"><code>#Histogram showing the distribution of the maximum streak lengths across all simulations
 set.seed(1)
-chess_data &lt;- tibble(x = replicate(replicates, max(run_length_wins_repl)))
+chess_data &lt;- tibble(x = replicate(replicates, with(rle(sample(result, games, replace=TRUE, prob = probability)), max(lengths[values==1]))))
 
 chess_data %&gt;% ggplot(aes(x)) +
   geom_histogram(aes(y=..density..), color = &quot;black&quot;, fill = &quot;lightblue&quot;) +
