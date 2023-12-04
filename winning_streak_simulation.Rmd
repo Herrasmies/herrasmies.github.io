@@ -73,7 +73,9 @@ set.seed(1)
 chess_data <- tibble(x = replicate(replicates, with(rle(sample(result, games, replace=TRUE, prob = probability)), max(lengths[values==1]))))
 
 chess_data %>% ggplot(aes(x)) +
-  geom_histogram(aes(y=..density..), color = "black", fill = "lightblue") +
+  geom_bar(aes(y = (..count..)/sum(..count..)), color = "black", fill = "lightblue") +
+  #geom_histogram(aes(y=..density..), color = "black", fill = "lightblue") +
+  #geom_density() +
   scale_y_continuous(labels = scales::label_percent(accuracy = 1L)) +
   labs(y = "Proportion", x = "Maximum winning streak length (number of games)",
        title = "50k games played simulated 1000 times, 300 elo difference (15% / 85%)") +
