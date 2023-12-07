@@ -488,6 +488,36 @@ chess_data %&gt;% ggplot(aes(x)) +
   theme_bw()</code></pre>
 <p><img src="winning_streak_simulation_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
 </div>
+<div id="histogram-comparisons-hypothetical-cheaters-vs.-legit-players"
+class="section level2">
+<h2>Histogram comparisons (hypothetical cheaters vs. legit players)</h2>
+<pre class="r"><code>#Histogram showing the distribution of the maximum streak lengths across all simulations, separetely for hypothetical cheaters (with 80% win probability) and legit players (with 70% win probability)
+set.seed(1)
+probability_cheaters &lt;- c(0.2, 0.8)
+probability_legit &lt;- c(0.30, 0.70)
+
+chess_data_cheaters &lt;- tibble(x = replicate(replicates, with(rle(sample(result, games, replace=TRUE, prob = probability_cheaters)), max(lengths[values==1]))), group = &quot;Cheaters (80% win)&quot;)
+chess_data_legit &lt;- tibble(x = replicate(replicates, with(rle(sample(result, games, replace=TRUE, prob = probability_legit)), max(lengths[values==1]))),
+                           group = &quot;Legit players (70% win)&quot;)
+
+chess_data_all &lt;- rbind(chess_data_cheaters, chess_data_legit)
+
+
+chess_data_all %&gt;% ggplot(aes(x, fill = group, color = group)) +
+  #geom_density(aes(color = group, fill = group), alpha=.5) +
+  geom_bar(aes(y = (..count..)/sum(..count..)), alpha = .25, position = &quot;identity&quot;) +
+  #geom_histogram(aes(y=..density..), color = &quot;black&quot;, fill = &quot;lightblue&quot;) +
+  scale_y_continuous(labels = scales::label_percent(accuracy = 1L)) +
+  labs(y = &quot;Proportion&quot;, x = &quot;Maximum winning streak length (number of games)&quot;,
+       title = &quot;50k games played simulated 1000 times&quot;) +
+  theme_bw(base_size=13) +
+  theme(legend.position = c(0.7,0.5)) +
+  # scale_fill_manual(values = c(&quot;salmon&quot;, &quot;blue&quot;)) +
+  # scale_color_manual(values = c(&quot;salmon&quot;, &quot;blue&quot;)) +
+  labs(color = NULL, fill = NULL)</code></pre>
+<p><img src="winning_streak_simulation_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<pre class="r"><code>#wilcox.test(chess_data_all$x~chess_data_all$group)</code></pre>
+</div>
 
 
 

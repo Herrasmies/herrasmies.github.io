@@ -1,0 +1,78 @@
+library(tidyverse)
+
+pisa <- read.table("C:\\Users\\jpgk\\Desktop\\INT_stui_2003_v2.txt",
+                   header = F, sep = "", dec = ".", fill = TRUE)
+
+pisa_fin <- pisa %>% filter(grepl('FIN', V1))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+####
+####
+
+# SWE 93 
+# FIN 88 
+# CAN 86 
+# USA 83 
+# AUS 79 
+# NZL 76 
+# BEL 74 
+# KOR 72 
+# NOR 71 
+# EST 69
+# POR 69 
+# Luxembourg 64 
+# CZE 60 
+# NLD 57 
+# GER 55 
+# TUR 52 
+# AUT 52 
+# CHE 48 
+# ISL 45 
+# DEN 45 
+# IRL 45 
+# LTU 43 
+# ESP 43 
+# ITA 43 
+# Serbia 43 
+# Romania 41 
+# Malta 40 
+# Cyprus 40
+# France 36
+# Greece 36
+# Croatia 33
+# Japan 33 
+# Poland 33
+# Slovenia 33
+# Israel 31
+# United Arab Emirates 29
+# Mexico 29 
+# Latvia 26 
+# Argentina 26
+# North Macedonia 21
+# Albania 21
+# Bulgaria 21
+# Chile 21
+# Moldova 19
+# India 19
+# Jordan 19
+# Brazil 14
+# Russia 12
+# China 7 
+# Ukraine 7
+# Slovakia 7
+# Saudi Arabia 5
+# South Africa 5
+# Hungary 0
+# Indonesia 0
