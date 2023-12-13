@@ -253,7 +253,6 @@ fig1 <- offshore_logit1_ef %>%
 offshore_logit1_ef2 <- as_tibble(effect(c("veikkaus_viikoittain_f", "jakso"), offshore_logit1))
 
 fig2 <- offshore_logit1_ef2 %>%
-
   dplyr::mutate(veikkaus_viikoittain_f = factor(veikkaus_viikoittain_f,
                                               levels = c(1,0),
                                               labels = c("Yes", "No"))) %>%
