@@ -1,0 +1,218 @@
+library(tidyverse)
+library(haven)
+library(foreign)
+library(psych)
+library(lavaan)
+library(semPlot)
+#library(gpairs)
+
+
+marianna_data <- read_spss('C:\\Users\\jpgk\\Downloads\\Combined Data_cleaned_634_corrected_Hexaco.sav')
+
+
+marianna_data %>%
+  dplyr::select(HonestyHumility, Emotionality, Extraversion, Agreeableness, Conscientiousness, OpennesstoExperience,
+                MoralObligation, IOS, INS, EnvironmentalSelfID_scale, SocialAwarenessSelf_scale, SocialAwarenessOther_scale,
+                MAA_scale, NEP_scale, EnvironmentalConcern_scale, AwarenessConsequencesEgo_scale, AwarenessConsequencesSocial_scale,
+                AwarenessConsequencesBio_scale, MoralAwareness2_scale, 
+                ConcernNature_scale, ConcernPeople_scale, ConcernMe_scale, ECCB12_scale) %>% 
+  pairs.panels(method = "spearman", # correlation method
+               hist.col = "#00AFBB",
+               density = TRUE,  # show density plots
+               ellipses = TRUE,
+               smoother = FALSE) # show correlation ellipses
+
+
+marianna_data %>%
+  dplyr::select(HonestyHumility, Emotionality, Extraversion, Agreeableness, Conscientiousness, OpennesstoExperience) %>% 
+  pairs.panels(method = "spearman", # correlation method
+               hist.col = "#00AFBB",
+               density = TRUE,  # show density plots
+               ellipses = TRUE,
+               smoother = FALSE) # show correlation ellipses
+
+
+
+
+#Environmental   Viewpoints	== environmental_concern?
+#general concern
+#Awareness of Consequences -General  	
+#ECCB12 vai B11? Nyt B12 käytetty
+
+
+marianna_data %>%
+  dplyr::select(EnvironmentalSelfID_scale, MAA_scale, SocialAwarenessSelf_scale, SocialAwarenessOther_scale,
+                IOS, INS, MoralAwareness2_scale, MoralObligation,
+                EnvironmentalConcern_scale, ConcernNature_scale, ConcernPeople_scale, ConcernMe_scale,
+                NEP_scale, AwarenessConsequencesBio_scale, AwarenessConsequencesSocial_scale, AwarenessConsequencesEgo_scale, 
+                ECCB12_scale) %>%
+  gather(key, value) %>%
+  dplyr::mutate(key = factor(key, labels = c("Environmental Self ID",
+                                             "MAA",
+                                             "Social Awareness - Self",
+                                             "Social Awareness - Other",
+                                             "IOS",
+                                             "INS",
+                                             "Moral Awareness",
+                                             "Moral Obligation",
+                                             "Environmental Viewpoints",
+                                             "Biospheric Concern",
+                                             "Social Concern",
+                                             "Egoistic Concern",
+                                             "NEP",
+                                             "Awareness of C. - Bio",
+                                             "Awareness of C. - Social",
+                                             "Awareness of C. - Ego",
+                                             "ECCG"))) %>%
+  ggplot(aes(value)) +
+  geom_histogram(alpha=.85, color="black", fill="lightblue") +
+  theme_bw() +
+  labs(x = "DV value", y = "Number of observations", title = "Histograms of DVs") +
+  facet_wrap("key", scales="free_y")
+
+
+
+
+marianna_model <- '
+  # regressions
+    EnvironmentalSelfID_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    MAA_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    SocialAwarenessSelf_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    SocialAwarenessOther_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    IOS ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    INS ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    MoralAwareness2_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    MoralObligation ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    EnvironmentalConcern_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    ConcernNature_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    ConcernPeople_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    ConcernMe_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    NEP_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    AwarenessConsequencesBio_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    AwarenessConsequencesSocial_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    AwarenessConsequencesEgo_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+    ECCB12_scale ~ HonestyHumility+Emotionality+Extraversion+Agreeableness+Conscientiousness+OpennesstoExperience+Sample+Age+Gender+Education
+
+  # residual correlations (automatically calculated for DVs)
+    AwarenessConsequencesSocial_scale ~~ 0*AwarenessConsequencesBiio_scale
+    AwarenessConsequencesBio_scale ~~ 0*AwarenessConsequencesEgo_scale
+    AwarenessConsequencesSocial_scale ~~ 0*AwarenessConsequencesEgo_scale
+    EnvironmentalSelfID_scale ~~ 0*ECCB12_scale
+    EnvironmentalSelfID_scale ~~ 0*MoralObligation
+    EnvironmentalConcern_scale ~~ 0*NEP_scale
+    EnvironmentalConcern_scale ~~ 0*AwarenessConsequencesBio_scale
+    EnvironmentalConcern_scale ~~ 0*AwarenessConsequencesSocial_scale
+    EnvironmentalConcern_scale ~~ 0*AwarenessConsequencesEgo_scale
+    
+
+'
+
+fit <- sem(marianna_model, data = marianna_data)
+summary(fit, standardized = TRUE)
+
+
+semPaths(
+  object = fit,
+  what = "path",
+  whatLabels = "par",
+  style = "ram",
+  layout = "tree",
+  rotation = 2,
+  sizeMan = 7,
+  sizeLat = 7,
+  color = "lightgray",
+  edge.label.cex = 1.2,
+  label.cex = 1.3
+)
+
+
+### Residuals
+
+malli1 <- as.data.frame(resid(lm(EnvironmentalSelfID_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                   Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli1)[1] <- "EnvironmentalSelfID_scale"
+
+malli2 <- as.data.frame(resid(lm(MAA_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                   Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli2)[1] <- "MAA_scale"
+
+malli3 <- as.data.frame(resid(lm(SocialAwarenessSelf_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                   Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli3)[1] <- "SocialAwarenessSelf_scale"
+
+malli4 <- as.data.frame(resid(lm(SocialAwarenessOther_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                   Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli4)[1] <- "SocialAwarenessOther_scale"
+
+
+malli5 <- as.data.frame(resid(lm(IOS ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                   Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli5)[1] <- "IOS"
+
+
+malli6 <- as.data.frame(resid(lm(INS ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                   Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli6)[1] <- "INS"
+
+
+malli7 <- as.data.frame(resid(lm(MoralAwareness2_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                   Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli7)[1] <- "MoralAwareness2_scale"
+
+
+malli8 <- as.data.frame(resid(lm(MoralObligation ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                   Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli8)[1] <- "MoralObligation"
+
+
+malli9 <- as.data.frame(resid(lm(EnvironmentalConcern_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                   Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli9)[1] <- "EnvironmentalConcern_scale"
+
+
+malli10 <- as.data.frame(resid(lm(ConcernNature_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                    Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli10)[1] <- "ConcernNature_scale"
+
+
+malli11 <- as.data.frame(resid(lm(ConcernPeople_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                    Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli11)[1] <- "ConcernPeople_scale"
+
+
+malli12 <- as.data.frame(resid(lm(ConcernMe_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                    Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli12)[1] <- "ConcernMe_scale"
+
+malli13 <- as.data.frame(resid(lm(NEP_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                    Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli13)[1] <- "NEP_scale"
+
+
+malli14 <- as.data.frame(resid(lm(AwarenessConsequencesBio_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                    Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli14)[1] <- "AwarenessConsequencesBio_scale"
+
+
+malli15 <- as.data.frame(resid(lm(AwarenessConsequencesSocial_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                    Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli15)[1] <- "AwarenessConsequencesSocial_scale"
+
+malli16 <- as.data.frame(resid(lm(AwarenessConsequencesEgo_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                    Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli16)[1] <- "AwarenessConsequencesEgo_scale"
+
+malli17 <- as.data.frame(resid(lm(ECCB12_scale ~ HonestyHumility + Emotionality + Extraversion + Agreeableness +
+                                    Conscientiousness + OpennesstoExperience, data=marianna_data)))
+names(malli17)[1] <- "ECCB12_scale"
+
+
+mallit <- cbind(malli1, malli2, malli3, malli4, malli5, malli6, malli7, malli8, malli9, malli10, malli11, malli12, malli13,
+                malli14, malli15, malli16, malli17)
+
+
+mallit %>% gather(key, value) %>%
+  ggplot(aes(value)) + 
+  geom_histogram(fill="lightblue", color="black", alpha=.75) +
+  facet_wrap("key") +
+  theme_bw()

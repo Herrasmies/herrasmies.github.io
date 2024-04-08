@@ -1,0 +1,870 @@
+library(tidyverse)
+
+vk1215 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 12_15_2022/SPSS_viikot_12_15.csv", sep = ";", dec = ",")
+vk1619 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 16_19_2022/SPSS_viikot_16-19.csv", sep = ";", dec = ",")
+vk2023 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 20_23_2022/SPSS_viikot_20-23.csv", sep = ";", dec = ",")
+vk2427 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 24_27_2022/SPSS_viikot_24-27.csv", sep = ";", dec = ",")
+vk2932 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 29_32/SPSS_viikot_29-32.csv", sep = ";", dec = ",")
+vk3336 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 33_36_2022/SPSS_viikot_33-36.csv", sep = ";", dec = ",")
+vk3841 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 38_41_2022/SPSS_viikot_38-41.csv", sep = ";", dec = ",")
+vk4245 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 42_45_2022/SPSS_viikot_42-45.csv", sep = ";", dec = ",")
+vk4649 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 46_49_2022/SPSS_viikot_46-49.csv", sep = ";", dec = ",")
+vk5103 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 51_03/SPSS_viikot_51_2022-03_2023.csv", sep = ";", dec = ",")
+vk0407 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 04_07_2023/SPSS_viikot_04-07.csv", sep = ";", dec = ",")
+vk0811 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 08_11_2023/SPSS_viikot_08-11_2023.csv", sep = ";", dec = ",")
+vk1316 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 13_16_2023/SPSS_viikot_13-16_2023.csv", sep = ";", dec = ",")
+vk1720 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 17_20_2023/SPSS_viikot_17-20_2023.csv", sep = ";", dec = ",")
+vk2124 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 21_24_2023/SPSS_viikot_21-24_2023.csv", sep = ";", dec = ",")
+vk2528 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 25_28_2023/SPSS_viikot_25-28_2023.csv", sep = ";", dec = ",")
+vk3134 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 31_34_2023/SPSS_viikot_31-34_2023.csv", sep = ";", dec = ",")
+vk3538 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 35_38_2023/SPSS_viikot_35-38_2023.csv", sep = ";", dec = ",")
+vk4043 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 40_43_2023/SPSS_viikot_40-43_2023.csv", sep = ";", dec = ",")
+vk4447 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 44_47_2023/SPSS_viikot_44-47_2023.csv", sep = ";", dec = ",")
+vk4952 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 49_52_2023/SPSS_viikot_49-52_2023.csv", sep = ";", dec = ",")
+vk0104 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 1_4_2024/SPSS_viikot_01-04_2024.csv", sep = ";", dec = ",")
+vk0508 <- read.csv("//helfs01.thl.fi/groups4/Offshore-rahapelaaminen/Viikot 05_08_2024/SPSS_viikot_05-08_2024.csv", sep = ";", dec = ",")
+
+
+vk1215$jakso <- "2022-12-15"
+vk1215$offshore_dummy <- ifelse(vk1215$rape2b<5, 1, 0)
+vk1215$offshore_pelannut <- ifelse(is.na(vk1215$offshore_dummy), 0, vk1215$offshore_dummy)
+vk1215$pelannut <- ifelse(vk1215$rape1==1, 1, 0)
+vk1215$paf_pelannut <- ifelse(vk1215$rape3.1==1, 1, 0)
+vk1215$offshore_kpl <- vk1215$rape3.1+vk1215$rape3.2+vk1215$rape3.3+vk1215$rape3.4+vk1215$rape3.5+vk1215$rape3.6
+vk1215$ongelmia <- ifelse(vk1215$rape5>1 & vk1215$rape5<5, 1, 0)
+vk1215$veikkaus_viikoittain <- ifelse(vk1215$rape2a<3, 1, 0)
+vk1215$offshore_viikoittain <- ifelse(vk1215$rape2b<3, 1, 0)
+vk1215$offshore_viikottain <- ifelse(is.na(vk1215$offshore_viikoittain), 0, vk1215$offshore_viikoittain)
+vk1215$veikkaus_viikottain <- ifelse(is.na(vk1215$veikkaus_viikoittain), 0, vk1215$veikkaus_viikoittain)
+
+vk1215$vain_veikkaus <- ifelse(vk1215$rape1>0 & vk1215$rape2a<5 & vk1215$rape2b>4, 1, 0)
+vk1215$vain_veikkaus <- ifelse(is.na(vk1215$vain_veikkaus), 0, vk1215$vain_veikkaus)
+vk1215$vain_offshore <- ifelse(vk1215$rape1>0 & vk1215$rape2a>4 & vk1215$rape2b<5, 1, 0)
+vk1215$vain_offshore <- ifelse(is.na(vk1215$vain_offshore), 0, vk1215$vain_offshore)
+vk1215$molemmat <- ifelse(vk1215$rape1>0 & vk1215$rape2a<5 & vk1215$rape2b<5, 1, 0)
+#vk1215$molemmat <- ifelse(vk1215$rape1>0 & (vk1215$rape2a<5|vk1215$rape2a==6) & (vk1215$rape2b<5|vk1215$rape2b==6), 1, 0)
+vk1215$molemmat <- ifelse(is.na(vk1215$molemmat), 0, vk1215$molemmat)
+#vk1215$ei_pelannut <- ifelse(vk1215$rape1==2, 1, 0)
+vk1215$ei_pelannut <- ifelse(vk1215$rape1==2|(vk1215$rape1==1 & vk1215$rape2b==5 & vk1215$rape2a==5), 1, 0)
+vk1215$ei_pelannut <- ifelse(is.na(vk1215$ei_pelannut), 0, vk1215$ei_pelannut)
+#vk1215$eos <- ifelse(vk1215$rape1==3, 1, 0)
+vk1215$eos <- ifelse(vk1215$rape1==3|(vk1215$rape2a==6 & vk1215$rape2b>4)|(vk1215$rape2a>4 & vk1215$rape2b==6), 1, 0)
+vk1215$eos <- ifelse(is.na(vk1215$eos), 0, vk1215$eos)
+
+
+
+
+vk1619$jakso <- "2022-16-19"
+vk1619$offshore_dummy <- ifelse(vk1619$rape2b<5, 1, 0)
+vk1619$offshore_pelannut <- ifelse(is.na(vk1619$offshore_dummy), 0, vk1619$offshore_dummy)
+vk1619$pelannut <- ifelse(vk1619$rape1==1, 1, 0)
+vk1619$paf_pelannut <- ifelse(vk1619$rape3.1==1, 1, 0)
+vk1619$offshore_kpl <- vk1619$rape3.1+vk1619$rape3.2+vk1619$rape3.3+vk1619$rape3.4+vk1619$rape3.5+vk1619$rape3.6
+vk1619$ongelmia <- ifelse(vk1619$rape5>1 & vk1619$rape5<5, 1, 0)
+vk1619$veikkaus_viikoittain <- ifelse(vk1619$rape2a<3, 1, 0)
+vk1619$offshore_viikoittain <- ifelse(vk1619$rape2b<3, 1, 0)
+vk1619$vain_veikkaus <- ifelse(vk1619$rape1>0 & vk1619$rape2a<5 & vk1619$rape2b>4, 1, 0)
+vk1619$vain_offshore <- ifelse(vk1619$rape1>0 & vk1619$rape2a>4 & vk1619$rape2b<5, 1, 0)
+vk1619$molemmat <- ifelse(vk1619$rape1>0 & vk1619$rape2a<5 & vk1619$rape2b<5, 1, 0)
+vk1619$ei_pelannut <- ifelse(vk1619$rape1==2, 1, 0)
+vk1619$eos <- ifelse(vk1619$rape1==3, 1, 0)
+vk1619$offshore_viikottain <- ifelse(is.na(vk1619$offshore_viikoittain), 0, vk1619$offshore_viikoittain)
+vk1619$veikkaus_viikottain <- ifelse(is.na(vk1619$veikkaus_viikoittain), 0, vk1619$veikkaus_viikoittain)
+
+vk1619$vain_veikkaus <- ifelse(vk1619$rape1>0 & vk1619$rape2a<5 & vk1619$rape2b>4, 1, 0)
+vk1619$vain_veikkaus <- ifelse(is.na(vk1619$vain_veikkaus), 0, vk1619$vain_veikkaus)
+vk1619$vain_offshore <- ifelse(vk1619$rape1>0 & vk1619$rape2a>4 & vk1619$rape2b<5, 1, 0)
+vk1619$vain_offshore <- ifelse(is.na(vk1619$vain_offshore), 0, vk1619$vain_offshore)
+vk1619$molemmat <- ifelse(vk1619$rape1>0 & vk1619$rape2a<5 & vk1619$rape2b<5, 1, 0)
+#vk1619$molemmat <- ifelse(vk1619$rape1>0 & (vk1619$rape2a<5|vk1619$rape2a==6) & (vk1619$rape2b<5|vk1619$rape2b==6), 1, 0)
+vk1619$molemmat <- ifelse(is.na(vk1619$molemmat), 0, vk1619$molemmat)
+#vk1619$ei_pelannut <- ifelse(vk1619$rape1==2, 1, 0)
+vk1619$ei_pelannut <- ifelse(vk1619$rape1==2|(vk1619$rape1==1 & vk1619$rape2b==5 & vk1619$rape2a==5), 1, 0)
+vk1619$ei_pelannut <- ifelse(is.na(vk1619$ei_pelannut), 0, vk1619$ei_pelannut)
+#vk1619$eos <- ifelse(vk1619$rape1==3, 1, 0)
+vk1619$eos <- ifelse(vk1619$rape1==3|(vk1619$rape2a==6 & vk1619$rape2b>4)|(vk1619$rape2a>4 & vk1619$rape2b==6), 1, 0)
+vk1619$eos <- ifelse(is.na(vk1619$eos), 0, vk1619$eos)
+
+
+
+
+vk2023$jakso <- "2022-20-23"
+vk2023$offshore_dummy <- ifelse(vk2023$rape2b<5, 1, 0)
+vk2023$offshore_pelannut <- ifelse(is.na(vk2023$offshore_dummy), 0, vk2023$offshore_dummy)
+vk2023$pelannut <- ifelse(vk2023$rape1==1, 1, 0)
+vk2023$paf_pelannut <- ifelse(vk2023$rape3.1==1, 1, 0)
+vk2023$offshore_kpl <- vk2023$rape3.1+vk2023$rape3.2+vk2023$rape3.3+vk2023$rape3.4+vk2023$rape3.5+vk2023$rape3.6
+vk2023$ongelmia <- ifelse(vk2023$rape5>1 & vk2023$rape5<5, 1, 0)
+vk2023$veikkaus_viikoittain <- ifelse(vk2023$rape2a<3, 1, 0)
+vk2023$offshore_viikoittain <- ifelse(vk2023$rape2b<3, 1, 0)
+vk2023$offshore_viikottain <- ifelse(is.na(vk2023$offshore_viikoittain), 0, vk2023$offshore_viikoittain)
+vk2023$veikkaus_viikottain <- ifelse(is.na(vk2023$veikkaus_viikoittain), 0, vk2023$veikkaus_viikoittain)
+
+vk2023$vain_veikkaus <- ifelse(vk2023$rape1>0 & vk2023$rape2a<5 & vk2023$rape2b>4, 1, 0)
+vk2023$vain_veikkaus <- ifelse(is.na(vk2023$vain_veikkaus), 0, vk2023$vain_veikkaus)
+vk2023$vain_offshore <- ifelse(vk2023$rape1>0 & vk2023$rape2a>4 & vk2023$rape2b<5, 1, 0)
+vk2023$vain_offshore <- ifelse(is.na(vk2023$vain_offshore), 0, vk2023$vain_offshore)
+vk2023$molemmat <- ifelse(vk2023$rape1>0 & vk2023$rape2a<5 & vk2023$rape2b<5, 1, 0)
+#vk2023$molemmat <- ifelse(vk2023$rape1>0 & (vk2023$rape2a<5|vk2023$rape2a==6) & (vk2023$rape2b<5|vk2023$rape2b==6), 1, 0)
+vk2023$molemmat <- ifelse(is.na(vk2023$molemmat), 0, vk2023$molemmat)
+#vk2023$ei_pelannut <- ifelse(vk2023$rape1==2, 1, 0)
+vk2023$ei_pelannut <- ifelse(vk2023$rape1==2|(vk2023$rape1==1 & vk2023$rape2b==5 & vk2023$rape2a==5), 1, 0)
+vk2023$ei_pelannut <- ifelse(is.na(vk2023$ei_pelannut), 0, vk2023$ei_pelannut)
+#vk2023$eos <- ifelse(vk2023$rape1==3, 1, 0)
+vk2023$eos <- ifelse(vk2023$rape1==3|(vk2023$rape2a==6 & vk2023$rape2b>4)|(vk2023$rape2a>4 & vk2023$rape2b==6), 1, 0)
+vk2023$eos <- ifelse(is.na(vk2023$eos), 0, vk2023$eos)
+
+
+
+
+vk2427$jakso <- "2022-24-27"
+vk2427$offshore_dummy <- ifelse(vk2427$rape2b<5, 1, 0)
+vk2427$offshore_pelannut <- ifelse(is.na(vk2427$offshore_dummy), 0, vk2427$offshore_dummy)
+vk2427$pelannut <- ifelse(vk2427$rape1==1, 1, 0)
+vk2427$paf_pelannut <- ifelse(vk2427$rape3.1==1, 1, 0)
+vk2427$offshore_kpl <- vk2427$rape3.1+vk2427$rape3.2+vk2427$rape3.3+vk2427$rape3.4+vk2427$rape3.5+vk2427$rape3.6
+vk2427$ongelmia <- ifelse(vk2427$rape5>1 & vk2427$rape5<5, 1, 0)
+vk2427$veikkaus_viikoittain <- ifelse(vk2427$rape2a<3, 1, 0)
+vk2427$offshore_viikoittain <- ifelse(vk2427$rape2b<3, 1, 0)
+vk2427$offshore_viikottain <- ifelse(is.na(vk2427$offshore_viikoittain), 0, vk2427$offshore_viikoittain)
+vk2427$veikkaus_viikottain <- ifelse(is.na(vk2427$veikkaus_viikoittain), 0, vk2427$veikkaus_viikoittain)
+
+vk2427$vain_veikkaus <- ifelse(vk2427$rape1>0 & vk2427$rape2a<5 & vk2427$rape2b>4, 1, 0)
+vk2427$vain_veikkaus <- ifelse(is.na(vk2427$vain_veikkaus), 0, vk2427$vain_veikkaus)
+vk2427$vain_offshore <- ifelse(vk2427$rape1>0 & vk2427$rape2a>4 & vk2427$rape2b<5, 1, 0)
+vk2427$vain_offshore <- ifelse(is.na(vk2427$vain_offshore), 0, vk2427$vain_offshore)
+vk2427$molemmat <- ifelse(vk2427$rape1>0 & vk2427$rape2a<5 & vk2427$rape2b<5, 1, 0)
+#vk2427$molemmat <- ifelse(vk2427$rape1>0 & (vk2427$rape2a<5|vk2427$rape2a==6) & (vk2427$rape2b<5|vk2427$rape2b==6), 1, 0)
+vk2427$molemmat <- ifelse(is.na(vk2427$molemmat), 0, vk2427$molemmat)
+#vk2427$ei_pelannut <- ifelse(vk2427$rape1==2, 1, 0)
+vk2427$ei_pelannut <- ifelse(vk2427$rape1==2|(vk2427$rape1==1 & vk2427$rape2b==5 & vk2427$rape2a==5), 1, 0)
+vk2427$ei_pelannut <- ifelse(is.na(vk2427$ei_pelannut), 0, vk2427$ei_pelannut)
+#vk2427$eos <- ifelse(vk2427$rape1==3, 1, 0)
+vk2427$eos <- ifelse(vk2427$rape1==3|(vk2427$rape2a==6 & vk2427$rape2b>4)|(vk2427$rape2a>4 & vk2427$rape2b==6), 1, 0)
+vk2427$eos <- ifelse(is.na(vk2427$eos), 0, vk2427$eos)
+
+
+
+vk2932$jakso <- "2022-29-32"
+vk2932$offshore_dummy <- ifelse(vk2932$rape2b<5, 1, 0)
+vk2932$offshore_pelannut <- ifelse(is.na(vk2932$offshore_dummy), 0, vk2932$offshore_dummy)
+vk2932$pelannut <- ifelse(vk2932$rape1==1, 1, 0)
+vk2932$paf_pelannut <- ifelse(vk2932$rape3.1==1, 1, 0)
+vk2932$offshore_kpl <- vk2932$rape3.1+vk2932$rape3.2+vk2932$rape3.3+vk2932$rape3.4+vk2932$rape3.5+vk2932$rape3.6
+vk2932$ongelmia <- ifelse(vk2932$rape5>1 & vk2932$rape5<5, 1, 0)
+vk2932$veikkaus_viikoittain <- ifelse(vk2932$rape2a<3, 1, 0)
+vk2932$offshore_viikoittain <- ifelse(vk2932$rape2b<3, 1, 0)
+vk2932$offshore_viikottain <- ifelse(is.na(vk2932$offshore_viikoittain), 0, vk2932$offshore_viikoittain)
+vk2932$veikkaus_viikottain <- ifelse(is.na(vk2932$veikkaus_viikoittain), 0, vk2932$veikkaus_viikoittain)
+
+vk2932$vain_veikkaus <- ifelse(vk2932$rape1>0 & vk2932$rape2a<5 & vk2932$rape2b>4, 1, 0)
+vk2932$vain_veikkaus <- ifelse(is.na(vk2932$vain_veikkaus), 0, vk2932$vain_veikkaus)
+vk2932$vain_offshore <- ifelse(vk2932$rape1>0 & vk2932$rape2a>4 & vk2932$rape2b<5, 1, 0)
+vk2932$vain_offshore <- ifelse(is.na(vk2932$vain_offshore), 0, vk2932$vain_offshore)
+vk2932$molemmat <- ifelse(vk2932$rape1>0 & vk2932$rape2a<5 & vk2932$rape2b<5, 1, 0)
+#vk2932$molemmat <- ifelse(vk2932$rape1>0 & (vk2932$rape2a<5|vk2932$rape2a==6) & (vk2932$rape2b<5|vk2932$rape2b==6), 1, 0)
+vk2932$molemmat <- ifelse(is.na(vk2932$molemmat), 0, vk2932$molemmat)
+#vk2932$ei_pelannut <- ifelse(vk2932$rape1==2, 1, 0)
+vk2932$ei_pelannut <- ifelse(vk2932$rape1==2|(vk2932$rape1==1 & vk2932$rape2b==5 & vk2932$rape2a==5), 1, 0)
+vk2932$ei_pelannut <- ifelse(is.na(vk2932$ei_pelannut), 0, vk2932$ei_pelannut)
+#vk2932$eos <- ifelse(vk2932$rape1==3, 1, 0)
+vk2932$eos <- ifelse(vk2932$rape1==3|(vk2932$rape2a==6 & vk2932$rape2b>4)|(vk2932$rape2a>4 & vk2932$rape2b==6), 1, 0)
+vk2932$eos <- ifelse(is.na(vk2932$eos), 0, vk2932$eos)
+
+
+
+
+
+vk3336$jakso <- "2022-33-36"
+vk3336$offshore_dummy <- ifelse(vk3336$rape2b<5, 1, 0)
+vk3336$offshore_pelannut <- ifelse(is.na(vk3336$offshore_dummy), 0, vk3336$offshore_dummy)
+vk3336$pelannut <- ifelse(vk3336$rape1==1, 1, 0)
+vk3336$paf_pelannut <- ifelse(vk3336$rape3.1==1, 1, 0)
+vk3336$offshore_kpl <- vk3336$rape3.1+vk3336$rape3.2+vk3336$rape3.3+vk3336$rape3.4+vk3336$rape3.5+vk3336$rape3.6
+vk3336$ongelmia <- ifelse(vk3336$rape5>1 & vk3336$rape5<5, 1, 0)
+vk3336$veikkaus_viikoittain <- ifelse(vk3336$rape2a<3, 1, 0)
+vk3336$offshore_viikoittain <- ifelse(vk3336$rape2b<3, 1, 0)
+vk3336$offshore_viikottain <- ifelse(is.na(vk3336$offshore_viikoittain), 0, vk3336$offshore_viikoittain)
+vk3336$veikkaus_viikottain <- ifelse(is.na(vk3336$veikkaus_viikoittain), 0, vk3336$veikkaus_viikoittain)
+
+vk3336$vain_veikkaus <- ifelse(vk3336$rape1>0 & vk3336$rape2a<5 & vk3336$rape2b>4, 1, 0)
+vk3336$vain_veikkaus <- ifelse(is.na(vk3336$vain_veikkaus), 0, vk3336$vain_veikkaus)
+vk3336$vain_offshore <- ifelse(vk3336$rape1>0 & vk3336$rape2a>4 & vk3336$rape2b<5, 1, 0)
+vk3336$vain_offshore <- ifelse(is.na(vk3336$vain_offshore), 0, vk3336$vain_offshore)
+vk3336$molemmat <- ifelse(vk3336$rape1>0 & vk3336$rape2a<5 & vk3336$rape2b<5, 1, 0)
+#vk3336$molemmat <- ifelse(vk3336$rape1>0 & (vk3336$rape2a<5|vk3336$rape2a==6) & (vk3336$rape2b<5|vk3336$rape2b==6), 1, 0)
+vk3336$molemmat <- ifelse(is.na(vk3336$molemmat), 0, vk3336$molemmat)
+#vk3336$ei_pelannut <- ifelse(vk3336$rape1==2, 1, 0)
+vk3336$ei_pelannut <- ifelse(vk3336$rape1==2|(vk3336$rape1==1 & vk3336$rape2b==5 & vk3336$rape2a==5), 1, 0)
+vk3336$ei_pelannut <- ifelse(is.na(vk3336$ei_pelannut), 0, vk3336$ei_pelannut)
+#vk3336$eos <- ifelse(vk3336$rape1==3, 1, 0)
+vk3336$eos <- ifelse(vk3336$rape1==3|(vk3336$rape2a==6 & vk3336$rape2b>4)|(vk3336$rape2a>4 & vk3336$rape2b==6), 1, 0)
+vk3336$eos <- ifelse(is.na(vk3336$eos), 0, vk3336$eos)
+
+
+
+
+vk3841$jakso <- "2022-38-41"
+vk3841$offshore_dummy <- ifelse(vk3841$rape2b<5, 1, 0)
+vk3841$offshore_pelannut <- ifelse(is.na(vk3841$offshore_dummy), 0, vk3841$offshore_dummy)
+vk3841$pelannut <- ifelse(vk3841$rape1==1, 1, 0)
+vk3841$paf_pelannut <- ifelse(vk3841$rape3.1==1, 1, 0)
+vk3841$offshore_kpl <- vk3841$rape3.1+vk3841$rape3.2+vk3841$rape3.3+vk3841$rape3.4+vk3841$rape3.5+vk3841$rape3.6
+vk3841$ongelmia <- ifelse(vk3841$rape5>1 & vk3841$rape5<5, 1, 0)
+vk3841$veikkaus_viikoittain <- ifelse(vk3841$rape2a<3, 1, 0)
+vk3841$offshore_viikoittain <- ifelse(vk3841$rape2b<3, 1, 0)
+vk3841$offshore_viikottain <- ifelse(is.na(vk3841$offshore_viikoittain), 0, vk3841$offshore_viikoittain)
+vk3841$veikkaus_viikottain <- ifelse(is.na(vk3841$veikkaus_viikoittain), 0, vk3841$veikkaus_viikoittain)
+
+vk3841$vain_veikkaus <- ifelse(vk3841$rape1>0 & vk3841$rape2a<5 & vk3841$rape2b>4, 1, 0)
+vk3841$vain_veikkaus <- ifelse(is.na(vk3841$vain_veikkaus), 0, vk3841$vain_veikkaus)
+vk3841$vain_offshore <- ifelse(vk3841$rape1>0 & vk3841$rape2a>4 & vk3841$rape2b<5, 1, 0)
+vk3841$vain_offshore <- ifelse(is.na(vk3841$vain_offshore), 0, vk3841$vain_offshore)
+vk3841$molemmat <- ifelse(vk3841$rape1>0 & vk3841$rape2a<5 & vk3841$rape2b<5, 1, 0)
+#vk3841$molemmat <- ifelse(vk3841$rape1>0 & (vk3841$rape2a<5|vk3841$rape2a==6) & (vk3841$rape2b<5|vk3841$rape2b==6), 1, 0)
+vk3841$molemmat <- ifelse(is.na(vk3841$molemmat), 0, vk3841$molemmat)
+#vk3841$ei_pelannut <- ifelse(vk3841$rape1==2, 1, 0)
+vk3841$ei_pelannut <- ifelse(vk3841$rape1==2|(vk3841$rape1==1 & vk3841$rape2b==5 & vk3841$rape2a==5), 1, 0)
+vk3841$ei_pelannut <- ifelse(is.na(vk3841$ei_pelannut), 0, vk3841$ei_pelannut)
+#vk3841$eos <- ifelse(vk3841$rape1==3, 1, 0)
+vk3841$eos <- ifelse(vk3841$rape1==3|(vk3841$rape2a==6 & vk3841$rape2b>4)|(vk3841$rape2a>4 & vk3841$rape2b==6), 1, 0)
+vk3841$eos <- ifelse(is.na(vk3841$eos), 0, vk3841$eos)
+
+
+
+vk4245$jakso <- "2022-42-45"
+vk4245$offshore_dummy <- ifelse(vk4245$rape2b<5, 1, 0)
+vk4245$offshore_pelannut <- ifelse(is.na(vk4245$offshore_dummy), 0, vk4245$offshore_dummy)
+vk4245$pelannut <- ifelse(vk4245$rape1==1, 1, 0)
+vk4245$paf_pelannut <- ifelse(vk4245$rape3.1==1, 1, 0)
+vk4245$offshore_kpl <- vk4245$rape3.1+vk4245$rape3.2+vk4245$rape3.3+vk4245$rape3.4+vk4245$rape3.5+vk4245$rape3.6
+vk4245$ongelmia <- ifelse(vk4245$rape5>1 & vk4245$rape5<5, 1, 0)
+vk4245$veikkaus_viikoittain <- ifelse(vk4245$rape2a<3, 1, 0)
+vk4245$offshore_viikoittain <- ifelse(vk4245$rape2b<3, 1, 0)
+vk4245$offshore_viikottain <- ifelse(is.na(vk4245$offshore_viikoittain), 0, vk4245$offshore_viikoittain)
+vk4245$veikkaus_viikottain <- ifelse(is.na(vk4245$veikkaus_viikoittain), 0, vk4245$veikkaus_viikoittain)
+
+vk4245$vain_veikkaus <- ifelse(vk4245$rape1>0 & vk4245$rape2a<5 & vk4245$rape2b>4, 1, 0)
+vk4245$vain_veikkaus <- ifelse(is.na(vk4245$vain_veikkaus), 0, vk4245$vain_veikkaus)
+vk4245$vain_offshore <- ifelse(vk4245$rape1>0 & vk4245$rape2a>4 & vk4245$rape2b<5, 1, 0)
+vk4245$vain_offshore <- ifelse(is.na(vk4245$vain_offshore), 0, vk4245$vain_offshore)
+vk4245$molemmat <- ifelse(vk4245$rape1>0 & vk4245$rape2a<5 & vk4245$rape2b<5, 1, 0)
+#vk4245$molemmat <- ifelse(vk4245$rape1>0 & (vk4245$rape2a<5|vk4245$rape2a==6) & (vk4245$rape2b<5|vk4245$rape2b==6), 1, 0)
+vk4245$molemmat <- ifelse(is.na(vk4245$molemmat), 0, vk4245$molemmat)
+#vk4245$ei_pelannut <- ifelse(vk4245$rape1==2, 1, 0)
+vk4245$ei_pelannut <- ifelse(vk4245$rape1==2|(vk4245$rape1==1 & vk4245$rape2b==5 & vk4245$rape2a==5), 1, 0)
+vk4245$ei_pelannut <- ifelse(is.na(vk4245$ei_pelannut), 0, vk4245$ei_pelannut)
+#vk4245$eos <- ifelse(vk4245$rape1==3, 1, 0)
+vk4245$eos <- ifelse(vk4245$rape1==3|(vk4245$rape2a==6 & vk4245$rape2b>4)|(vk4245$rape2a>4 & vk4245$rape2b==6), 1, 0)
+vk4245$eos <- ifelse(is.na(vk4245$eos), 0, vk4245$eos)
+
+
+
+vk4649$jakso <- "2022-46-49"
+vk4649$offshore_dummy <- ifelse(vk4649$rape2b<5, 1, 0)
+vk4649$offshore_pelannut <- ifelse(is.na(vk4649$offshore_dummy), 0, vk4649$offshore_dummy)
+vk4649$pelannut <- ifelse(vk4649$rape1==1, 1, 0)
+vk4649$paf_pelannut <- ifelse(vk4649$rape3.1==1, 1, 0)
+vk4649$offshore_kpl <- vk4649$rape3.1+vk4649$rape3.2+vk4649$rape3.3+vk4649$rape3.4+vk4649$rape3.5+vk4649$rape3.6
+vk4649$ongelmia <- ifelse(vk4649$rape5>1 & vk4649$rape5<5, 1, 0)
+vk4649$veikkaus_viikoittain <- ifelse(vk4649$rape2a<3, 1, 0)
+vk4649$offshore_viikoittain <- ifelse(vk4649$rape2b<3, 1, 0)
+vk4649$offshore_viikottain <- ifelse(is.na(vk4649$offshore_viikoittain), 0, vk4649$offshore_viikoittain)
+vk4649$veikkaus_viikottain <- ifelse(is.na(vk4649$veikkaus_viikoittain), 0, vk4649$veikkaus_viikoittain)
+
+vk4649$vain_veikkaus <- ifelse(vk4649$rape1>0 & vk4649$rape2a<5 & vk4649$rape2b>4, 1, 0)
+vk4649$vain_veikkaus <- ifelse(is.na(vk4649$vain_veikkaus), 0, vk4649$vain_veikkaus)
+vk4649$vain_offshore <- ifelse(vk4649$rape1>0 & vk4649$rape2a>4 & vk4649$rape2b<5, 1, 0)
+vk4649$vain_offshore <- ifelse(is.na(vk4649$vain_offshore), 0, vk4649$vain_offshore)
+vk4649$molemmat <- ifelse(vk4649$rape1>0 & vk4649$rape2a<5 & vk4649$rape2b<5, 1, 0)
+#vk4649$molemmat <- ifelse(vk4649$rape1>0 & (vk4649$rape2a<5|vk4649$rape2a==6) & (vk4649$rape2b<5|vk4649$rape2b==6), 1, 0)
+vk4649$molemmat <- ifelse(is.na(vk4649$molemmat), 0, vk4649$molemmat)
+#vk4649$ei_pelannut <- ifelse(vk4649$rape1==2, 1, 0)
+vk4649$ei_pelannut <- ifelse(vk4649$rape1==2|(vk4649$rape1==1 & vk4649$rape2b==5 & vk4649$rape2a==5), 1, 0)
+vk4649$ei_pelannut <- ifelse(is.na(vk4649$ei_pelannut), 0, vk4649$ei_pelannut)
+#vk4649$eos <- ifelse(vk4649$rape1==3, 1, 0)
+vk4649$eos <- ifelse(vk4649$rape1==3|(vk4649$rape2a==6 & vk4649$rape2b>4)|(vk4649$rape2a>4 & vk4649$rape2b==6), 1, 0)
+vk4649$eos <- ifelse(is.na(vk4649$eos), 0, vk4649$eos)
+
+
+vk5103$jakso <- "2022-51-03"
+vk5103$offshore_dummy <- ifelse(vk5103$rape2b<5, 1, 0)
+vk5103$offshore_pelannut <- ifelse(is.na(vk5103$offshore_dummy), 0, vk5103$offshore_dummy)
+vk5103$pelannut <- ifelse(vk5103$rape1==1, 1, 0)
+vk5103$paf_pelannut <- ifelse(vk5103$rape3.1==1, 1, 0)
+vk5103$offshore_kpl <- vk5103$rape3.1+vk5103$rape3.2+vk5103$rape3.3+vk5103$rape3.4+vk5103$rape3.5+vk5103$rape3.6
+vk5103$ongelmia <- ifelse(vk5103$rape5>1 & vk5103$rape5<5, 1, 0)
+vk5103$veikkaus_viikoittain <- ifelse(vk5103$rape2a<3, 1, 0)
+vk5103$offshore_viikoittain <- ifelse(vk5103$rape2b<3, 1, 0)
+vk5103$offshore_viikottain <- ifelse(is.na(vk5103$offshore_viikoittain), 0, vk5103$offshore_viikoittain)
+vk5103$veikkaus_viikottain <- ifelse(is.na(vk5103$veikkaus_viikoittain), 0, vk5103$veikkaus_viikoittain)
+
+vk5103$vain_veikkaus <- ifelse(vk5103$rape1>0 & vk5103$rape2a<5 & vk5103$rape2b>4, 1, 0)
+vk5103$vain_veikkaus <- ifelse(is.na(vk5103$vain_veikkaus), 0, vk5103$vain_veikkaus)
+vk5103$vain_offshore <- ifelse(vk5103$rape1>0 & vk5103$rape2a>4 & vk5103$rape2b<5, 1, 0)
+vk5103$vain_offshore <- ifelse(is.na(vk5103$vain_offshore), 0, vk5103$vain_offshore)
+vk5103$molemmat <- ifelse(vk5103$rape1>0 & vk5103$rape2a<5 & vk5103$rape2b<5, 1, 0)
+#vk5103$molemmat <- ifelse(vk5103$rape1>0 & (vk5103$rape2a<5|vk5103$rape2a==6) & (vk5103$rape2b<5|vk5103$rape2b==6), 1, 0)
+vk5103$molemmat <- ifelse(is.na(vk5103$molemmat), 0, vk5103$molemmat)
+vk5103$ei_pelannut <- ifelse(vk5103$rape1==2|(vk5103$rape1==1 & vk5103$rape2b==5 & vk5103$rape2a==5), 1, 0)
+vk5103$ei_pelannut <- ifelse(is.na(vk5103$ei_pelannut), 0, vk5103$ei_pelannut)
+#vk5103$eos <- ifelse(vk5103$rape1==3, 1, 0)
+vk5103$eos <- ifelse(vk5103$rape1==3|(vk5103$rape2a==6 & vk5103$rape2b>4)|(vk5103$rape2a>4 & vk5103$rape2b==6), 1, 0)
+vk5103$eos <- ifelse(is.na(vk5103$eos), 0, vk5103$eos)
+
+
+# tästä eteenpäin suodatetaan euromääräiset kysymykset pois, jotta aineistoissa on samat muuttujat
+
+#vk0407 <- vk0407 %>% select(-c("rape2c1", "rape2c2")) %>% filter(!is.na(rape1))
+vk0407$jakso <- "2023-04-07"
+vk0407$offshore_dummy <- ifelse(vk0407$rape2b<5, 1, 0)
+vk0407$offshore_pelannut <- ifelse(is.na(vk0407$offshore_dummy), 0, vk0407$offshore_dummy)
+vk0407$pelannut <- ifelse(vk0407$rape1==1, 1, 0)
+vk0407$paf_pelannut <- ifelse(vk0407$rape3.1==1, 1, 0)
+vk0407$offshore_kpl <- vk0407$rape3.1+vk0407$rape3.2+vk0407$rape3.3+vk0407$rape3.4+vk0407$rape3.5+vk0407$rape3.6
+vk0407$ongelmia <- ifelse(vk0407$rape5>1 & vk0407$rape5<5, 1, 0)
+vk0407$veikkaus_viikoittain <- ifelse(vk0407$rape2a<3, 1, 0)
+vk0407$offshore_viikoittain <- ifelse(vk0407$rape2b<3, 1, 0)
+vk0407$offshore_viikottain <- ifelse(is.na(vk0407$offshore_viikoittain), 0, vk0407$offshore_viikoittain)
+vk0407$veikkaus_viikottain <- ifelse(is.na(vk0407$veikkaus_viikoittain), 0, vk0407$veikkaus_viikoittain)
+
+vk0407$vain_veikkaus <- ifelse(vk0407$rape1>0 & vk0407$rape2a<5 & vk0407$rape2b>4, 1, 0)
+vk0407$vain_veikkaus <- ifelse(is.na(vk0407$vain_veikkaus), 0, vk0407$vain_veikkaus)
+vk0407$vain_offshore <- ifelse(vk0407$rape1>0 & vk0407$rape2a>4 & vk0407$rape2b<5, 1, 0)
+vk0407$vain_offshore <- ifelse(is.na(vk0407$vain_offshore), 0, vk0407$vain_offshore)
+vk0407$molemmat <- ifelse(vk0407$rape1>0 & vk0407$rape2a<5 & vk0407$rape2b<5, 1, 0)
+#vk0407$molemmat <- ifelse(vk0407$rape1>0 & (vk0407$rape2a<5|vk0407$rape2a==6) & (vk0407$rape2b<5|vk0407$rape2b==6), 1, 0)
+vk0407$molemmat <- ifelse(is.na(vk0407$molemmat), 0, vk0407$molemmat)
+vk0407$ei_pelannut <- ifelse(vk0407$rape1==2|(vk0407$rape1==1 & vk0407$rape2b==5 & vk0407$rape2a==5), 1, 0)
+vk0407$ei_pelannut <- ifelse(is.na(vk0407$ei_pelannut), 0, vk0407$ei_pelannut)
+#vk0407$eos <- ifelse(vk0407$rape1==3, 1, 0)
+vk0407$eos <- ifelse(vk0407$rape1==3|(vk0407$rape2a==6 & vk0407$rape2b>4)|(vk0407$rape2a>4 & vk0407$rape2b==6), 1, 0)
+vk0407$eos <- ifelse(is.na(vk0407$eos), 0, vk0407$eos)
+
+
+#vk0811 <- vk0811 %>% select(-c("rape2c1", "rape2c2")) %>% filter(!is.na(rape1))
+vk0811$jakso <- "2023-08-11"
+vk0811$offshore_dummy <- ifelse(vk0811$rape2b<5, 1, 0)
+vk0811$offshore_pelannut <- ifelse(is.na(vk0811$offshore_dummy), 0, vk0811$offshore_dummy)
+vk0811$pelannut <- ifelse(vk0811$rape1==1, 1, 0)
+vk0811$paf_pelannut <- ifelse(vk0811$rape3.1==1, 1, 0)
+vk0811$offshore_kpl <- vk0811$rape3.1+vk0811$rape3.2+vk0811$rape3.3+vk0811$rape3.4+vk0811$rape3.5+vk0811$rape3.6
+vk0811$ongelmia <- ifelse(vk0811$rape5>1 & vk0811$rape5<5, 1, 0)
+vk0811$veikkaus_viikoittain <- ifelse(vk0811$rape2a<3, 1, 0)
+vk0811$offshore_viikoittain <- ifelse(vk0811$rape2b<3, 1, 0)
+vk0811$offshore_viikottain <- ifelse(is.na(vk0811$offshore_viikoittain), 0, vk0811$offshore_viikoittain)
+vk0811$veikkaus_viikottain <- ifelse(is.na(vk0811$veikkaus_viikoittain), 0, vk0811$veikkaus_viikoittain)
+
+vk0811$vain_veikkaus <- ifelse(vk0811$rape1>0 & vk0811$rape2a<5 & vk0811$rape2b>4, 1, 0)
+vk0811$vain_veikkaus <- ifelse(is.na(vk0811$vain_veikkaus), 0, vk0811$vain_veikkaus)
+vk0811$vain_offshore <- ifelse(vk0811$rape1>0 & vk0811$rape2a>4 & vk0811$rape2b<5, 1, 0)
+vk0811$vain_offshore <- ifelse(is.na(vk0811$vain_offshore), 0, vk0811$vain_offshore)
+vk0811$molemmat <- ifelse(vk0811$rape1>0 & vk0811$rape2a<5 & vk0811$rape2b<5, 1, 0)
+#vk0811$molemmat <- ifelse(vk0811$rape1>0 & (vk0811$rape2a<5|vk0811$rape2a==6) & (vk0811$rape2b<5|vk0811$rape2b==6), 1, 0)
+vk0811$molemmat <- ifelse(is.na(vk0811$molemmat), 0, vk0811$molemmat)
+vk0811$ei_pelannut <- ifelse(vk0811$rape1==2|(vk0811$rape1==1 & vk0811$rape2b==5 & vk0811$rape2a==5), 1, 0)
+vk0811$ei_pelannut <- ifelse(is.na(vk0811$ei_pelannut), 0, vk0811$ei_pelannut)
+#vk0811$eos <- ifelse(vk0811$rape1==3, 1, 0)
+vk0811$eos <- ifelse(vk0811$rape1==3|(vk0811$rape2a==6 & vk0811$rape2b>4)|(vk0811$rape2a>4 & vk0811$rape2b==6), 1, 0)
+vk0811$eos <- ifelse(is.na(vk0811$eos), 0, vk0811$eos)
+
+
+#vk1316 <- vk1316 %>% select(-c("rape2c1", "rape2c2")) %>% filter(!is.na(rape1))
+vk1316$jakso <- "2023-13-16"
+vk1316$offshore_dummy <- ifelse(vk1316$rape2b<5, 1, 0)
+vk1316$offshore_pelannut <- ifelse(is.na(vk1316$offshore_dummy), 0, vk1316$offshore_dummy)
+vk1316$pelannut <- ifelse(vk1316$rape1==1, 1, 0)
+vk1316$paf_pelannut <- ifelse(vk1316$rape3.1==1, 1, 0)
+vk1316$offshore_kpl <- vk1316$rape3.1+vk1316$rape3.2+vk1316$rape3.3+vk1316$rape3.4+vk1316$rape3.5+vk1316$rape3.6
+vk1316$ongelmia <- ifelse(vk1316$rape5>1 & vk1316$rape5<5, 1, 0)
+vk1316$veikkaus_viikoittain <- ifelse(vk1316$rape2a<3, 1, 0)
+vk1316$offshore_viikoittain <- ifelse(vk1316$rape2b<3, 1, 0)
+vk1316$offshore_viikottain <- ifelse(is.na(vk1316$offshore_viikoittain), 0, vk1316$offshore_viikoittain)
+vk1316$veikkaus_viikottain <- ifelse(is.na(vk1316$veikkaus_viikoittain), 0, vk1316$veikkaus_viikoittain)
+
+
+vk1316$vain_veikkaus <- ifelse(vk1316$rape1>0 & vk1316$rape2a<5 & vk1316$rape2b>4, 1, 0)
+vk1316$vain_veikkaus <- ifelse(is.na(vk1316$vain_veikkaus), 0, vk1316$vain_veikkaus)
+vk1316$vain_offshore <- ifelse(vk1316$rape1>0 & vk1316$rape2a>4 & vk1316$rape2b<5, 1, 0)
+vk1316$vain_offshore <- ifelse(is.na(vk1316$vain_offshore), 0, vk1316$vain_offshore)
+vk1316$molemmat <- ifelse(vk1316$rape1>0 & vk1316$rape2a<5 & vk1316$rape2b<5, 1, 0)
+#vk1316$molemmat <- ifelse(vk1316$rape1>0 & (vk1316$rape2a<5|vk1316$rape2a==6) & (vk1316$rape2b<5|vk1316$rape2b==6), 1, 0)
+vk1316$molemmat <- ifelse(is.na(vk1316$molemmat), 0, vk1316$molemmat)
+vk1316$ei_pelannut <- ifelse(vk1316$rape1==2|(vk1316$rape1==1 & vk1316$rape2b==5 & vk1316$rape2a==5), 1, 0)
+vk1316$ei_pelannut <- ifelse(is.na(vk1316$ei_pelannut), 0, vk1316$ei_pelannut)
+#vk1316$eos <- ifelse(vk1316$rape1==3, 1, 0)
+vk1316$eos <- ifelse(vk1316$rape1==3|(vk1316$rape2a==6 & vk1316$rape2b>4)|(vk1316$rape2a>4 & vk1316$rape2b==6), 1, 0)
+vk1316$eos <- ifelse(is.na(vk1316$eos), 0, vk1316$eos)
+
+
+#vk1720 <- vk1720 %>% select(-c("rape2c1", "rape2c2")) %>% filter(!is.na(rape1))
+vk1720$jakso <- "2023-17-20"
+vk1720$offshore_dummy <- ifelse(vk1720$rape2b<5, 1, 0)
+vk1720$offshore_pelannut <- ifelse(is.na(vk1720$offshore_dummy), 0, vk1720$offshore_dummy)
+vk1720$pelannut <- ifelse(vk1720$rape1==1, 1, 0)
+vk1720$paf_pelannut <- ifelse(vk1720$rape3.1==1, 1, 0)
+vk1720$offshore_kpl <- vk1720$rape3.1+vk1720$rape3.2+vk1720$rape3.3+vk1720$rape3.4+vk1720$rape3.5+vk1720$rape3.6
+vk1720$ongelmia <- ifelse(vk1720$rape5>1 & vk1720$rape5<5, 1, 0)
+vk1720$veikkaus_viikoittain <- ifelse(vk1720$rape2a<3, 1, 0)
+vk1720$offshore_viikoittain <- ifelse(vk1720$rape2b<3, 1, 0)
+vk1720$offshore_viikottain <- ifelse(is.na(vk1720$offshore_viikoittain), 0, vk1720$offshore_viikoittain)
+vk1720$veikkaus_viikottain <- ifelse(is.na(vk1720$veikkaus_viikoittain), 0, vk1720$veikkaus_viikoittain)
+
+
+vk1720$vain_veikkaus <- ifelse(vk1720$rape1>0 & vk1720$rape2a<5 & vk1720$rape2b>4, 1, 0)
+vk1720$vain_veikkaus <- ifelse(is.na(vk1720$vain_veikkaus), 0, vk1720$vain_veikkaus)
+vk1720$vain_offshore <- ifelse(vk1720$rape1>0 & vk1720$rape2a>4 & vk1720$rape2b<5, 1, 0)
+vk1720$vain_offshore <- ifelse(is.na(vk1720$vain_offshore), 0, vk1720$vain_offshore)
+vk1720$molemmat <- ifelse(vk1720$rape1>0 & vk1720$rape2a<5 & vk1720$rape2b<5, 1, 0)
+#vk1720$molemmat <- ifelse(vk1720$rape1>0 & (vk1720$rape2a<5|vk1720$rape2a==6) & (vk1720$rape2b<5|vk1720$rape2b==6), 1, 0)
+vk1720$molemmat <- ifelse(is.na(vk1720$molemmat), 0, vk1720$molemmat)
+vk1720$ei_pelannut <- ifelse(vk1720$rape1==2|(vk1720$rape1==1 & vk1720$rape2b==5 & vk1720$rape2a==5), 1, 0)
+vk1720$ei_pelannut <- ifelse(is.na(vk1720$ei_pelannut), 0, vk1720$ei_pelannut)
+#vk1720$eos <- ifelse(vk1720$rape1==3, 1, 0)
+vk1720$eos <- ifelse(vk1720$rape1==3|(vk1720$rape2a==6 & vk1720$rape2b>4)|(vk1720$rape2a>4 & vk1720$rape2b==6), 1, 0)
+vk1720$eos <- ifelse(is.na(vk1720$eos), 0, vk1720$eos)
+
+
+
+#vk2124 <- vk2124 %>% select(-c("rape2c1", "rape2c2")) %>% filter(!is.na(rape1))
+vk2124$jakso <- "2023-21-24"
+vk2124$offshore_dummy <- ifelse(vk2124$rape2b<5, 1, 0)
+vk2124$offshore_pelannut <- ifelse(is.na(vk2124$offshore_dummy), 0, vk2124$offshore_dummy)
+vk2124$pelannut <- ifelse(vk2124$rape1==1, 1, 0)
+vk2124$paf_pelannut <- ifelse(vk2124$rape3.1==1, 1, 0)
+vk2124$offshore_kpl <- vk2124$rape3.1+vk2124$rape3.2+vk2124$rape3.3+vk2124$rape3.4+vk2124$rape3.5+vk2124$rape3.6
+vk2124$ongelmia <- ifelse(vk2124$rape5>1 & vk2124$rape5<5, 1, 0)
+vk2124$veikkaus_viikoittain <- ifelse(vk2124$rape2a<3, 1, 0)
+vk2124$offshore_viikoittain <- ifelse(vk2124$rape2b<3, 1, 0)
+vk2124$offshore_viikottain <- ifelse(is.na(vk2124$offshore_viikoittain), 0, vk2124$offshore_viikoittain)
+vk2124$veikkaus_viikottain <- ifelse(is.na(vk2124$veikkaus_viikoittain), 0, vk2124$veikkaus_viikoittain)
+
+
+vk2124$vain_veikkaus <- ifelse(vk2124$rape1>0 & vk2124$rape2a<5 & vk2124$rape2b>4, 1, 0)
+vk2124$vain_veikkaus <- ifelse(is.na(vk2124$vain_veikkaus), 0, vk2124$vain_veikkaus)
+vk2124$vain_offshore <- ifelse(vk2124$rape1>0 & vk2124$rape2a>4 & vk2124$rape2b<5, 1, 0)
+vk2124$vain_offshore <- ifelse(is.na(vk2124$vain_offshore), 0, vk2124$vain_offshore)
+vk2124$molemmat <- ifelse(vk2124$rape1>0 & vk2124$rape2a<5 & vk2124$rape2b<5, 1, 0)
+#vk2124$molemmat <- ifelse(vk2124$rape1>0 & (vk2124$rape2a<5|vk2124$rape2a==6) & (vk2124$rape2b<5|vk2124$rape2b==6), 1, 0)
+vk2124$molemmat <- ifelse(is.na(vk2124$molemmat), 0, vk2124$molemmat)
+vk2124$ei_pelannut <- ifelse(vk2124$rape1==2|(vk2124$rape1==1 & vk2124$rape2b==5 & vk2124$rape2a==5), 1, 0)
+vk2124$ei_pelannut <- ifelse(is.na(vk2124$ei_pelannut), 0, vk2124$ei_pelannut)
+#vk2124$eos <- ifelse(vk2124$rape1==3, 1, 0)
+vk2124$eos <- ifelse(vk2124$rape1==3|(vk2124$rape2a==6 & vk2124$rape2b>4)|(vk2124$rape2a>4 & vk2124$rape2b==6), 1, 0)
+vk2124$eos <- ifelse(is.na(vk2124$eos), 0, vk2124$eos)
+
+
+
+#vk2528 <- vk2528 %>% select(-c("rape2c1", "rape2c2")) %>% filter(!is.na(rape1))
+vk2528$jakso <- "2023-25-28"
+vk2528$offshore_dummy <- ifelse(vk2528$rape2b<5, 1, 0)
+vk2528$offshore_pelannut <- ifelse(is.na(vk2528$offshore_dummy), 0, vk2528$offshore_dummy)
+vk2528$pelannut <- ifelse(vk2528$rape1==1, 1, 0)
+vk2528$paf_pelannut <- ifelse(vk2528$rape3.1==1, 1, 0)
+vk2528$offshore_kpl <- vk2528$rape3.1+vk2528$rape3.2+vk2528$rape3.3+vk2528$rape3.4+vk2528$rape3.5+vk2528$rape3.6
+vk2528$ongelmia <- ifelse(vk2528$rape5>1 & vk2528$rape5<5, 1, 0)
+vk2528$veikkaus_viikoittain <- ifelse(vk2528$rape2a<3, 1, 0)
+vk2528$offshore_viikoittain <- ifelse(vk2528$rape2b<3, 1, 0)
+vk2528$offshore_viikottain <- ifelse(is.na(vk2528$offshore_viikoittain), 0, vk2528$offshore_viikoittain)
+vk2528$veikkaus_viikottain <- ifelse(is.na(vk2528$veikkaus_viikoittain), 0, vk2528$veikkaus_viikoittain)
+
+
+vk2528$vain_veikkaus <- ifelse(vk2528$rape1>0 & vk2528$rape2a<5 & vk2528$rape2b>4, 1, 0)
+vk2528$vain_veikkaus <- ifelse(is.na(vk2528$vain_veikkaus), 0, vk2528$vain_veikkaus)
+vk2528$vain_offshore <- ifelse(vk2528$rape1>0 & vk2528$rape2a>4 & vk2528$rape2b<5, 1, 0)
+vk2528$vain_offshore <- ifelse(is.na(vk2528$vain_offshore), 0, vk2528$vain_offshore)
+vk2528$molemmat <- ifelse(vk2528$rape1>0 & vk2528$rape2a<5 & vk2528$rape2b<5, 1, 0)
+#vk2528$molemmat <- ifelse(vk2528$rape1>0 & (vk2528$rape2a<5|vk2528$rape2a==6) & (vk2528$rape2b<5|vk2528$rape2b==6), 1, 0)
+vk2528$molemmat <- ifelse(is.na(vk2528$molemmat), 0, vk2528$molemmat)
+vk2528$ei_pelannut <- ifelse(vk2528$rape1==2|(vk2528$rape1==1 & vk2528$rape2b==5 & vk2528$rape2a==5), 1, 0)
+vk2528$ei_pelannut <- ifelse(is.na(vk2528$ei_pelannut), 0, vk2528$ei_pelannut)
+#vk2528$eos <- ifelse(vk2528$rape1==3, 1, 0)
+vk2528$eos <- ifelse(vk2528$rape1==3|(vk2528$rape2a==6 & vk2528$rape2b>4)|(vk2528$rape2a>4 & vk2528$rape2b==6), 1, 0)
+vk2528$eos <- ifelse(is.na(vk2528$eos), 0, vk2528$eos)
+
+
+
+#vk3134 <- vk3134 %>% select(-c("rape2c1", "rape2c2")) %>% filter(!is.na(rape1))
+vk3134$jakso <- "2023-31-34"
+vk3134$offshore_dummy <- ifelse(vk3134$rape2b<5, 1, 0)
+vk3134$offshore_pelannut <- ifelse(is.na(vk3134$offshore_dummy), 0, vk3134$offshore_dummy)
+vk3134$pelannut <- ifelse(vk3134$rape1==1, 1, 0)
+vk3134$paf_pelannut <- ifelse(vk3134$rape3.1==1, 1, 0)
+vk3134$offshore_kpl <- vk3134$rape3.1+vk3134$rape3.2+vk3134$rape3.3+vk3134$rape3.4+vk3134$rape3.5+vk3134$rape3.6
+vk3134$ongelmia <- ifelse(vk3134$rape5>1 & vk3134$rape5<5, 1, 0)
+vk3134$veikkaus_viikoittain <- ifelse(vk3134$rape2a<3, 1, 0)
+vk3134$offshore_viikoittain <- ifelse(vk3134$rape2b<3, 1, 0)
+vk3134$offshore_viikottain <- ifelse(is.na(vk3134$offshore_viikoittain), 0, vk3134$offshore_viikoittain)
+vk3134$veikkaus_viikottain <- ifelse(is.na(vk3134$veikkaus_viikoittain), 0, vk3134$veikkaus_viikoittain)
+
+
+vk3134$vain_veikkaus <- ifelse(vk3134$rape1>0 & vk3134$rape2a<5 & vk3134$rape2b>4, 1, 0)
+vk3134$vain_veikkaus <- ifelse(is.na(vk3134$vain_veikkaus), 0, vk3134$vain_veikkaus)
+vk3134$vain_offshore <- ifelse(vk3134$rape1>0 & vk3134$rape2a>4 & vk3134$rape2b<5, 1, 0)
+vk3134$vain_offshore <- ifelse(is.na(vk3134$vain_offshore), 0, vk3134$vain_offshore)
+vk3134$molemmat <- ifelse(vk3134$rape1>0 & vk3134$rape2a<5 & vk3134$rape2b<5, 1, 0)
+#vk3134$molemmat <- ifelse(vk3134$rape1>0 & (vk3134$rape2a<5|vk3134$rape2a==6) & (vk3134$rape2b<5|vk3134$rape2b==6), 1, 0)
+vk3134$molemmat <- ifelse(is.na(vk3134$molemmat), 0, vk3134$molemmat)
+vk3134$ei_pelannut <- ifelse(vk3134$rape1==2|(vk3134$rape1==1 & vk3134$rape2b==5 & vk3134$rape2a==5), 1, 0)
+vk3134$ei_pelannut <- ifelse(is.na(vk3134$ei_pelannut), 0, vk3134$ei_pelannut)
+#vk3134$eos <- ifelse(vk3134$rape1==3, 1, 0)
+vk3134$eos <- ifelse(vk3134$rape1==3|(vk3134$rape2a==6 & vk3134$rape2b>4)|(vk3134$rape2a>4 & vk3134$rape2b==6), 1, 0)
+vk3134$eos <- ifelse(is.na(vk3134$eos), 0, vk3134$eos)
+
+
+#vk3538 <- vk3538 %>% select(-c("rape2c1", "rape2c2")) %>% filter(!is.na(rape1))
+vk3538$jakso <- "2023-35-38"
+vk3538$offshore_dummy <- ifelse(vk3538$rape2b<5, 1, 0)
+vk3538$offshore_pelannut <- ifelse(is.na(vk3538$offshore_dummy), 0, vk3538$offshore_dummy)
+vk3538$pelannut <- ifelse(vk3538$rape1==1, 1, 0)
+vk3538$paf_pelannut <- ifelse(vk3538$rape3.1==1, 1, 0)
+vk3538$offshore_kpl <- vk3538$rape3.1+vk3538$rape3.2+vk3538$rape3.3+vk3538$rape3.4+vk3538$rape3.5+vk3538$rape3.6
+vk3538$ongelmia <- ifelse(vk3538$rape5>1 & vk3538$rape5<5, 1, 0)
+vk3538$veikkaus_viikoittain <- ifelse(vk3538$rape2a<3, 1, 0)
+vk3538$offshore_viikoittain <- ifelse(vk3538$rape2b<3, 1, 0)
+vk3538$offshore_viikottain <- ifelse(is.na(vk3538$offshore_viikoittain), 0, vk3538$offshore_viikoittain)
+vk3538$veikkaus_viikottain <- ifelse(is.na(vk3538$veikkaus_viikoittain), 0, vk3538$veikkaus_viikoittain)
+
+
+vk3538$vain_veikkaus <- ifelse(vk3538$rape1>0 & vk3538$rape2a<5 & vk3538$rape2b>4, 1, 0)
+vk3538$vain_veikkaus <- ifelse(is.na(vk3538$vain_veikkaus), 0, vk3538$vain_veikkaus)
+vk3538$vain_offshore <- ifelse(vk3538$rape1>0 & vk3538$rape2a>4 & vk3538$rape2b<5, 1, 0)
+vk3538$vain_offshore <- ifelse(is.na(vk3538$vain_offshore), 0, vk3538$vain_offshore)
+vk3538$molemmat <- ifelse(vk3538$rape1>0 & vk3538$rape2a<5 & vk3538$rape2b<5, 1, 0)
+#vk3538$molemmat <- ifelse(vk3538$rape1>0 & (vk3538$rape2a<5|vk3538$rape2a==6) & (vk3538$rape2b<5|vk3538$rape2b==6), 1, 0)
+vk3538$molemmat <- ifelse(is.na(vk3538$molemmat), 0, vk3538$molemmat)
+vk3538$ei_pelannut <- ifelse(vk3538$rape1==2|(vk3538$rape1==1 & vk3538$rape2b==5 & vk3538$rape2a==5), 1, 0)
+vk3538$ei_pelannut <- ifelse(is.na(vk3538$ei_pelannut), 0, vk3538$ei_pelannut)
+#vk3538$eos <- ifelse(vk3538$rape1==3, 1, 0)
+vk3538$eos <- ifelse(vk3538$rape1==3|(vk3538$rape2a==6 & vk3538$rape2b>4)|(vk3538$rape2a>4 & vk3538$rape2b==6), 1, 0)
+vk3538$eos <- ifelse(is.na(vk3538$eos), 0, vk3538$eos)
+
+
+# Tästä eteenpäin pitää suodattaa sarakkeita pois, koska yhtiöihin on lisätty uusia "kiinteitä" valintoja haastattelijalle
+
+#vk4043 <- vk4043 %>% select(-c("rape2c1", "rape2c2", "rape3.8", "rape3.9", "rape3.10", "rape3.11", "rape3.12", "rape3.98", "rape3.99")) %>% filter(!is.na(rape1))
+vk4043$jakso <- "2023-40-43"
+vk4043$offshore_dummy <- ifelse(vk4043$rape2b<5, 1, 0)
+vk4043$offshore_pelannut <- ifelse(is.na(vk4043$offshore_dummy), 0, vk4043$offshore_dummy)
+vk4043$pelannut <- ifelse(vk4043$rape1==1, 1, 0)
+vk4043$paf_pelannut <- ifelse(vk4043$rape3.1==1, 1, 0)
+vk4043$offshore_kpl <- vk4043$rape3.1+vk4043$rape3.2+vk4043$rape3.3+vk4043$rape3.4+vk4043$rape3.5+vk4043$rape3.6
+vk4043$ongelmia <- ifelse(vk4043$rape5>1 & vk4043$rape5<5, 1, 0)
+vk4043$veikkaus_viikoittain <- ifelse(vk4043$rape2a<3, 1, 0)
+vk4043$offshore_viikoittain <- ifelse(vk4043$rape2b<3, 1, 0)
+vk4043$offshore_viikottain <- ifelse(is.na(vk4043$offshore_viikoittain), 0, vk4043$offshore_viikoittain)
+vk4043$veikkaus_viikottain <- ifelse(is.na(vk4043$veikkaus_viikoittain), 0, vk4043$veikkaus_viikoittain)
+
+
+vk4043$vain_veikkaus <- ifelse(vk4043$rape1>0 & vk4043$rape2a<5 & vk4043$rape2b>4, 1, 0)
+vk4043$vain_veikkaus <- ifelse(is.na(vk4043$vain_veikkaus), 0, vk4043$vain_veikkaus)
+vk4043$vain_offshore <- ifelse(vk4043$rape1>0 & vk4043$rape2a>4 & vk4043$rape2b<5, 1, 0)
+vk4043$vain_offshore <- ifelse(is.na(vk4043$vain_offshore), 0, vk4043$vain_offshore)
+vk4043$molemmat <- ifelse(vk4043$rape1>0 & vk4043$rape2a<5 & vk4043$rape2b<5, 1, 0)
+#vk4043$molemmat <- ifelse(vk4043$rape1>0 & (vk4043$rape2a<5|vk4043$rape2a==6) & (vk4043$rape2b<5|vk4043$rape2b==6), 1, 0)
+vk4043$molemmat <- ifelse(is.na(vk4043$molemmat), 0, vk4043$molemmat)
+vk4043$ei_pelannut <- ifelse(vk4043$rape1==2|(vk4043$rape1==1 & vk4043$rape2b==5 & vk4043$rape2a==5), 1, 0)
+vk4043$ei_pelannut <- ifelse(is.na(vk4043$ei_pelannut), 0, vk4043$ei_pelannut)
+#vk4043$eos <- ifelse(vk4043$rape1==3, 1, 0)
+vk4043$eos <- ifelse(vk4043$rape1==3|(vk4043$rape2a==6 & vk4043$rape2b>4)|(vk4043$rape2a>4 & vk4043$rape2b==6), 1, 0)
+vk4043$eos <- ifelse(is.na(vk4043$eos), 0, vk4043$eos)
+
+
+#vk4447 <- vk4447 %>% select(-c("rape2c1", "rape2c2", "rape3.8", "rape3.9", "rape3.10", "rape3.11", "rape3.12", "rape3.98", "rape3.99")) %>% filter(!is.na(rape1))
+vk4447$jakso <- "2023-44-47"
+vk4447$offshore_dummy <- ifelse(vk4447$rape2b<5, 1, 0)
+vk4447$offshore_pelannut <- ifelse(is.na(vk4447$offshore_dummy), 0, vk4447$offshore_dummy)
+vk4447$pelannut <- ifelse(vk4447$rape1==1, 1, 0)
+vk4447$paf_pelannut <- ifelse(vk4447$rape3.1==1, 1, 0)
+vk4447$offshore_kpl <- vk4447$rape3.1+vk4447$rape3.2+vk4447$rape3.3+vk4447$rape3.4+vk4447$rape3.5+vk4447$rape3.6
+vk4447$ongelmia <- ifelse(vk4447$rape5>1 & vk4447$rape5<5, 1, 0)
+vk4447$veikkaus_viikoittain <- ifelse(vk4447$rape2a<3, 1, 0)
+vk4447$offshore_viikoittain <- ifelse(vk4447$rape2b<3, 1, 0)
+vk4447$offshore_viikottain <- ifelse(is.na(vk4447$offshore_viikoittain), 0, vk4447$offshore_viikoittain)
+vk4447$veikkaus_viikottain <- ifelse(is.na(vk4447$veikkaus_viikoittain), 0, vk4447$veikkaus_viikoittain)
+
+
+vk4447$vain_veikkaus <- ifelse(vk4447$rape1>0 & vk4447$rape2a<5 & vk4447$rape2b>4, 1, 0)
+vk4447$vain_veikkaus <- ifelse(is.na(vk4447$vain_veikkaus), 0, vk4447$vain_veikkaus)
+vk4447$vain_offshore <- ifelse(vk4447$rape1>0 & vk4447$rape2a>4 & vk4447$rape2b<5, 1, 0)
+vk4447$vain_offshore <- ifelse(is.na(vk4447$vain_offshore), 0, vk4447$vain_offshore)
+vk4447$molemmat <- ifelse(vk4447$rape1>0 & vk4447$rape2a<5 & vk4447$rape2b<5, 1, 0)
+#vk4447$molemmat <- ifelse(vk4447$rape1>0 & (vk4447$rape2a<5|vk4447$rape2a==6) & (vk4447$rape2b<5|vk4447$rape2b==6), 1, 0)
+vk4447$molemmat <- ifelse(is.na(vk4447$molemmat), 0, vk4447$molemmat)
+vk4447$ei_pelannut <- ifelse(vk4447$rape1==2|(vk4447$rape1==1 & vk4447$rape2b==5 & vk4447$rape2a==5), 1, 0)
+vk4447$ei_pelannut <- ifelse(is.na(vk4447$ei_pelannut), 0, vk4447$ei_pelannut)
+#vk4447$eos <- ifelse(vk4447$rape1==3, 1, 0)
+vk4447$eos <- ifelse(vk4447$rape1==3|(vk4447$rape2a==6 & vk4447$rape2b>4)|(vk4447$rape2a>4 & vk4447$rape2b==6), 1, 0)
+vk4447$eos <- ifelse(is.na(vk4447$eos), 0, vk4447$eos)
+
+
+#vk4952 <- vk4952 %>% select(-c("rape2c1", "rape2c2", "rape3.8", "rape3.9", "rape3.10", "rape3.11", "rape3.12", "rape3.98", "rape3.99")) %>% filter(!is.na(rape1))
+vk4952$jakso <- "2023-49-52"
+vk4952$offshore_dummy <- ifelse(vk4952$rape2b<5, 1, 0)
+vk4952$offshore_pelannut <- ifelse(is.na(vk4952$offshore_dummy), 0, vk4952$offshore_dummy)
+vk4952$pelannut <- ifelse(vk4952$rape1==1, 1, 0)
+vk4952$paf_pelannut <- ifelse(vk4952$rape3.1==1, 1, 0)
+vk4952$offshore_kpl <- vk4952$rape3.1+vk4952$rape3.2+vk4952$rape3.3+vk4952$rape3.4+vk4952$rape3.5+vk4952$rape3.6
+vk4952$ongelmia <- ifelse(vk4952$rape5>1 & vk4952$rape5<5, 1, 0)
+vk4952$veikkaus_viikoittain <- ifelse(vk4952$rape2a<3, 1, 0)
+vk4952$offshore_viikoittain <- ifelse(vk4952$rape2b<3, 1, 0)
+vk4952$offshore_viikottain <- ifelse(is.na(vk4952$offshore_viikoittain), 0, vk4952$offshore_viikoittain)
+vk4952$veikkaus_viikottain <- ifelse(is.na(vk4952$veikkaus_viikoittain), 0, vk4952$veikkaus_viikoittain)
+
+
+vk4952$vain_veikkaus <- ifelse(vk4952$rape1>0 & vk4952$rape2a<5 & vk4952$rape2b>4, 1, 0)
+vk4952$vain_veikkaus <- ifelse(is.na(vk4952$vain_veikkaus), 0, vk4952$vain_veikkaus)
+vk4952$vain_offshore <- ifelse(vk4952$rape1>0 & vk4952$rape2a>4 & vk4952$rape2b<5, 1, 0)
+vk4952$vain_offshore <- ifelse(is.na(vk4952$vain_offshore), 0, vk4952$vain_offshore)
+vk4952$molemmat <- ifelse(vk4952$rape1>0 & vk4952$rape2a<5 & vk4952$rape2b<5, 1, 0)
+#vk4952$molemmat <- ifelse(vk4952$rape1>0 & (vk4952$rape2a<5|vk4952$rape2a==6) & (vk4952$rape2b<5|vk4952$rape2b==6), 1, 0)
+vk4952$molemmat <- ifelse(is.na(vk4952$molemmat), 0, vk4952$molemmat)
+vk4952$ei_pelannut <- ifelse(vk4952$rape1==2|(vk4952$rape1==1 & vk4952$rape2b==5 & vk4952$rape2a==5), 1, 0)
+vk4952$ei_pelannut <- ifelse(is.na(vk4952$ei_pelannut), 0, vk4952$ei_pelannut)
+#vk4952$eos <- ifelse(vk4952$rape1==3, 1, 0)
+vk4952$eos <- ifelse(vk4952$rape1==3|(vk4952$rape2a==6 & vk4952$rape2b>4)|(vk4952$rape2a>4 & vk4952$rape2b==6), 1, 0)
+vk4952$eos <- ifelse(is.na(vk4952$eos), 0, vk4952$eos)
+
+
+#tästä eteenpäin mukana myös Veikkauksen pelityypit
+
+#vk0104 <- vk0104 %>% select(-c("rape2c1", "rape2c2", "rape3.8", "rape3.9", "rape3.10", "rape3.11", "rape3.12", "rape3.98", "rape3.99", "rape4b.1", "rape4b.2", "rape4b.3", "rape4b.4", "rape4b.5", "rape4b.6", "rape4b.7", "rape4b.8", "rape4b_avoin")) %>% filter(!is.na(rape1))
+vk0104$jakso <- "2024-01-04"
+vk0104$offshore_dummy <- ifelse(vk0104$rape2b<5, 1, 0)
+vk0104$offshore_pelannut <- ifelse(is.na(vk0104$offshore_dummy), 0, vk0104$offshore_dummy)
+vk0104$pelannut <- ifelse(vk0104$rape1==1, 1, 0)
+vk0104$paf_pelannut <- ifelse(vk0104$rape3.1==1, 1, 0)
+vk0104$offshore_kpl <- vk0104$rape3.1+vk0104$rape3.2+vk0104$rape3.3+vk0104$rape3.4+vk0104$rape3.5+vk0104$rape3.6
+vk0104$ongelmia <- ifelse(vk0104$rape5>1 & vk0104$rape5<5, 1, 0)
+vk0104$veikkaus_viikoittain <- ifelse(vk0104$rape2a<3, 1, 0)
+vk0104$offshore_viikoittain <- ifelse(vk0104$rape2b<3, 1, 0)
+vk0104$offshore_viikottain <- ifelse(is.na(vk0104$offshore_viikoittain), 0, vk0104$offshore_viikoittain)
+vk0104$veikkaus_viikottain <- ifelse(is.na(vk0104$veikkaus_viikoittain), 0, vk0104$veikkaus_viikoittain)
+
+
+vk0104$vain_veikkaus <- ifelse(vk0104$rape1>0 & vk0104$rape2a<5 & vk0104$rape2b>4, 1, 0)
+vk0104$vain_veikkaus <- ifelse(is.na(vk0104$vain_veikkaus), 0, vk0104$vain_veikkaus)
+vk0104$vain_offshore <- ifelse(vk0104$rape1>0 & vk0104$rape2a>4 & vk0104$rape2b<5, 1, 0)
+vk0104$vain_offshore <- ifelse(is.na(vk0104$vain_offshore), 0, vk0104$vain_offshore)
+vk0104$molemmat <- ifelse(vk0104$rape1>0 & vk0104$rape2a<5 & vk0104$rape2b<5, 1, 0)
+#vk0104$molemmat <- ifelse(vk0104$rape1>0 & (vk0104$rape2a<5|vk0104$rape2a==6) & (vk0104$rape2b<5|vk0104$rape2b==6), 1, 0)
+vk0104$molemmat <- ifelse(is.na(vk0104$molemmat), 0, vk0104$molemmat)
+vk0104$ei_pelannut <- ifelse(vk0104$rape1==2|(vk0104$rape1==1 & vk0104$rape2b==5 & vk0104$rape2a==5), 1, 0)
+vk0104$ei_pelannut <- ifelse(is.na(vk0104$ei_pelannut), 0, vk0104$ei_pelannut)
+#vk0104$eos <- ifelse(vk0104$rape1==3, 1, 0)
+vk0104$eos <- ifelse(vk0104$rape1==3|(vk0104$rape2a==6 & vk0104$rape2b>4)|(vk0104$rape2a>4 & vk0104$rape2b==6), 1, 0)
+vk0104$eos <- ifelse(is.na(vk0104$eos), 0, vk0104$eos)
+
+
+#vk0508 <- vk0508 %>% select(-c("rape2c1", "rape2c2", "rape3.8", "rape3.9", "rape3.10", "rape3.11", "rape3.12", "rape3.98", "rape3.99", "rape4b.1", "rape4b.2", "rape4b.3", "rape4b.4", "rape4b.5", "rape4b.6", "rape4b.7", "rape4b.8", "rape4b_avoin")) %>% filter(!is.na(rape1))
+vk0508$jakso <- "2024-05-08"
+vk0508$offshore_dummy <- ifelse(vk0508$rape2b<5, 1, 0)
+vk0508$offshore_pelannut <- ifelse(is.na(vk0508$offshore_dummy), 0, vk0508$offshore_dummy)
+vk0508$pelannut <- ifelse(vk0508$rape1==1, 1, 0)
+vk0508$paf_pelannut <- ifelse(vk0508$rape3.1==1, 1, 0)
+vk0508$offshore_kpl <- vk0508$rape3.1+vk0508$rape3.2+vk0508$rape3.3+vk0508$rape3.4+vk0508$rape3.5+vk0508$rape3.6
+vk0508$ongelmia <- ifelse(vk0508$rape5>1 & vk0508$rape5<5, 1, 0)
+vk0508$veikkaus_viikoittain <- ifelse(vk0508$rape2a<3, 1, 0)
+vk0508$offshore_viikoittain <- ifelse(vk0508$rape2b<3, 1, 0)
+vk0508$offshore_viikottain <- ifelse(is.na(vk0508$offshore_viikoittain), 0, vk0508$offshore_viikoittain)
+vk0508$veikkaus_viikottain <- ifelse(is.na(vk0508$veikkaus_viikoittain), 0, vk0508$veikkaus_viikoittain)
+
+
+vk0508$vain_veikkaus <- ifelse(vk0508$rape1>0 & vk0508$rape2a<5 & vk0508$rape2b>4, 1, 0)
+vk0508$vain_veikkaus <- ifelse(is.na(vk0508$vain_veikkaus), 0, vk0508$vain_veikkaus)
+vk0508$vain_offshore <- ifelse(vk0508$rape1>0 & vk0508$rape2a>4 & vk0508$rape2b<5, 1, 0)
+vk0508$vain_offshore <- ifelse(is.na(vk0508$vain_offshore), 0, vk0508$vain_offshore)
+vk0508$molemmat <- ifelse(vk0508$rape1>0 & vk0508$rape2a<5 & vk0508$rape2b<5, 1, 0)
+#vk0508$molemmat <- ifelse(vk0508$rape1>0 & (vk0508$rape2a<5|vk0508$rape2a==6) & (vk0508$rape2b<5|vk0508$rape2b==6), 1, 0)
+vk0508$molemmat <- ifelse(is.na(vk0508$molemmat), 0, vk0508$molemmat)
+vk0508$ei_pelannut <- ifelse(vk0508$rape1==2|(vk0508$rape1==1 & vk0508$rape2b==5 & vk0508$rape2a==5), 1, 0)
+vk0508$ei_pelannut <- ifelse(is.na(vk0508$ei_pelannut), 0, vk0508$ei_pelannut)
+#vk0508$eos <- ifelse(vk0508$rape1==3, 1, 0)
+vk0508$eos <- ifelse(vk0508$rape1==3|(vk0508$rape2a==6 & vk0508$rape2b>4)|(vk0508$rape2a>4 & vk0508$rape2b==6), 1, 0)
+vk0508$eos <- ifelse(is.na(vk0508$eos), 0, vk0508$eos)
+
+
+
+#yhdistetään erilliset jaksot yhdeksi aineistoksi
+#offshore <- rbind(vk1215, vk1619, vk2023, vk2427, vk2932, vk3336, vk3841, vk4245, vk4649, vk5103, vk0407, vk0811, vk1316, vk1720, vk2124, vk2528, vk3134, vk3538, vk4043, vk4447, vk4952, vk0104)
+offshore <- bind_rows(vk1215, vk1619, vk2023, vk2427, vk2932, vk3336, vk3841, vk4245, vk4649, vk5103, vk0407, vk0811, vk1316, vk1720, vk2124, vk2528, vk3134, vk3538, vk4043, vk4447, vk4952, vk0104, vk0508)
+
+# luodaan uudet kk-tason indikaattorit pelaamiselle
+offshore$veikkaus_kuukausittain <- ifelse(offshore$rape2a<5, 1, 0)
+offshore$offshore_kuukausittain <- ifelse(offshore$rape2b<5, 1, 0)
+
+
+# suodatetaan data siitä eteenpäin, kun haittakysymys on kysytty kaikilta pelanneilta (Veikkaus ja offshore)
+# lisäksi suodatetaan pois vastaajat, jotka eivät ole pelanneet 12kk sisällä verkossa ja sellaiset, jotka eivät osaa sanoa koska ovat pelanneet
+
+# offshore_suodatettu <- offshore %>% filter(jakso=="2023-04-07" | jakso=="2023-08-11" | jakso=="2023-13-16" | jakso=="2023-17-20" | jakso=="2023-21-24" 
+#                                            | jakso=="2023-25-28" | jakso=="2023-31-34" | jakso=="2023-35-38" | jakso=="2023-40-43" | jakso=="2023-49-52" | jakso=="2024-01-04" 
+#                                            | jakso=="2024-05-08"  & rape2a!=6 & rape2b!=6 & rape1==1)
+
+
+##JUSSIN ANALYYSI JA KUVA
+offshore_filtered <- offshore %>% filter(jakso=="2023-04-07" | jakso=="2023-08-11" | jakso=="2023-13-16" | jakso=="2023-17-20" | jakso=="2023-21-24" 
+                                           | jakso=="2023-25-28" | jakso=="2023-31-34" | jakso=="2023-35-38" | jakso=="2023-40-43" | jakso == "2023-44-47" 
+                                           | jakso=="2023-49-52" | jakso=="2024-01-04" 
+                                           | jakso=="2024-05-08"  & rape2a!=6 & rape2b!=6 & rape1==1)
+
+offshore_filtered$veikkaus_kuukausittain <- ifelse(offshore_filtered$rape2a<4, 1, 0)
+offshore_filtered$offshore_kuukausittain <- ifelse(offshore_filtered$rape2b<4, 1, 0)
+offshore_filtered$veikkaus_kuukausittain_f <- factor(offshore_filtered$veikkaus_kuukausittain)
+offshore_filtered$offshore_kuukausittain_f <- factor(offshore_filtered$offshore_kuukausittain)
+offshore_filtered$suku <- factor(offshore_filtered$suku, labels = c("Female", "Male"))
+
+offshore_filtered$testimuuttuja <- factor(interaction(offshore_filtered$veikkaus_kuukausittain_f, offshore_filtered$offshore_kuukausittain_f),
+                                          labels = c("Neither", "Only (monthly) Veikkaus", "Only (monthly) Offshore", "Both"))
+
+offshore_filtered$testimuuttuja2 <- factor(interaction(offshore_filtered$rape4.2, offshore_filtered$rape4b.2),
+                                           labels = c("Neither", "Only Veikkaus slots", "Only offshore slots", "Both"))
+
+offshore_filtered$testimuuttuja3 <- factor(interaction(offshore_filtered$rape4.5, offshore_filtered$rape4b.5),
+                                           labels = c("Neither", "Only Veikkaus table games", "Only offshore table games", "Both"))
+
+
+
+#Muuta alla testimuuttuja2 --> testimuuttuja jos halutaan visualisointi kaikkien pelien ja mittauspisteiden yli
+eka <- offshore_filtered %>% 
+  group_by(jakso, testimuuttuja) %>%
+  dplyr::mutate(ongelmia_NONA = ifelse(is.na(ongelmia), 0, ongelmia)) %>% #not used currently
+  dplyr::select(testimuuttuja, ongelmia) %>%
+  na.omit() %>%
+  dplyr::summarize(ongelmia_prop = sum(ongelmia)/n(),
+                   lower_ongelmia=prop.test(sum(ongelmia),n())$conf.int[1],
+                   upper_ongelmia=prop.test(sum(ongelmia),n())$conf.int[2]) %>%
+  ggplot(aes(jakso, ongelmia_prop, color = testimuuttuja, group=testimuuttuja)) +
+  geom_line(position= position_dodge(.9)) +
+  geom_errorbar(aes(ymin = lower_ongelmia, ymax = upper_ongelmia), width=.2, position=position_dodge(.9), alpha = .35) +
+  geom_point(size=2.5, alpha=.35, position=position_dodge(.9)) +
+  scale_color_manual(values=c("lightblue", "blue", "salmon", "red")) +
+  scale_fill_manual(values=c("lightblue", "blue", "salmon", "red")) +
+  scale_y_continuous(breaks = seq(0, 90, by = 0.10), labels = scales::percent, limits = c(0, .90)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = c(0.8,0.80)) +
+  labs(color = "Monthly activity", y = "Proportion of self-reported gambling problems", x = NULL)
+
+
+toka <- offshore_filtered %>% 
+  group_by(jakso, testimuuttuja3) %>%
+  dplyr::mutate(ongelmia_NONA = ifelse(is.na(ongelmia), 0, ongelmia)) %>% #not used currently
+  dplyr::select(testimuuttuja3, ongelmia) %>%
+  na.omit() %>%
+  dplyr::summarize(ongelmia_prop = sum(ongelmia)/n(),
+                   lower_ongelmia=prop.test(sum(ongelmia),n())$conf.int[1],
+                   upper_ongelmia=prop.test(sum(ongelmia),n())$conf.int[2]) %>%
+  ggplot(aes(jakso, ongelmia_prop, color = testimuuttuja3, group=testimuuttuja3)) +
+  geom_line(position= position_dodge(.25)) +
+  geom_errorbar(aes(ymin = lower_ongelmia, ymax = upper_ongelmia), width=.2, position=position_dodge(.25), alpha = .35) +
+  geom_point(size=2.5, alpha=.35, position=position_dodge(.25)) +
+  scale_color_manual(values=c("lightblue", "blue", "salmon", "red")) +
+  scale_fill_manual(values=c("lightblue", "blue", "salmon", "red")) +
+  scale_y_continuous(breaks = seq(0, 90, by = 0.10), labels = scales::percent, limits = c(0, .90)) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = c(0.8,0.80)) +
+  labs(color = "Monthly activity", y = "Proportion of self-reported gambling problems", x = NULL)
+
+
+ggarrange(eka, toka)
+
+
+offshore_filtered %>% 
+  group_by(jakso, suku) %>%
+  dplyr::mutate(ongelmia_NONA = ifelse(is.na(ongelmia), 0, ongelmia)) %>%
+  dplyr::select(veikkaus_kuukausittain, offshore_kuukausittain, ongelmia_NONA, suku) %>%
+  na.omit() %>%
+  dplyr::summarize(veikkaus_prop = sum(veikkaus_kuukausittain)/n(),
+                   offshore_prop = sum(offshore_kuukausittain)/n(),
+                   ongelmia_NONA_prop = sum(ongelmia_NONA)/n(),
+                   lower_veikkaus=prop.test(sum(veikkaus_kuukausittain),n())$conf.int[1],
+                   upper_veikkaus=prop.test(sum(veikkaus_kuukausittain),n())$conf.int[2],
+                   lower_offshore=prop.test(sum(offshore_kuukausittain),n())$conf.int[1],
+                   upper_offshore=prop.test(sum(offshore_kuukausittain),n())$conf.int[2],
+                   lower_ongelmia=prop.test(sum(ongelmia_NONA),n())$conf.int[1],
+                   upper_ongelmia=prop.test(sum(ongelmia_NONA),n())$conf.int[2]) %>%
+  gather(key, value, veikkaus_prop, offshore_prop) %>%
+  dplyr::mutate(key = factor(key, levels = c("veikkaus_prop", "offshore_prop"),
+                             labels = c("Veikkaus", "Offshore"))) %>%
+  ggplot(aes(jakso, value, color = key)) +
+  scale_color_manual(values = c("blue", "salmon")) +
+  scale_y_continuous(breaks = seq(0, 85, by = 0.10), labels = scales::percent, limits = c(0, .85)) +
+  geom_path(aes(group=key)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = lower_veikkaus, ymax = upper_veikkaus), color = "blue", alpha = .35, width=0.25) +
+  geom_errorbar(aes(ymin = lower_offshore, ymax = upper_offshore), color = "salmon", alpha = .35, width=0.25) +
+  #geom_errorbar(aes(ymin = lower_ongelmia, ymax = upper_ongelmia), color = "red", alpha = .35, width=0.25) +
+  theme_bw(base_size=14) +
+  labs(x = NULL, color = NULL, y = "Proportion of monthly players") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        legend.position = c(.75, .5)) +
+  facet_wrap("suku")
+
+
+
+
+offshore_logit2 <- glm(ongelmia ~ 
+                         veikkaus_kuukausittain_f*offshore_kuukausittain_f+
+                         ikaluok+
+                         t1+
+                         tulo+
+                         suku+
+                         jakso,
+                       data=offshore_filtered, family="binomial")
+
+summary(offshore_logit2)
+summ(offshore_logit2, vifs=T)
+
+
+#emmeans and effects give slightly different results... why?
+#offshore_logit1_ef <- as_tibble(effect(c("offshore_viikoittain_f", "veikkaus_viikoittain_f"), offshore_logit1))
+offshore_logit2_ef <- as_tibble(effect(c("offshore_kuukausittain_f", "veikkaus_kuukausittain_f"), offshore_logit2))
+#offshore_logit1_ef <- as_tibble(emmeans(offshore_logit1, c("offshore_viikoittain_f", "jakso"), type = "response"))
+#plot(allEffects(offshore_logit1))
+
+
+# offshore_logit1_ef %>% ggplot(aes(offshore_viikoittain_f, fit, color = veikkaus_viikoittain_f)) + 
+#   geom_point() + 
+#   geom_line(aes(group = veikkaus_viikoittain_f)) + 
+#   theme_bw()
+
+offshore_logit2_ef %>% 
+  dplyr::mutate(offshore_kuukausittain_f = factor(offshore_kuukausittain_f, labels = c("No", "Yes")),
+                veikkaus_kuukausittain_f = factor(veikkaus_kuukausittain_f, labels = c("No", "Yes"))) %>%
+  ggplot(aes(offshore_kuukausittain_f, fit, color = veikkaus_kuukausittain_f)) + 
+  geom_point(size=2.5, alpha = .5, position = position_dodge(.1)) + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = .05, size = .8, position = position_dodge(.1)) +
+  geom_line(aes(group = veikkaus_kuukausittain_f), size = .8, position = position_dodge(.1)) + 
+  scale_color_manual(values = c("salmon", "blue")) +
+  scale_y_continuous(labels = scales::percent, breaks = c(0.05, 0.1, 0.15, 0.2, 0.25)) +
+  labs(y = "Probability of self-reported gambling problems",
+       x = "Monthly offshore",
+       color = "Monthly Veikkaus") +
+  theme_classic(base_size=13) +
+  theme(legend.position = c(0.3, 0.8))
+
+
+
+
+
+#####
+#####
+#####
+#####
+
+
+
+
+
+####
+####
+
+
+offshore_ongelmat_w <- lm(ongelmia ~ veikkaus_viikottain*offshore_viikottain + ikaluok + suku + t1 + tulo + as.factor(jakso), data=offshore_suodatettu)
+summary(offshore_ongelmat_w)
+
+offshore_ongelmat_w <- lm(ongelmia ~ veikkaus_kuukausittain*offshore_kuukausittain + ikaluok + suku + t1 + tulo + as.factor(jakso), data=offshore_suodatettu)
+summary(offshore_ongelmat_w)
+
