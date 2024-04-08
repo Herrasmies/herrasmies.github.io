@@ -10,7 +10,7 @@ output:
 
 <font size=5>Peer-reviewed publications</font>
 
-I've (co)authored 62 scientific papers, 52 of which have been peer-reviewed (19 as first author, 11 as second author, and 9 as last author). My papers focus on 1) gambling, games, and behavioral addictions, 2) social psychology and moral psychology of robotics, 3) emotions, decision-making, and psychophysiological correlates of cognition, and 4) psychology of deception.
+I've (co)authored 62 scientific papers, 52 of which have been peer-reviewed (19 as first author, 12 as second author, and 9 as last author). My papers focus on 1) gambling, games, and behavioral addictions, 2) social psychology and moral psychology of robotics, 3) emotions, decision-making, and psychophysiological correlates of cognition, and 4) psychology of deception.
 
 My papers are listed below topic-wise, though some papers fit multiple topics. If you want a paper you can't access, I'll be happy to <a href="contact.html">email</a href> you a copy.
 
