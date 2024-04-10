@@ -1,0 +1,602 @@
+library(tidyverse)
+library(survey)
+library(effects)
+library(survey)
+library(Hmisc)
+library(psych)
+
+#77% (doublecheck) on kaikki LRGG-kyssärit tehtynä
+
+#lrgg <- read.csv("C:\\Users\\jpgk\\Downloads\\LRGG+Suomi_April+24,+2023_11.34.csv", sep=",")
+lrgg <- read.csv("C:\\Users\\jpgk\\Downloads\\LRGG_numeric_values.csv", sep=",")
+
+#Remove test responses
+lrgg <- lrgg[-c(1:60),]
+
+#Create grouping variable
+oldnames_group1 <- colnames(lrgg)[17:41]
+oldnames_group2 <- colnames(lrgg)[42:66]
+
+group1 <- lrgg %>% dplyr::filter(usab1_1 > 0)
+group2 <- lrgg %>% dplyr::filter(usab1_1.1 > 0)
+
+group1 <- group1 %>%
+  dplyr::select(-c(usab1_1.1:lrgg4_3.1)) %>%
+  dplyr::mutate(group = rep("Group 1", n()))
+
+group2 <- group2 %>%
+  dplyr::select(-c(usab1_1:lrgg4_3)) %>% 
+  dplyr::rename_at(vars(oldnames_group2), ~ oldnames_group1) %>%
+  dplyr::mutate(group = rep("Group 2", n()))
+
+lrgg <- rbind(group1, group2)
+
+#remove useless columns
+lrgg <- lrgg[, -c(1,2,3,7,9,10)]
+
+lrgg <- lrgg %>% dplyr::filter(Q_BallotBoxStuffing != "true")
+
+#Add running ID, and change usability-variables into numeric
+#Then, create usability scales (prelim, mukana ei usab10 ja usab11 jotka sisältävät "ei koske minua"-vastauksen)
+lrgg <- lrgg %>% 
+  dplyr::mutate(id = seq(1:n())) %>%
+  dplyr::mutate_at(c("usab1_1", "usab2_1", "usab3.4_1", "usab3.4_2", 
+                     "usab5_1", "usab6_1", "usab7_1", "usab8_1", 
+                     "usab9_1", "usab10_1", "usab11_1",
+                     "lrgg1_1", "lrgg1_2", "lrgg1_3", "lrgg1_4", 
+                     "lrgg2a_1", "lrgg2b_1", "lrgg2c_1", 
+                     "lrgg3_1", "lrgg3_2", "lrgg3_3", "lrgg3_4",
+                     "lrgg4_1", "lrgg4_2", "lrgg4_3",
+                     "PGSI_1", "PGSI_2", "PGSI_3", "PGSI_4", "PGSI_5",
+                     "PGSI_6", "PGSI_7", "PGSI_8", "PGSI_9",
+                     "ATGS_1", "ATGS_2", "ATGS_3", "ATGS_4", "ATGS_5",
+                     "ATGS_6", "ATGS_7", "ATGS_8"), as.numeric) %>%
+  dplyr::mutate(across(.cols = contains('PGSI_', ignore.case = FALSE), .names = '{.col}ver2')) %>% #created to retain NA values
+  dplyr::mutate_at(c("PGSI_1", "PGSI_2", "PGSI_3", "PGSI_4", "PGSI_5",
+                     "PGSI_6", "PGSI_7", "PGSI_8", "PGSI_9"), ~replace_na(.,1)) %>% #replace na with 1, then subtract 1 below
+  group_by(id) %>%
+  dplyr::mutate(usability_total = mean(c(usab1_1, usab2_1, usab3.4_1, usab3.4_2, 
+                                         (6-usab5_1), usab6_1, usab7_1, usab8_1, usab9_1)),
+                ATGS_mean = mean(c(ATGS_1, 6-ATGS_2, 6-ATGS_3, ATGS_4, 6-ATGS_5, ATGS_6, ATGS_7, 6-ATGS_7)), #reverse coded: 2, 3, 5, 8
+                PGSI_total = sum(PGSI_1-1, PGSI_2-1, PGSI_3-1, PGSI_4-1, PGSI_5-1, PGSI_6-1, PGSI_7-1, PGSI_8-1, PGSI_9-1, na.rm=T),
+                PGSI_totalver2 = sum(PGSI_1ver2-1, PGSI_2ver2-1, PGSI_3ver2-1, PGSI_4ver2-1, PGSI_5ver2-1, PGSI_6ver2-1, PGSI_7ver2-1, PGSI_8ver2-1, PGSI_9ver2-1)) %>% #retain NA -values to flag those who haven't gambled
+  ungroup() %>%
+  dplyr::mutate(group = factor(group, labels = c("Household income", "Personal income")),
+                PGSI_category = case_when(PGSI_total == 0 ~ "No problem",
+                                          PGSI_total > 0 & PGSI_total < 5 ~ "Low-risk gambler",
+                                          PGSI_total > 4 & PGSI_total < 8 ~ "Moderate-risk gambler",
+                                          PGSI_total >= 8 ~ "Problem gambler"),
+                PGSI_category2 = ifelse((PGSI_category == "Problem gambler" | PGSI_category == "Moderate-risk gambler"), "PGSI: At risk", "PGSI: Not at risk"),
+                PGSI_category3 = case_when(is.na(PGSI_totalver2) ~ "No problem, has not gambled",
+                                           PGSI_totalver2 == 0 ~ "No problem, has gambled",
+                                           PGSI_totalver2 > 0 & PGSI_total < 5 ~ "Low-risk gambler",
+                                           PGSI_totalver2 > 4 & PGSI_total < 8 ~ "Moderate-risk gambler",
+                                           PGSI_totalver2 >= 8 ~ "Problem gambler"),
+                sukupuoli = factor(sukupuoli, labels = c("Male", "Female", "Other", "Do not wish to answer")),
+                koulutus = as.numeric(koulutus),
+                tulotaso_henk = as.numeric(tulotaso_henk),
+                tulotaso_kotitalous = as.numeric(tulotaso_kotitalous),
+                ika = as.numeric(ika),
+                usab5_rev = 6-usab5_1) #usab5rev for visualization purposes! TODO: find better way to deal with this?
+
+#Descriptives
+
+
+# lrgg %>%
+#   dplyr::mutate(PGSI_category = factor(PGSI_category, levels = c("No problem", "Low-risk gambler",
+#                                                                  "Moderate-risk gambler", "Problem gambler"),
+#                                          labels = c("No\nprob.", "Low-\nrisk", 
+#                                                                  "Moderate-\nrisk", "Problem")),
+#                 sukupuoli = factor(sukupuoli, labels = c("Male", "Female", "Other", "No\nanswer"))) %>%
+#   gather(key, value, sukupuoli, koulutus, tulotaso_henk, tulotaso_kotitalous, PGSI_category) %>%
+#   ggplot(aes(value)) +
+#   geom_histogram(stat="count") +
+#   #geom_bar(aes(y = (..count..)/sum(..count..))) +
+#   facet_wrap("key", scales="free") +
+#   #scale_y_continuous(labels=percent) +
+#   theme_bw()
+
+
+#Preliminary visualization
+lrgg %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  group_by(id) %>%
+  dplyr::mutate(overall = mean(c(usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1))) %>%
+  gather(key, value, usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1, overall) %>% #käytetään usab5_rev jotta visualisointi järkevämpää! muotoilu "unwanted" --> pienempi arvo on hyvä
+  ggplot(aes(key, value, color = group)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "point", position=position_dodge(.4), size=2) +
+  stat_summary(fun.data= mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.4), size=1.2) +
+  geom_jitter(aes(key, value), alpha=.02, width = .1, height=.3, inherit.aes = F) +
+  theme_bw() +
+  theme(legend.position = "top") +
+  scale_x_discrete(labels = c("AVERAGE", "Sensibility", "Applicability", "Short-term benefit", "Long-term benefit",
+                              "Unwanted consequences", "Preparedness", "Effectiveness", "Understandability", "Clarity")) +
+  scale_y_continuous(breaks = 1:5, 
+                     labels = c("1 (very negative)", "2", "3", "4", "5 (very positive)")) +
+  scale_color_manual(values = c("red", "blue")) +
+  labs(color = NULL, y = "Usability score", x = NULL) +
+  coord_flip() +
+  facet_wrap("sukupuoli")
+
+
+#Mean usability (scale) score
+# lrgg %>%
+#   dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+#   ggplot(aes(group, usability_total)) +
+#   geom_jitter(width=.15, alpha=.25) +
+#   stat_summary(geom = "point", fun = "mean", color="blue", size=4) +
+#   stat_summary(fun.data=mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.9),
+#                color="blue", size=1.5) +
+#   theme_bw() +
+#   facet_wrap("sukupuoli") +
+#   labs(x = NULL, y = "Usability mean score")
+
+
+#TODO LATER:
+#geom_point(aes(group, lrgg2a_1, color=PGSI_category2), alpha=.06, position=position_jitterdodge(.10, .25, .25)) +
+
+
+# lrgg %>%
+#   dplyr::filter(ryhma %in% c("1", "5", "2", "8")) %>%
+#   gather(key, value, usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1) %>% #käytetään usab5_rev jotta visualisointi järkevämpää! muotoilu "unwanted" --> pienempi arvo on hyvä
+#   ggplot(aes(key, value, color = group)) +
+#   stat_summary(fun.data = mean_cl_normal, geom = "point", position=position_dodge(.4), size=2) +
+#   stat_summary(fun.data= mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.4), size=1.2) +
+#   geom_jitter(aes(key, value), alpha=.02, width = .1, inherit.aes = F) +
+#   theme_bw() +
+#   theme(legend.position = "top") +
+#   scale_x_discrete(labels = c("Sensibility", "Applicability", "Short-term benefit", "Long-term benefit",
+#                               "Unwanted consequences", "Preparedness", "Effectiveness", "Understandability", "Clarity")) +
+#   scale_y_continuous(breaks = 1:5, 
+#                      labels = c("1 (very negative)", "2", "3", "4", "5 (very positive)")) +
+#   scale_color_manual(values = c("red", "blue")) +
+#   labs(color = NULL, y = "Usability score", x = NULL) +
+#   coord_flip() + 
+#   facet_wrap("ryhma")
+
+
+#TODO: usab10 ja usab11
+
+# lrgg %>%
+#   ggplot(aes(group, usability_total)) +
+#   geom_jitter(width=.15, alpha=.25) +
+#   stat_summary(geom = "point", fun = "mean", color="blue", size=4) +
+#   stat_summary(fun.data=mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.9),
+#                color="blue", size=1.5) +
+#   theme_bw() +
+#   facet_wrap("PGSI_category") +
+#   labs(x = NULL, y = "Usability mean score")
+#   
+
+lrgg %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  gather(key, value, lrgg1_1, lrgg1_2, lrgg1_3, lrgg1_4) %>%
+  dplyr::filter(value != 6) %>% #poistetaan "ohjeistus on epäselvä
+  #dplyr::mutate(key = factor(key, levels = c("lrgg1_4", "lrgg1_3", "lrgg1_2", "lrgg1_1"))) %>%
+  ggplot(aes(key, value, color = group)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "point", position=position_dodge(.25), size=2) +
+  stat_summary(fun.data= mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.25), size=1.2) +
+  geom_jitter(aes(key, value), alpha=.02, width = .1, inherit.aes = F) +
+  theme_bw(base_size=13) +
+  theme(legend.position = "bottom") +
+  scale_x_discrete(labels = c("Guideline 1\n(income)", "Guideline 2\n(days)", "Guideline 3\n(types)", "Overall")) +
+  scale_y_continuous(breaks = 1:5,
+                     labels = c("1 (much too limiting)", "2", "3 (just right)", "4", "5 (much too allowing)")) +
+  scale_color_manual(values = c("red", "blue")) +
+  labs(color = NULL, y = NULL, x = NULL, 
+       title = "Are the guidelines suitable for most people\nwho gamble?") +
+  facet_wrap("sukupuoli")
+
+
+lrgg %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  gather(key, value, lrgg3_1, lrgg3_2, lrgg3_3, lrgg3_4) %>%
+  dplyr::filter(value != 6) %>% #poistetaan "ohjeistus on epäselvä
+  #dplyr::mutate(key = factor(key, levels = c("lrgg3_4", "lrgg3_3", "lrgg3_2", "lrgg3_1"))) %>%
+  ggplot(aes(key, value, color = group)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "point", position=position_dodge(.25), size=2) +
+  stat_summary(fun.data= mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.25), size=1.2) +
+  geom_jitter(aes(key, value), alpha=.02, width = .1, inherit.aes = F) +
+  theme_bw(base_size=13) +
+  theme(legend.position = "bottom") +
+  scale_x_discrete(labels = c("Guideline 1\n(income)", "Guideline 2\n(days)", "Guideline 3\n(types)", "Overall")) +
+  scale_y_continuous(breaks = 1:5,
+                     labels = c("1 (definitely not)", "2", "3 (don't know)", "4", "5 (definitely)")) +
+  scale_color_manual(values = c("red", "blue")) +
+  labs(color = NULL, y = NULL, x = NULL,
+       title = "Would the guideliens be effective in reducing\ngambling harm?") +
+  facet_wrap("sukupuoli")
+
+
+lrgg %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  gather(key, value, lrgg4_1, lrgg4_2, lrgg4_3) %>%
+  dplyr::filter(value != 6) %>% #poistetaan "ohjeistus on epäselvä
+  #dplyr::mutate(key = factor(key, levels = c("lrgg4_3", "lrgg4_2", "lrgg4_1"))) %>%
+  ggplot(aes(key, value, color = group)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "point", position=position_dodge(.25), size=2) +
+  stat_summary(fun.data= mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.25), size=1.2) +
+  geom_jitter(aes(key, value), alpha=.02, width = .1, inherit.aes = F) +
+  theme_bw(base_size=13) +
+  theme(legend.position = "bottom") +
+  scale_x_discrete(labels = c("Guideline 1\n(income)", "Guideline 2\n(days)", "Guideline 3\n(types)")) +
+  scale_y_continuous(breaks = 1:5,
+                     labels = c("1 (definitely not)", "2", "3 (don't know)", "4", "5 (definitely)")) +
+  scale_color_manual(values = c("red", "blue")) +
+  labs(color = NULL, y = NULL, x = NULL,
+       title = "Would you follow the guidelines if you had to\ngamble less?") +
+  facet_wrap("sukupuoli")
+
+
+lrgg %>%
+  dplyr::filter(lrgg2a_1 <7, sukupuoli %in% c("Male", "Female")) %>% #poistetaan datasta hämärät 12.5 arvot (todo: chekkaa mitä nämä ovat)
+  ggplot(aes(group, lrgg2a_1)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "point", position=position_dodge(.25), size=2, color="blue") +
+  stat_summary(fun.data= mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.25), size=1.2, color="blue") +
+  geom_jitter(alpha=.10, width = .1, height=.2) +
+  theme_bw(base_size=13) +
+  theme(legend.position = "bottom") +
+  scale_x_discrete(labels = c("Household income", "Personal income")) +
+  scale_y_continuous(breaks = 1:7,
+                     labels = c("less than 1 %", "1 % (proposed limit, household)", "2 % (proposed limit, personal)", 
+                                "3 %", "4 %", "5 %", "more than 5 %")) +
+  labs(color = NULL, y = NULL, x = NULL,
+       title = "What would be a suitable limit for\nGuideline 1 (income)") +
+  facet_wrap("sukupuoli")
+
+
+lrgg %>%
+  dplyr::filter(lrgg2b_1 <7, sukupuoli %in% c("Male", "Female")) %>% #poistetaan datasta hämärät 12.5 arvot (todo: chekkaa mitä nämä ovat)
+  ggplot(aes(group, lrgg2b_1)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "point", position=position_dodge(.25), size=2, color="blue") +
+  stat_summary(fun.data= mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.25), size=1.2, color="blue") +
+  geom_jitter(alpha=.10, width = .1, height=.2) +
+  theme_bw(base_size=13) +
+  theme(legend.position = "bottom") +
+  scale_x_discrete(labels = c("Household income", "Personal income")) +
+  scale_y_continuous(breaks = 1:6,
+                     labels = c("0-2", "3", "4 (proposed limit)", 
+                                "5", "6", "7 or more")) +
+  labs(color = NULL, y = NULL, x = NULL,
+       title = "What would be a suitable limit for\nGuideline 2 (days)") +
+  facet_wrap("sukupuoli")
+
+
+lrgg %>%
+  dplyr::filter(lrgg2c_1 <7, sukupuoli %in% c("Male", "Female")) %>% #poistetaan datasta hämärät 12.5 arvot (todo: chekkaa mitä nämä ovat)
+  ggplot(aes(group, lrgg2c_1)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "point", position=position_dodge(.25), size=2, color="blue") +
+  stat_summary(fun.data= mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.25), size=1.2, color="blue") +
+  geom_jitter(alpha=.10, width = .1, height=.2) +
+  theme_bw(base_size=13) +
+  theme(legend.position = "bottom") +
+  scale_x_discrete(labels = c("Household income", "Personal income")) +
+  scale_y_continuous(breaks = 1:6,
+                     labels = c("0-1", "2 (proposed limit)", "3-4", 
+                                "5-6", "7-8", "more than 8")) +
+  labs(color = NULL, y = NULL, x = NULL,
+       title = "What would be a suitable limit for\nGuideline 3 (types)") +
+  facet_wrap("sukupuoli")
+
+
+#Counts (to find out mode)
+lrgg %>% 
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>% 
+  gather(key, value, lrgg2a_1, lrgg2b_1, lrgg2c_1) %>%
+  group_by(group, sukupuoli, key, value) %>% 
+  dplyr::summarize(count = n()) %>%
+  dplyr::filter(count == max(count))
+
+
+
+# lrgg %>%
+#   gather(key, value, lrgg2a_1, lrgg2b_1, lrgg2c_1) %>%
+#   dplyr::filter(value <7) %>% #poistetaan datasta hämärät 12.5 arvot (todo: chekkaa mitä nämä ovat)
+#   ggplot(aes(group, value)) +
+#   geom_jitter(width=.15, alpha=.25) +
+#   stat_summary(geom = "point", fun = "mean", color="blue", size=4) +
+#   stat_summary(fun.data=mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.9),
+#                color="blue", size=1.5) +
+#   theme_bw() +
+#   facet_wrap("key")
+
+
+# lrgg %>%
+#   gather(key, value, lrgg3_1, lrgg3_2, lrgg3_3) %>%
+#   dplyr::filter(value != 6) %>% #poistetaan "ohjeistus on epäselvä
+#   ggplot(aes(group, value)) +
+#   geom_jitter(width=.15, alpha=.25) +
+#   stat_summary(geom = "point", fun = "mean", color="blue", size=4) +
+#   stat_summary(fun.data=mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.9),
+#                color="blue", size=1.5) +
+#   theme_bw() +
+#   facet_wrap("key")
+
+# 
+# lrgg %>%
+#   gather(key, value, lrgg4_1, lrgg4_2, lrgg4_3) %>%
+#   dplyr::filter(value != 6) %>% #poistetaan "ohjeistus on epäselvä
+#   ggplot(aes(group, value)) +
+#   geom_jitter(width=.15, alpha=.25) +
+#   stat_summary(geom = "point", fun = "mean", color="blue", size=4) +
+#   stat_summary(fun.data=mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.9),
+#                color="blue", size=1.5) +
+#   theme_bw() +
+#   facet_wrap("key")
+
+
+#ATGS prelim visualizations
+lrgg %>%
+  ggplot(aes(usability_total, ATGS_mean)) +
+  geom_jitter(width=.2) +
+  geom_smooth(method = "lm") +
+  theme_bw()
+
+
+lrgg$email[which(lrgg$email=="")] <- NA
+
+
+# 1. viihdepelaaja (ei haittoja)
+# 2. rahapeleistä aiemmin tai tällä hetkellä haittoja kokeva
+# 3. rahapeleistä aiemmin tai tällä hetkellä haittoja kokevan läheinen
+# 4. ammattilaisrahapelaaja
+# 5. työssään rahapelihaittoja kokevia kohtaava ammattilainen
+# 6. työskentelen rahapelaamisen parissa, mutta en ole töissä rahapeliyhtiössä
+# 7. olen rahapeliyhtiön työntekijä
+# 8. ei mikään yllä olevista
+
+
+#TESTING WEIGHTS (for gender imbalance)
+
+lrgg_gendertrim <- lrgg %>% 
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  dplyr::mutate(sukupuoli = droplevels(sukupuoli))
+
+lrgg.svy.unweighted <- svydesign(ids=~1, data=lrgg_gendertrim)
+
+
+gender.dist <- data.frame(sukupuoli = c("Male", "Female"), 
+                          Freq = nrow(lrgg) * c(0.5, 0.5))
+
+
+lrgg.svy.rake <- rake(design = lrgg.svy.unweighted,
+                      sample.margins = list(~sukupuoli),
+                      population.margins = list(gender.dist))
+
+
+lrgg.svy.rake$postStrata
+
+#Weighted (gender 50-50) dataset:
+#sukupuolen painot (laskettu koodin alaosassa manuaalisesti!) 2.0993377 0.6876356
+lrgg_weighted <- lrgg %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  dplyr::mutate(weight = ifelse(sukupuoli == "Male", 2.0993377, 0.6876356)) %>% 
+  group_by(id) %>%
+  dplyr::mutate(overall = mean(c(usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1))) %>%
+  ungroup() %>%
+  gather(key, value, usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1, overall) %>%
+  group_by(group, key) %>%
+  dplyr::mutate(weighted_mean = weighted.mean(value, weight),
+                weighted_se = sqrt(wtd.var(value, weight)) / sqrt(n()),
+                mean = mean(value))
+  # group_by(group, key, sukupuoli) %>%
+  # dplyr::summarize(weighted_mean = mean(weighted_mean),
+  #                  mean = mean(mean))
+
+lrgg %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  group_by(id) %>%
+  dplyr::mutate(overall = mean(c(usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1))) %>%
+  gather(key, value, usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1, overall) %>% #käytetään usab5_rev jotta visualisointi järkevämpää! muotoilu "unwanted" --> pienempi arvo on hyvä
+  ggplot(aes(key, value, color = group)) +
+  geom_point(aes(key, weighted_mean), data=lrgg_weighted, position=position_dodge(.4), size=2) +
+  geom_errorbar(aes(ymin = weighted_mean-(1.96*weighted_se), ymax = weighted_mean+(1.96*weighted_se)), width = 0.2, size=1.2,
+                data=lrgg_weighted,
+                position = position_dodge(.4)) +
+  geom_jitter(aes(key, value), alpha=.015, width = .1, height=.3, inherit.aes = F) +
+  theme_bw() +
+  theme(legend.position = "top") +
+  scale_x_discrete(labels = c("AVERAGE", "Sensibility", "Applicability", "Short-term benefit", "Long-term benefit",
+                              "Unwanted consequences", "Preparedness", "Effectiveness", "Understandability", "Clarity")) +
+  scale_y_continuous(breaks = 1:5, 
+                     labels = c("1 (very negative)", "2", "3", "4", "5 (very positive)")) +
+  scale_color_manual(values = c("red", "blue")) +
+  labs(color = NULL, y = "Usability score", x = NULL) +
+  coord_flip()
+
+
+#Stratified sample
+lrgg %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  group_by(sukupuoli) %>%
+  sample_n(size=151, seed=11) %>%
+  group_by(id) %>%
+  dplyr::mutate(overall = mean(c(usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1))) %>%
+  gather(key, value, usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1, overall) %>% #käytetään usab5_rev jotta visualisointi järkevämpää! muotoilu "unwanted" --> pienempi arvo on hyvä
+  ggplot(aes(key, value, color = group)) +
+  stat_summary(fun.data = mean_cl_normal, geom = "point", position=position_dodge(.4), size=2) +
+  stat_summary(fun.data= mean_cl_normal, geom="errorbar", width=.1, position=position_dodge(.4), size=1.2) +
+  geom_jitter(aes(key, value), alpha=.015, width = .1, height=.3, inherit.aes = F) +
+  theme_bw() +
+  theme(legend.position = "top") +
+  scale_x_discrete(labels = c("AVERAGE", "Sensibility", "Applicability", "Short-term benefit", "Long-term benefit",
+                              "Unwanted consequences", "Preparedness", "Effectiveness", "Understandability", "Clarity")) +
+  scale_y_continuous(breaks = 1:5, 
+                     labels = c("1 (very negative)", "2", "3", "4", "5 (very positive)")) +
+  scale_color_manual(values = c("red", "blue")) +
+  labs(color = NULL, y = "Usability score", x = NULL, title="Randomly stratified, equal number of both genders") +
+  coord_flip()
+  
+
+
+
+##Attitudes towards gambling
+#TODO: only overall?
+
+#suitability, perceived effectiveness, would you follow, self-perceived limit 1, 2, 3
+
+lrgg %>%
+  group_by(id) %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  dplyr::mutate(overall = mean(c(usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1))) %>%
+  gather(key, value, usab1_1, usab2_1, usab3.4_1, usab3.4_2, usab5_rev, usab6_1, usab7_1, usab8_1, usab9_1, overall) %>% 
+  dplyr::mutate(key = factor(key, levels = c("usab1_1", "usab2_1", "usab3.4_1", 
+                                             "usab3.4_2", "usab5_rev", "usab6_1", 
+                                             "usab7_1", "usab8_1", "usab9_1", "overall"),
+                             labels = c("Sensibility", "Applicability", "Short-term benefit", 
+                                        "Long-term benefit", "Unwanted consequences", "Preparedness", 
+                                        "Effectiveness", "Understandability", "Clarity", "AVERAGE"))) %>%
+  ggplot(aes(ATGS_mean, value)) +
+  geom_smooth(method = "lm", fullrange=T, aes(color=sukupuoli, fill=sukupuoli), alpha=.1) +
+  geom_jitter(alpha=.08) +
+  scale_y_continuous(breaks = 1:5, 
+                     labels = c("1 (very negative)", "2", "3", "4", "5 (very positive)")) +
+  facet_wrap("key") +
+  labs(y= NULL, x = "ATGS mean score") +
+  scale_color_manual(values = c("blue", "salmon")) +
+  scale_fill_manual(values = c("blue", "salmon")) +
+  labs(fill = NULL, color = NULL) +
+  theme_bw(base_size=13) +
+  theme(legend.position = c(0.7,0.2))
+
+  
+#Suitability for people who gamble, ATGS and eurohis
+lrgg %>%
+  group_by(id) %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  gather(key, value, lrgg1_1, lrgg1_2, lrgg1_3, lrgg1_4) %>% 
+  dplyr::filter(value != 6) %>% #poistetaan "ohjeistus on epäselvä // EI TOIMI CHEKKAA MIKSEI???
+  dplyr::mutate(key = factor(key, levels = c("lrgg1_1", "lrgg1_2", "lrgg1_3", "lrgg1_4"),
+                             labels= c("Guideline 1 (income)", "Guideline 2 (days)", "Guideline 3 (types)", "Overall"))) %>%
+  ggplot(aes(ATGS_mean, value)) +
+  geom_smooth(method = "lm", fullrange=T, aes(color=sukupuoli, fill=sukupuoli), alpha=.1) +
+  geom_jitter(alpha=.1) +
+  facet_wrap("key") +
+  labs(x = "ATGS mean score") +
+  theme_bw(base_size=12) +
+  theme(legend.position = "bottom") +
+  scale_y_continuous(breaks = 1:5,
+                     labels = c("1 (much too limiting)", "2", "3 (just right)", "4", "5 (much too allowing)")) +
+  scale_color_manual(values = c("blue", "salmon")) +
+  scale_fill_manual(values = c("blue", "salmon")) +
+  labs(color = NULL, fill = NULL, y = NULL, x = "ATGS mean score", 
+       title = "Are the guidelines suitable for most people who gamble?")
+
+
+#Would the guidelines be effective in reducing gambling harm?
+lrgg %>%
+  group_by(id) %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  gather(key, value, lrgg3_1, lrgg3_2, lrgg3_3, lrgg3_4) %>% 
+  dplyr::filter(value != 6) %>% #poistetaan "ohjeistus on epäselvä // EI TOIMI CHEKKAA MIKSEI???
+  dplyr::mutate(key = factor(key, levels = c("lrgg3_1", "lrgg3_2", "lrgg3_3", "lrgg3_4"),
+                             labels= c("Guideline 1 (income)", "Guideline 2 (days)", "Guideline 3 (types)", "Overall"))) %>%
+  ggplot(aes(ATGS_mean, value)) +
+  geom_smooth(method = "lm", fullrange=T, aes(color=sukupuoli, fill=sukupuoli), alpha=.1) +
+  geom_jitter(alpha=.1) +
+  facet_wrap("key") +
+  labs(x = "ATGS mean score") +
+  theme_bw(base_size=12) +
+  theme(legend.position = "bottom") +
+  scale_y_continuous(breaks = 1:5,
+                     labels = c("1 (definitely not)", "2", "3 (don't know)", "4", "5 (definitely)"))  +
+  scale_color_manual(values = c("blue", "salmon")) +
+  scale_fill_manual(values = c("blue", "salmon")) +
+  labs(color = NULL, fill = NULL, y = NULL, x = "ATGS mean score", 
+       title = "Would the guideliens be effective in reducing gambling harm?")
+
+
+#Would you follow the guidelines?
+lrgg %>%
+  group_by(id) %>%
+  dplyr::filter(sukupuoli %in% c("Male", "Female")) %>%
+  gather(key, value, lrgg4_1, lrgg4_2, lrgg4_3) %>% 
+  dplyr::filter(value != 6) %>% #poistetaan "ohjeistus on epäselvä // EI TOIMI CHEKKAA MIKSEI???
+  dplyr::mutate(key = factor(key, levels = c("lrgg4_1", "lrgg4_2", "lrgg4_3"),
+                             labels= c("Guideline 1 (income)", "Guideline 2 (days)", "Guideline 3 (types)"))) %>%
+  ggplot(aes(ATGS_mean, value)) +
+  geom_smooth(method = "lm", fullrange=T, aes(color=sukupuoli, fill=sukupuoli), alpha=.1) +
+  geom_jitter(alpha=.1) +
+  facet_wrap("key") +
+  labs(x = "ATGS mean score") +
+  theme_bw(base_size=12) +
+  theme(legend.position = "bottom") +
+  scale_y_continuous(breaks = 1:5,
+                     labels = c("1 (definitely not)", "2", "3 (don't know)", "4", "5 (definitely)"))  +
+  scale_color_manual(values = c("blue", "salmon")) +
+  scale_fill_manual(values = c("blue", "salmon")) +
+  labs(color = NULL, fill = NULL, y = NULL, x = "ATGS mean score", 
+       title = "Would you follow the guidelines if you had to gamble less?")
+
+
+
+
+lrgg %>%
+  ggplot(aes(ATGS_mean, lrgg2a_1)) +
+  geom_smooth(method = "lm", fullrange=T) +
+  geom_jitter(alpha=.1) +
+  theme_bw()
+
+lrgg %>%
+  ggplot(aes(ATGS_mean, lrgg2b_1)) +
+  geom_smooth(method = "lm", fullrange=T) +
+  geom_jitter(alpha=.1) +
+  theme_bw()
+
+lrgg %>%
+  ggplot(aes(ATGS_mean, lrgg2c_1)) +
+  geom_smooth(method = "lm", fullrange=T) +
+  geom_jitter(alpha=.1) +
+  theme_bw()
+
+
+
+
+# svy_data_drugs <- svydesign(id = ~1,
+#                             fpc = ~rg_n,
+#                             weights = ~w_analysis,
+#                             strata = ~rg_stratum,
+#                             data = crosstabs)
+
+
+
+#Visualisoi surveyn progress
+lrgg_progress <- read.csv("C:\\Users\\jpgk\\Downloads\\LRGG_numeric_values.csv", sep=",")
+
+lrgg_progress %>% dplyr::mutate(progress = as.numeric(Progress)/100,
+                                id = fct_reorder(factor(seq(1:n())), progress)) %>% 
+  ggplot(aes(id, progress)) + 
+  geom_point(color="lightblue", alpha=.15) + 
+  geom_segment(aes(x=id, xend=id, y=0, yend=progress), alpha=.02) + 
+  scale_y_continuous(breaks = c(0, .2, .4, .6, .80, 1), labels = scales::percent_format(accuracy=1)) +
+  coord_flip() + 
+  theme_classic(base_size=13) + 
+  theme(axis.text.y = element_blank(), 
+        axis.ticks.y = element_blank(),
+        legend.position = "bottom") +
+  #scale_x_continuous(breaks=seq(1900, 2000, 10)) +
+  labs(y = "Survey completion ", x = "Participants who opened survey (N = 1131)", color = NULL,
+       title = "Survey completion % across all participants") +
+  annotate(geom = "text", label = "Intro + demographics", 
+           x = 95, y = 0.20, 
+           color = "blue", size = 3) +
+  annotate(geom = "text", label = "LRGG task\ninstructions", 
+           x = 90, y = 0.42, 
+           color = "blue", size = 3) +
+  annotate(geom = "text", label = "LRGG task\nhalf way", 
+           x = 220, y = 0.60, 
+           color = "blue", size = 3) +
+  annotate(geom = "text", label = "PGSI,\ngambling activity,\nEuroHIS", 
+           x = 300, y = 0.83, 
+           color = "blue", size = 3) +
+  annotate(geom = "text", label = "Open ended\nquestion", 
+           x = 330, y = 1, 
+           color = "blue", size = 3) +
+  annotate(geom = "rect", xmin=399, xmax=1131, ymin=.92, ymax=1.02, alpha=0.2, color="red") +
+  annotate(geom = "text", label = "Analyzed sample\n(> 95 % complete\nN = 703)", size = 3, x = 820, y = 0.80, color = "red")
+
+
+
+##TODO
+#1: tarkista "ohjeistus on epäselvä" vastaukset
+
