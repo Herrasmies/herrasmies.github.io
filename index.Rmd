@@ -6,7 +6,7 @@ pagetitle: Jussi Palomäki
 
 <img src="jussikuva2.jpg" style="width:30%; border:1px solid; margin-right: 10px" align="left"></td>
 
-I'm a <b>cognitive scientist</b>, <b>game enthusiast</b>, and <b>gambling researcher</b>. I have a PhD and the title of <a href="https://www.helsinki.fi/en/about-us/people/researchers-and-teachers/docents">docent</a href> in <a href="https://en.wikipedia.org/wiki/Cognitive_science" target="_blank">cognitive science</a href> from the University of Helsinki where I used to work as a university lecturer. Currently I work as a senior researcher at the Finnish Institute for Health and Welfare on gambling harm prevention. 
+I'm a <b>cognitive scientist</b>, <b>game enthusiast</b>, and <b>gambling researcher</b>. I have a PhD and the title of <a href="https://www.helsinki.fi/en/about-us/people/researchers-and-teachers/docents">docent</a href> in <a href="https://en.wikipedia.org/wiki/Cognitive_science" target="_blank">cognitive science</a href> from the University of Helsinki where I used to work as a university lecturer. I also have the title of docent in the study of games and well-being at Tampere University. Currently I work as a senior researcher at the Finnish Institute for Health and Welfare on gambling harm prevention. 
 
 
 

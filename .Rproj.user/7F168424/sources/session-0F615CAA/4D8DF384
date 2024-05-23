@@ -1,26 +1,26 @@
 {
-    "id": "F61A9958",
-    "path": "C:/Users/jpgk/Desktop/OffshoreR_Jussi.R",
+    "id": "4D8DF384",
+    "path": "C:/Users/jpgk/Desktop/Offshore_haitat.R",
     "project_path": null,
     "type": "r_source",
     "hash": "0",
     "contents": "",
     "dirty": false,
-    "created": 1698388632948.0,
+    "created": 1709567428303.0,
     "source_on_save": false,
-    "relative_order": 14,
+    "relative_order": 16,
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "151,20",
-        "scrollLine": "128"
+        "cursorPosition": "46,52",
+        "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1710003426,
+    "lastKnownWriteTime": 1710420810,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1710003426610,
+    "last_content_update": 1710420810573,
     "read_only": false,
     "read_only_alternatives": []
 }
