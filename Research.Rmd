@@ -10,7 +10,7 @@ output:
 
 <font size=5>Peer-reviewed publications</font>
 
-I've (co)authored 62 scientific papers, 52 of which have been peer-reviewed (19 as first author, 12 as second author, and 9 as last author). My papers focus on 1) gambling, games, and behavioral addictions, 2) social psychology and moral psychology of robotics, 3) emotions, decision-making, and psychophysiological correlates of cognition, and 4) psychology of deception.
+I've (co)authored 63 scientific papers, 53 of which have been peer-reviewed (19 as first author, 12 as second author, and 9 as last author). My papers focus on 1) gambling, games, and behavioral addictions, 2) social psychology and moral psychology of robotics, 3) emotions, decision-making, and psychophysiological correlates of cognition, and 4) psychology of deception.
 
 My papers are listed below topic-wise, though some papers fit multiple topics. If you want a paper you can't access, I'll be happy to <a href="contact.html">email</a href> you a copy.
 
@@ -112,6 +112,8 @@ My papers are listed below topic-wise, though some papers fit multiple topics. I
 
 
 #### Emotions, decision-making, and psychophysiological correlates of cognition
+
+- Kuznetsova, E., Tammi, T., Postnova, N., <b>Palomäki, J.</b>, & Cowley, B. (2024). Neurotypical Adults employ Distinct Cognitive Mechanisms compared to Adults with ADHD during a Sustained Attention Task with Gestalt Stimuli. In <i>Proceedings of the Annual Meeting of the Cognitive Science Society</i> (Vol. 46).
 
 - Saarinen, V.A., & <b>Palomäki, J.</b> (2021). Psykojuridinen näkökulma tuomarin päätöksentekoon, erityisesti rangaistuksen määräämiseen. <i>Lakimies, 119</i>(6), 993–1014.
 
