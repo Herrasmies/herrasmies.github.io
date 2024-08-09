@@ -463,18 +463,39 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
     payout &lt;- c(100, 50, 30, 15, 8, 7, 3, 2, 0) - 1
     probability &lt;- c(0.002, 0.011, 0.236, 1.151, 1.101, 1.123, 7.445, 12.928, 76.003)/100
     ev &lt;- sum(payout*probability) #ev = -0.10045
+    sd &lt;- sd(sample(payout, 1000000, replace = TRUE, prob = probability))
+    cumEV = cumsum(rep(ev, rounds))
+    cumSD = sqrt(cumsum(rep(sd^2, rounds))) #first convert to variance, then convert the sum back to SD
+    lower &lt;- qnorm(0.025, cumEV, cumSD)
+    upper &lt;- qnorm(0.975, cumEV, cumSD)
+    confidence &lt;- data.frame(cbind(lower, upper))
+    confidence$ID &lt;- seq.int(nrow(confidence))
   }
   
   else if (volatility==&quot;med&quot;) {
     payout &lt;- c(500, 65, 45, 13, 7, 6, 3, 2, 0) - 1
     probability &lt;- c(0.002, 0.011, 0.236, 1.151, 1.101, 1.123, 7.445, 12.928, 76.003)/100
     ev &lt;- sum(payout*probability) #ev = -0.10066
+    sd &lt;- sd(sample(payout, 1000000, replace = TRUE, prob = probability))
+    cumEV = cumsum(rep(ev, rounds))
+    cumSD = sqrt(cumsum(rep(sd^2, rounds))) #first convert to variance, then convert the sum back to SD
+    lower &lt;- qnorm(0.025, cumEV, cumSD)
+    upper &lt;- qnorm(0.975, cumEV, cumSD)
+    confidence &lt;- data.frame(cbind(lower, upper))
+    confidence$ID &lt;- seq.int(nrow(confidence))
   }
   
   else { 
     payout &lt;- c(2000, 50, 33, 14, 7, 5, 3, 2, 0) - 1
     probability &lt;- c(0.002, 0.011, 0.236, 1.151, 1.101, 1.123, 7.445, 12.928, 76.003)/100
     ev &lt;- sum(payout*probability) #ev = -0.10035
+    sd &lt;- sd(sample(payout, 1000000, replace = TRUE, prob = probability))
+    cumEV = cumsum(rep(ev, rounds))
+    cumSD = sqrt(cumsum(rep(sd^2, rounds))) #first convert to variance, then convert the sum back to SD
+    lower &lt;- qnorm(0.025, cumEV, cumSD)
+    upper &lt;- qnorm(0.975, cumEV, cumSD)
+    confidence &lt;- data.frame(cbind(lower, upper))
+    confidence$ID &lt;- seq.int(nrow(confidence))
   }
 
   for (i in 1:players) {
@@ -630,6 +651,11 @@ casino_simulator &lt;- function(rounds, players, topbottom = F, volatility = &qu
     geom_line(aes(colour = maxmin, alpha = maxmin, size = maxmin)) +
     geom_abline(intercept = 0, slope = ev, linetype=&quot;dashed&quot;, size=0.5, color=&quot;red&quot;, alpha=.5) +
     geom_hline(yintercept = 0, size=0.5, alpha=.5) +
+    
+    #uncomment these if we want confidence interval:
+    # geom_line(data = confidence, aes(x = ID, y = lower), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
+    # geom_line(data = confidence, aes(x = ID, y = upper), linetype=&quot;dashed&quot;, color=&quot;black&quot;, size=0.5, inherit.aes=F) +
+    
     xlab(&quot;Hours played&quot;) + ylab(&quot;Money (euros)&quot;) +
     scale_color_manual(values=c(&quot;blue&quot;, &quot;red&quot;, &quot;grey&quot;)) +
     theme_minimal(base_size=14) +

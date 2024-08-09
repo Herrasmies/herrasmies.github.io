@@ -1,0 +1,131 @@
+---
+title: "Poker variance simulator"
+author: "(c) Jussi Palomäki, 2017-2023"
+output:
+  html_document:
+    code_folding: hide
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(include = TRUE, echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r, message=FALSE}
+library(tidyverse)
+library(gganimate)
+library(transformr)
+library(plotly)
+
+
+# blinds <- (c(-100, -80, -60, -40, -20, -10, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 10, 20, 40, 60, 80, 100))
+# 
+# sample(blinds, hands, replace = TRUE, prob = c(0.01, 0.01, 0.01, 0.02, 0.03, 0.04, 0.06, 0.06, 0.07, 0.07, 0.08, 0.08, 0.08, 0.07, 0.07, 0.06, 0.06, 0.04, 0.03, 0.02, 0.01, 0.01, 0.01))
+
+
+variance_simulator <- function(hands, winrate, SD, players, topbottom=F) {
+  
+  simulations = data.frame(nrow = 0)
+  simulations_cashout = data.frame(nrow = 0)
+  cumEV = cumsum(rep(winrate, hands))
+  cashout_deduction <- sample(c(0.1, 1), hands, replace = TRUE, prob = c(0.05, 0.95)) #every 20th hand will be multiplied by .1
+  cumEV_cashout <- cumsum(winrate*cashout_deduction)
+  cumSD = sqrt(cumsum(rep(SD^2, hands))) #first convert to variance, then convert the sum back to SD
+  lower <- qnorm(0.025, cumEV, cumSD)
+  upper <- qnorm(0.975, cumEV, cumSD)
+  lower_cashout <- qnorm(0.025, cumEV_cashout, cumSD_cashout) #cashout calculation and visualization stuff
+  upper_cashout <- qnorm(0.975, cumEV_cashout, cumSD_cashout) #cashout calculation and visualization stuff
+  confidence <- data.frame(cbind(lower, upper))
+  confidence$ID <- seq.int(nrow(confidence))
+  
+  #simulations for cashout
+  for (i in 1:players) {
+    test <- rnorm(hands, mean=winrate, sd=SD)
+    cashout_deduction <- sample(c(0.1, 1), hands, replace = TRUE, prob = c(0.05, 0.95)) #every 10th hand will be multiplied by .1
+    test <- test*cashout_deduction #cashout calculation and visualization stuff
+    test <- data.frame(run = test)
+    #names(test)[1] <- paste("Player ",i,sep="")
+    names(test)[1] <- i
+    simulations_cashout <- cbind(simulations_cashout, cumsum(test))
+    simulations_cashout$nrow <- NULL
+  }
+  
+  #simulations for non-cashout
+  for (i in 1:players) {
+    test <- rnorm(hands, mean=winrate, sd=SD)
+    test <- data.frame(run = test)
+    #names(test)[1] <- paste("Player ",i,sep="")
+    names(test)[1] <- i
+    simulations <- cbind(simulations, cumsum(test))
+    simulations$nrow <- NULL
+  }
+  
+  
+  # max_value <- which(tail(simulations, 1) == max(tail(simulations, 1))) #Among the last row, which column has the highest value
+  # min_value <- which(tail(simulations, 1) == min(tail(simulations, 1))) #Among the last row, which column has the lowest value
+  
+  simulations_cashout$ID <- seq.int(nrow(simulations_cashout))
+  
+  simulations.long.cashout <- simulations_cashout %>% 
+    gather(key, value, -ID) %>%
+    dplyr::mutate(cashout = rep("Cashout", n()))
+  
+
+  simulations$ID <- seq.int(nrow(simulations))
+  
+  simulations.long <- simulations %>% 
+    gather(key, value, -ID) %>%
+    dplyr::mutate(cashout = rep("Non-cashout", n()),
+                  key = as.numeric(key) + players) #this is a hack to unmatch key-values between the frames
+  
+  
+  simulations_all <- rbind(simulations.long.cashout, simulations.long)
+  
+  
+  #Plot all "players"
+  plot <- simulations_all %>%
+    ggplot(aes(ID, value, group=key)) + #group here required for complex animation
+    geom_line(aes(group = key, color = cashout), alpha = .4) +
+    # geom_line(data = confidence, aes(x = ID, y = lower), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    # geom_line(data = confidence, aes(x = ID, y = upper), linetype="dashed", color="black", size=0.5, inherit.aes=F) +
+    # geom_abline(intercept = 0, slope = winrate, linetype="dashed", size=1) +
+    geom_abline(intercept = 0, slope = tail(cumEV_cashout, 1) / hands, linetype="dashed", color ="red") + #cumEV last row (how much won at end, divided by the total number of hands, i.e. slope)
+    geom_abline(intercept = 0, slope = tail(cumEV, 1) / hands, linetype = "dashed", color ="blue") +
+    xlab("Hands played") + ylab("Big blinds won") +
+    scale_x_continuous(labels=function(x)x*100) +
+    theme_bw(base_size=14) +
+    guides(color="none")
+  
+  if (topbottom == F) {
+    return(plot) 
+    } 
+  else {
+    return(plot2)
+    }
+}
+
+#variance_simulator(500, 1.5, 75, 30)
+```
+This simulator illustrates the interplay of skill and chance in poker. The hypothetical players' levels of skill are defined as their winrate, which is the average amount of profit (or loss) over 100 poker hands played and represented by the dashed straight line. The standard deviation (SD) of every player's winrate is set as 75, which is normal in No Limit Hold'em poker (but is higher in other formats like Pot Limit Omaha). The dashed curved lines represent the 2.5% and 97.5% percentiles (the 95% confidence interval) of the cumulative expected winnings at any given point in time. The players have positive but low winrates (1.5 big blinds per 100 hands), and the simulations runs through 50,000 hands (i.e. 50,000 rounds of play in poker). For clarity, only the top and bottom earning players are visualized. Since both players have <b>identical skill</b>, their difference in big blinds won must be attributed to variance alone, or, in layman's terms, <b>luck</b>. Thus, the difference between the two curves is a direct illustration of the role of luck in the game, given a relatively low sample of 50,000 hands, and the relatively low winrate of 1.5 big blinds per 100 hands of play.
+
+<b>TL;DR:</b>
+30 poker players with the same amount of skill play poker for 50,000 hands. The winnings/losings for the one with the <b>best luck</b> and the one with the <b>worst luck</b> are visualized.
+
+```{r}
+animation <- variance_simulator(500, 1.5, 75, 30, topbottom=T) + 
+  geom_segment(aes(xend = 520, yend = value), linetype = 2, colour = 'grey') + 
+  geom_point(size=2) +
+  geom_text(aes(x = 500, label = key, color=profit), hjust = 0) +
+  #geom_text(aes(x = 500, label = round(value, -2), color=profit), vjust = -0.30, hjust = 0) +
+  scale_color_manual(values=c("red", "darkgreen", "lightblue", "salmon")) +
+  transition_reveal(ID) +
+  coord_cartesian(clip = 'off')
+
+animate(animation, duration = 25, fps = 10)
+```
+
+Below, I've rerun the simulation (hands = 50k, winrate = 1.5, SD of winrate = 75, players = 30) without animation, and visualized the entire spread of the observations.
+
+```{r}
+variance_simulator(500, 1.5, 75, 30)
+```
+
+Credit: https://github.com/thomasp85/gganimate/wiki/Temperature-time-series
