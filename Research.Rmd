@@ -10,7 +10,7 @@ output:
 
 <font size=5>Peer-reviewed publications</font>
 
-I've (co)authored 65 scientific papers, 55 of which have been peer-reviewed (19 as first author, 14 as second author, and 9 as last author). My papers focus on 1) gambling, games, and behavioral addictions, 2) social psychology and moral psychology of robotics, 3) emotions, decision-making, and psychophysiological correlates of cognition, and 4) psychology of deception.
+I've (co)authored 67 scientific papers, 57 of which have been peer-reviewed (20 as first author, 14 as second author, and 9 as last author). My papers focus on 1) gambling, games, and behavioral addictions, 2) social psychology and moral psychology of robotics, 3) emotions, decision-making, and psychophysiological correlates of cognition, and 4) psychology of deception.
 
 My papers are listed below topic-wise, though some papers fit multiple topics. If you want a paper you can't access, I'll be happy to <a href="contact.html">email</a href> you a copy.
 
@@ -18,6 +18,8 @@ My papers are listed below topic-wise, though some papers fit multiple topics. I
 
 
 #### Gambling, games, and behavioral addictions
+
+- Palomäki, J., Latvala, T., Salonen, A.H., Marionneau, V., Hodgins, D., Young, M.M., & Castrén, S. (in press). Testing the acceptability and feasibility of the lower-risk gambling guidelines in Finland. <i>Journal of Behavioural Addictions.</i>
 
 - Lind, J., <b>Palomäki, J.</b>, & Castrén, S. (in press). Examining problem gambling, substance use disorders and cluster B personality traits among incarcerated individuals. <i>Addictive Behaviors Reports.</i>
 
@@ -73,6 +75,8 @@ My papers are listed below topic-wise, though some papers fit multiple topics. I
 <br>
 
 #### Social psychology and moral psychology of robotics
+
+- Harkki, J., Tuovinen, P., Jousimäki, V., Barreto, G., Rapeli, P., <b>Palomäki, J.</b>, Annevirta, J., Puisto, A-H., McGlone, F., Nieminen, H., & Alho, H. (in press). CT-optimal touch modulates alcohol-cue-elicited heart rate variability in Alcohol Use Disorder patients during early abstinence: a randomized controlled study. <i>Alcohol.</i> 
 
 - Raitasalo, K., Karjalainen, K., Ollila, H., & <b>Palomäki, J.</b> (in press). Suomalaisten korkeakouluopiskelijoiden päihteiden käyttö vuonna 2021: KOTT-tutkimuksen tuloksia. <i>Sosiaalilääketieteellinen aikakauslehti.</i>
 
