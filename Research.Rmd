@@ -10,7 +10,7 @@ output:
 
 <font size=5>Peer-reviewed publications</font>
 
-I've (co)authored 73 scientific papers, 63 of which have been peer-reviewed (21 as first author, 15 as second author, and 9 as last author). My papers focus on 1) gambling, games, and behavioral addictions, 2) social psychology and moral psychology of robotics, 3) emotions, decision-making, and psychophysiological correlates of cognition, and 4) psychology of deception.
+I've (co)authored 77 scientific papers, 67 of which have been peer-reviewed (22 as first author, 16 as second author, and 9 as last author). My papers focus on 1) gambling, games, and behavioral addictions, 2) social psychology and moral psychology of robotics, 3) emotions, decision-making, and psychophysiological correlates of cognition, and 4) psychology of deception.
 
 My papers are listed below topic-wise, though some papers fit multiple topics. If you want a paper you can't access, I'll be happy to <a href="contact.html">email</a href> you a copy.
 
@@ -18,6 +18,10 @@ My papers are listed below topic-wise, though some papers fit multiple topics. I
 
 
 #### Gambling, games, and behavioral addictions
+
+- Marjamaa, N., Hylkilä, K., Kääriäinen, M., <b>Palomäki, J.</b>, Behm, S., Peltonen, A., Konttila, J., & Männikkö, N. (in press). Feasibility and preliminary outcomes of a digital intervention for gaming-related problems and well-being: A quasi-experimental study. <i>Nordic Studies on Alcohol and Drugs.</i>
+
+- <b>Palomäki, J.</b>, Laakasuo, M., Castrén, S., Kainulainen, T., Saastamoinen, J., & Suhonen, N. (2025). Intelligence, conscientiousness and extraversion moderate the house money effect in real-life financial decision-making. <i>Journal of Research in Personality</i>, 104669.
 
 - <a href="https://link.springer.com/article/10.1186/s12954-025-01225-9">Egerer, M., Jääskeläinen, P., Marionneau, V., Matilainen, R., <b>Palomäki, J.</b>, Pietilä, E., Tsupari, M., Hodgins, D.C., Young, M.M., & Castrén, S. (2025). A qualitative investigation of the feasibility and acceptability of lower risk gambling guidelines. <i>Harm Reduction Journal, 22</i>(1), 65.</a href>
 
@@ -84,6 +88,8 @@ My papers are listed below topic-wise, though some papers fit multiple topics. I
 
 #### Social psychology and moral psychology of robotics
 
+- Drosinou, M., <b>Palomäki, J.</b>, Kunnari, A., Koverola, M., Jokela, M., & Laakasuo, M. (in press). HEXACO personality dimensions as predictors of environmental attitudes, socio-moral orientations, and climate change beliefs. <i>iScience.</i>
+
 - Laakasuo, M., Kunnari, A., Francis, K., Košová, M.J., Kopecký, R., Buttazzoni, P., Koverola, M., <b>Palomäki, J.</b>, Drosinou, M., & Hannikainen, I. (in press). Moral psychological exploration of the asymmetry effect in AI-assisted euthanasia decisions. <i>Cognition</i>.
 
 - <a href="https://www.sciencedirect.com/science/article/pii/S0272494425000325" target="_blank">Drosinou, M., <b>Palomäki, J.</b>, Jokela, M., & Laakasuo, M. (2025). Everything is connected: Reminders of environmental and social connectedness strengthen environmental attitudes. <i>Journal of Environmental Psychology</i>, 102, 102549.</a href>
@@ -131,6 +137,8 @@ My papers are listed below topic-wise, though some papers fit multiple topics. I
 
 
 #### Emotions, decision-making, and psychophysiological correlates of cognition
+
+- Kuznetsova, E., Tammi, T., Postnova, N., <b>Palomäki, J.</b>, & Cowley, B. U. (2025). Mechanisms of learning in adults with ADHD during an ecologically-valid visual discrimination task. <i>Journal of Attention Disorders</i>, 10870547251356744.
 
 - Kuznetsova, E., Tammi, T., Postnova, N., <b>Palomäki, J.</b>, & Cowley, B. (2024). Neurotypical Adults employ Distinct Cognitive Mechanisms compared to Adults with ADHD during a Sustained Attention Task with Gestalt Stimuli. In <i>Proceedings of the Annual Meeting of the Cognitive Science Society</i> (Vol. 46).
 
